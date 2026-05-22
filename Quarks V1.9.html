@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quarks - Quantum Game</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --border-color: #334155;
+            --correct-bg: rgba(34, 197, 94, 0.2);
+            --correct-border: #22c55e;
+            --absent-bg: rgba(0, 0, 0, 0.2);
+            --wire-color: #64748b;
+            --gate-bg: #3b82f6;
+            --cx-color: #eab308;
+            --panel-bg: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        /* Logo Styles */
+        .app-logo {
+            max-width: 350px;
+            width: 90%;
+            height: auto;
+            margin: 0 auto 15px auto;
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+        .app-logo-small {
+            max-width: 250px;
+            width: 80%;
+            height: auto;
+            margin: 0 auto 15px auto;
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        #game-view { display: none; width: 100%; flex-direction: column; align-items: center;}
+        
+        .instructions { font-size: 0.95rem; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 800px; line-height: 1.4;}
+        
+        /* Hint/Lesson Button Styles */
+        .hint-btn {
+            background: #475569; color: white; border: none; padding: 6px 12px; 
+            border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 10px; margin-right: 5px;
+            transition: background 0.2s;
+        }
+        .hint-btn:hover { filter: brightness(1.1); }
+        .hint-text { margin-top: 10px; font-style: italic; color: #eab308; }
+        .lesson-text { margin-top: 10px; color: #cbd5e1; font-size: 0.9rem; text-align: left; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; border-left: 3px solid #38bdf8; line-height: 1.5;}
+        .lesson-text b { color: #38bdf8; }
+
+        .main-layout {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .left-col { display: flex; flex-direction: column; flex: 1; min-width: 320px; max-width: 700px; order: 1; }
+        .right-col {
+            display: flex; flex-direction: column; width: 250px; background: var(--panel-bg);
+            border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; height: fit-content;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); order: 2; margin: 0 auto;
+        }
+
+        .state-container {
+            background-color: var(--panel-bg); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .state-amplitudes { font-size: 1.1rem; font-family: monospace; font-weight: bold; color: #38bdf8; word-wrap: break-word;}
+        .state-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
+        
+        #live-state-container { border-color: #eab308; }
+        #live-state-container .state-amplitudes { color: #eab308; }
+
+        #board { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; width: 100%; }
+        .row-wrapper { 
+            display: flex; flex-direction: column; background: var(--panel-bg); 
+            border-radius: 6px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; width: 100%;
+        }
+        .row-wrapper.active { border-color: #94a3b8; box-shadow: 0 0 8px rgba(148, 163, 184, 0.3); }
+        
+        .circuit-row { display: flex; position: relative; width: 100%; }
+        
+        .qubit-labels {
+            display: flex; flex-direction: column; justify-content: space-around; width: 30px; 
+            background: #0f172a; font-family: monospace; font-size: 0.7rem; color: #94a3b8; 
+            padding-left: 5px; border-right: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        
+        .slot {
+            flex: 1; min-width: 35px; position: relative; border-right: 1px dashed var(--border-color); transition: background 0.2s;
+        }
+        .slot:last-child { border-right: none; }
+        .slot.drag-over { background: rgba(255, 255, 255, 0.1); }
+        .slot.correct { background: var(--correct-bg); border-color: var(--correct-border); border-style: solid; border-width: 0 1px 0 0;}
+        .slot.absent { background: var(--absent-bg); opacity: 0.5; }
+
+        .wire { position: absolute; left: 0; right: 0; height: 2px; background: var(--wire-color); z-index: 1; pointer-events: none;}
+        
+        .gate-box {
+            position: absolute; width: 30px; height: 30px; background: var(--gate-bg); color: white; 
+            text-align: center; font-weight: bold; line-height: 30px; font-size: 14px; z-index: 2; 
+            left: 50%; transform: translate(-50%, -50%); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none;
+        }
+        
+        .ctrl-dot {
+            position: absolute; width: 12px; height: 12px; background: var(--cx-color); 
+            border-radius: 50%; z-index: 2; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+        }
+        
+        .tgt-cross {
+            position: absolute; width: 20px; height: 20px; color: var(--cx-color); z-index: 2; 
+            left: 50%; transform: translate(-50%, -50%); font-size: 26px; line-height: 20px; text-align: center; pointer-events: none;
+        }
+        
+        .ctrl-line { position: absolute; left: 50%; width: 2px; background: var(--cx-color); transform: translateX(-50%); z-index: 1; pointer-events: none;}
+
+        #board.hard-mode .gate-box { width: 22px; height: 22px; line-height: 22px; font-size: 11px; }
+        #board.hard-mode .tgt-cross { width: 16px; height: 16px; font-size: 20px; line-height: 16px; }
+        #board.hard-mode .ctrl-dot { width: 8px; height: 8px; }
+        #board.hard-mode .qubit-labels { width: 22px; font-size: 0.6rem; }
+
+        .amplitudes-result { font-family: monospace; font-size: 0.95rem; background-color: rgba(0,0,0,0.3); padding: 8px; text-align: center; color: #cbd5e1; border-top: 1px solid var(--border-color); }
+        .original-label { font-size: 0.8rem; color: #f8fafc; background: rgba(0,0,0,0.4); padding: 4px; text-align: center; text-transform: uppercase;}
+
+        #palette-container { margin-bottom: 20px; width: 100%;}
+        .palette-label { font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; text-align: center; text-transform: uppercase;}
+        #palette { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; background: var(--panel-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .palette-item { width: 45px; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; position: relative; cursor: grab; transition: transform 0.1s;}
+        .palette-item:active { cursor: grabbing; transform: scale(0.95); }
+        .palette-item:hover { border-color: #64748b; }
+
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; width: 100%;}
+        .btn { flex: 1; padding: 12px; font-size: 0.9rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; text-transform: uppercase; }
+        #submit-btn { background-color: var(--gate-bg); }
+        #submit-btn:hover { background-color: #2563eb; }
+        #submit-btn:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
+        #menu-btn { background: #475569; }
+        #menu-btn:hover { background: #334155; }
+        .btn-green { background-color: #059669 !important; }
+        .btn-green:hover { background-color: #047857 !important; }
+        .btn-yellow { background-color: #eab308 !important; color: #000 !important; }
+        .btn-yellow:hover { background-color: #ca8a04 !important; }
+        
+        #message { font-size: 1.2rem; font-weight: bold; height: 1.5rem; text-align: center; margin-bottom: 20px; padding: 0 10px;}
+
+        #gate-guide { 
+            background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; 
+            padding: 15px; width: 100%; max-width: 980px; box-sizing: border-box; order: 3; margin: 0 auto 20px auto;
+        }
+        .guide-title { font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; text-align: center; }
+        .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .guide-card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; color: #cbd5e1; }
+        .guide-card b { color: #f8fafc; font-size: 0.95rem; display: block; margin-bottom: 6px; }
+        .math-expr { font-family: monospace; color: #eab308; display: block; line-height: 1.5; }
+
+        .bloch-title { text-align: center; font-size: 0.9rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px;}
+        .canvas-container { display: flex; flex-direction: column; align-items: center; gap: 20px;}
+        canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border-color); }
+        .bloch-note { font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 15px;}
+
+        /* Main Menu Overlay */
+        #main-menu { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 30px; animation: fadeIn 0.3s ease-out;}
+        .menu-section { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .menu-section h2 { margin-top: 0; color: #38bdf8; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;}
+        .menu-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;}
+        .menu-btn { background: var(--gate-bg); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem;}
+        .menu-btn:hover { filter: brightness(1.1); }
+        .menu-btn.completed { background-color: #059669; border: 1px solid #047857; color: white; }
+        
+        .stage-box { background: rgba(0,0,0,0.2); border: 1px solid #475569; border-radius: 8px; padding: 15px; margin-bottom: 15px;}
+        .stage-box h3 { margin: 0 0 5px 0; color: #f8fafc; font-size: 1.1rem;}
+        .stage-box p { margin: 0 0 10px 0; font-size: 0.85rem; color: #94a3b8;}
+
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <img src="logo.jpg" alt="Quarks - Quantum Game" class="app-logo">
+        <div class="instructions">Master Quantum Gates, Entanglement, and Algorithms!</div>
+        
+        <div class="menu-section">
+            <h2>Learn: Stages</h2>
+            <div id="stages-container"></div>
+        </div>
+
+        <div class="menu-section">
+            <h2>Play: Random Puzzles</h2>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0;">Guess the randomized quantum circuit. Equivalent circuits win!</p>
+            <div class="menu-row">
+                <button class="menu-btn btn-green" onclick="initGame('RANDOM', 1)">Easy (1 Qubit, 4 Gates)</button>
+                <button class="menu-btn btn-yellow" onclick="initGame('RANDOM', 2)">Medium (2 Qubits, 6 Gates)</button>
+                <button class="menu-btn" style="background:#ef4444;" onclick="initGame('RANDOM', 3)">Hard (3 Qubits, 10 Gates)</button>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h2>Sandbox: Free Play</h2>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0;">An infinite board. Place gates and evaluate your snapshots.</p>
+            <div class="menu-row">
+                <button class="menu-btn" style="background:#475569" onclick="initGame('FREEPLAY', 1)">1 Qubit</button>
+                <button class="menu-btn" style="background:#475569" onclick="initGame('FREEPLAY', 2)">2 Qubits</button>
+                <button class="menu-btn" style="background:#475569" onclick="initGame('FREEPLAY', 3)">3 Qubits</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-view">
+        <img src="logo.jpg" alt="Quarks - Quantum Game" class="app-logo-small">
+        <div class="instructions" id="instructions-text"></div>
+
+        <div class="main-layout">
+            <div class="left-col">
+                <div id="target-container" class="state-container">
+                    <div class="state-label">Target Amplitudes:</div>
+                    <div id="target-amplitudes" class="state-amplitudes">Loading...</div>
+                </div>
+
+                <div id="live-state-container" class="state-container hidden">
+                    <div class="state-label">Current Live Output:</div>
+                    <div id="live-state-amplitudes" class="state-amplitudes">|ψ⟩ = |0⟩</div>
+                </div>
+
+                <div id="board"></div>
+
+                <div id="palette-container">
+                    <div class="palette-label">Gate Palette</div>
+                    <div id="palette"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="submit-btn" class="btn" onclick="submitGuess()">Evaluate</button>
+                    <button id="next-btn" class="btn btn-green hidden" onclick="nextStage()">Next Stage</button>
+                    <button id="again-btn" class="btn btn-yellow hidden" onclick="playAgain()">Play Again</button>
+                    <button id="menu-btn" class="btn" onclick="showMainMenu()">Main Menu</button>
+                </div>
+                
+                <div id="message"></div>
+            </div>
+
+            <div class="right-col">
+                <div class="bloch-title">Live Bloch Spheres</div>
+                <div class="canvas-container" id="canvas-wrapper"></div>
+                <div class="bloch-note">Pink = Pure State<br>Yellow = Entangled</div>
+            </div>
+
+            <div id="gate-guide">
+                <div class="guide-title">Quantum Gate Reference</div>
+                <div class="guide-grid">
+                    <div class="guide-card"><b>X (NOT Gate)</b><span class="math-expr">X|0⟩ = |1⟩<br>X|1⟩ = |0⟩</span></div>
+                    <div class="guide-card"><b>Y (Pauli-Y Gate)</b><span class="math-expr">Y|0⟩ = i|1⟩<br>Y|1⟩ = -i|0⟩</span></div>
+                    <div class="guide-card"><b>Z (Phase Gate)</b><span class="math-expr">Z|0⟩ = |0⟩<br>Z|1⟩ = -|1⟩</span></div>
+                    <div class="guide-card"><b>H (Hadamard)</b><span class="math-expr">H|0⟩ = 1/√2(|0⟩+|1⟩)<br>H|1⟩ = 1/√2(|0⟩-|1⟩)</span></div>
+                    <div class="guide-card"><b>SX (√X Gate)</b><span class="math-expr">SX|0⟩ = ½(1+i)|0⟩ + ½(1-i)|1⟩<br>SX|1⟩ = ½(1-i)|0⟩ + ½(1+i)|1⟩</span></div>
+                    <div class="guide-card" style="grid-column: 1/-1;"><b>CX (CNOT) & CCX (Toffoli)</b><span class="math-expr">Flips Target (⊕) if all Controls (•) are |1⟩.</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- Save Data ---
+let completedStages = JSON.parse(localStorage.getItem('quarks_completed') || '[]');
+
+function markStageCompleted(sIdx, lIdx) {
+    let id = `${sIdx}-${lIdx}`;
+    if (!completedStages.includes(id)) {
+        completedStages.push(id);
+        localStorage.setItem('quarks_completed', JSON.stringify(completedStages));
+    }
+}
+
+// --- Configuration & Content ---
+const LEVELS = {
+    1: { q: 1, g: 4, minActive: 2, set: ['X0', 'Y0', 'H0', 'Z0', 'SX0'] },
+    2: { q: 2, g: 6, minActive: 3, set: ['X0', 'X1', 'Y0', 'Y1', 'H0', 'H1', 'Z0', 'Z1', 'SX0', 'SX1', 'CX01', 'CX10'] },
+    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120'] }
+};
+
+// Valid symmetrical CSWAP implementations
+const CSWAP_VARIANTS = [
+    [['CCX012'], ['CCX021'], ['CCX012']],
+    [['CCX021'], ['CCX012'], ['CCX021']],
+    [['CX21'], ['CCX012'], ['CX21']],
+    [['CX12'], ['CCX021'], ['CX12']]
+];
+
+// Helper to calculate exact multiset from a 2D array of gates
+function getGateMultiset(circuit) {
+    let gates = [];
+    for(let col of circuit) {
+        for(let gate of col) {
+            if(gate && gate !== 'I') gates.push(gate);
+        }
+    }
+    return gates.sort().join(',');
+}
+
+// Generate base permutations for Strict Mode multiset extraction
+const STAGES = [
+    {
+        title: "Stage 1: The Bloch Sphere",
+        desc: "Learn to navigate the 6 poles of the Bloch sphere using 1 qubit.",
+        qubits: 1, cols: 3, set: ['X0', 'Y0', 'Z0', 'H0', 'SX0'],
+        levels: [
+            { 
+                name: "1.1: +Z State |0⟩", circuits: [[[]]], hint: "The default starting state. Does it need gates?",
+                lesson: "<b>The Mechanism:</b> The |0⟩ state is the fundamental starting point of all quantum algorithms, representing the North Pole of the Bloch Sphere. Every game begins with the qubit perfectly resting here.<br><br><b>Why it matters:</b> Before we can exploit quantum mechanics, we need a clean, cold, and verified computational basis state to build upon. In real hardware, initializing qubits to |0⟩ with high fidelity is the vital first step of any quantum program."
+            },
+            { 
+                name: "1.2: -Z State |1⟩", circuits: [[['X0']]], hint: "Flip the bit entirely.",
+                lesson: "<b>The Mechanism:</b> The Pauli-X gate acts as a quantum NOT gate. It rotates the qubit 180 degrees around the X-axis, flipping it from the North Pole (|0⟩) to the South Pole (|1⟩).<br><br><b>Why it matters:</b> Bit-flips are the most basic form of logic. In quantum error correction, identifying and fixing accidental X-flips caused by environmental noise is a major area of research."
+            },
+            { 
+                name: "1.3: +X State |+⟩", circuits: [[['H0']]], hint: "Create an equal superposition.",
+                lesson: "<b>The Mechanism:</b> The Hadamard (H) gate creates an equal superposition of |0⟩ and |1⟩. Visually, it places the qubit directly on the equator facing the positive X-axis. If you measure this, you get a 50/50 chance of 0 or 1.<br><br><b>Why it matters:</b> Superposition is the fuel for quantum computing's massive parallel processing potential. By applying H gates to a register of qubits, we can explore all possible computational states simultaneously."
+            },
+            { 
+                name: "1.4: -X State |-⟩", circuits: [[['X0'], ['H0']]], hint: "Flip the bit, then superpose.",
+                lesson: "<b>The Mechanism:</b> By starting at |1⟩ and applying a Hadamard, we land on the opposite side of the equator. The amplitude of |1⟩ is now negative (-1/√2).<br><br><b>Why it matters:</b> Negative amplitudes are what make quantum mechanics truly different from classical probability. They allow for *Quantum Interference*. Algorithms are designed so that wrong answers interfere destructively (cancel out) and the right answer interferes constructively (amplifies)."
+            },
+            { 
+                name: "1.5: +Y State |+i⟩", circuits: [[['X0'], ['SX0']]], hint: "Combine a full flip and a half flip.",
+                lesson: "<b>The Mechanism:</b> The SX (Square-root of X) gate rotates the qubit 90 degrees around the X-axis. By combining gates, we can navigate to the Y-axis, bringing *imaginary numbers* (i) into our amplitudes.<br><br><b>Why it matters:</b> Complex numbers are essential to the Schrödinger equation. Manipulating the imaginary phase of a qubit is required for advanced routines like the Quantum Fourier Transform, a core component of Shor's algorithm for breaking RSA encryption."
+            },
+            { 
+                name: "1.6: -Y State |-i⟩", circuits: [[['SX0']]], hint: "A single half-X rotation.",
+                lesson: "<b>The Mechanism:</b> A single SX gate on |0⟩ pushes the qubit to the negative Y-axis. Notice how different combinations of rotations can reach different points on the equator.<br><br><b>Why it matters:</b> The X, Y, and Z axes represent non-commuting observables. Navigating precisely between them is exactly how quantum states are calibrated, tested, and manipulated inside physical hardware like superconducting transmon qubits."
+            }
+        ]
+    },
+    {
+        title: "Stage 2: Bell Pairs",
+        desc: "Create the four maximally entangled 2-qubit states.",
+        qubits: 2, cols: 4, set: ['X0', 'X1', 'Z0', 'Z1', 'H0', 'H1', 'CX01', 'CX10'],
+        levels: [
+            { 
+                name: "2.1: Φ+ State", circuits: [[['H0'], ['CX01']]], hint: "Entangle |+⟩ on Q0 with |0⟩ on Q1.",
+                lesson: "<b>The Mechanism:</b> The CNOT gate is represented on the board by a solid control dot connected vertically to a ⊕ target cross. It flips the target qubit *only* if the control qubit is |1⟩. Because our control qubit is in a superposition of |0⟩ and |1⟩, the target becomes a superposition of flipped and not-flipped. They are now mathematically locked together.<br><br><b>Why it matters:</b> This is maximum entanglement. Measuring one qubit instantly dictates the state of the other, regardless of distance. This is the exact state used in Quantum Teleportation and Superdense Coding."
+            },
+            { 
+                name: "2.2: Φ- State", circuits: [[['X0'], ['H0'], ['CX01']]], hint: "Entangle |-⟩ on Q0 with |0⟩ on Q1.",
+                lesson: "<b>The Mechanism:</b> By starting the control qubit in the |-⟩ state before entangling, we embed a relative negative phase into the entangled pair.<br><br><b>Why it matters:</b> Entanglement isn't just about perfectly correlated classical data. By manipulating the phase within an entangled pair, quantum networks can encode extra classical bits of information, transferring 2 bits of data using only 1 physical qubit (Superdense coding)."
+            },
+            { 
+                name: "2.3: Ψ+ State", circuits: [[['X1'], ['H0'], ['CX01']]], hint: "Flip the target before entangling.",
+                lesson: "<b>The Mechanism:</b> Here, the qubits are perfectly *anti-correlated*. If you measure a 0 on Q0, you are guaranteed to find a 1 on Q1, and vice versa.<br><br><b>Why it matters:</b> Anti-correlated Bell states are frequently used in Quantum Key Distribution (like the E91 protocol) to generate perfectly secure, unhackable encryption keys between two distant parties."
+            },
+            { 
+                name: "2.4: Ψ- State", circuits: [[['X0', 'X1'], ['H0'], ['CX01']]], hint: "Start with |11⟩ before entangling.",
+                lesson: "<b>The Mechanism:</b> Known as the 'Singlet State', this is the most unique of the four. It is rotationally invariant—meaning no matter what axis (X, Y, or Z) you measure these qubits on, they will always yield opposite results.<br><br><b>Why it matters:</b> Because of its perfect symmetry, the Singlet State is highly resistant to certain types of environmental noise, making it a foundational concept for creating Decoherence-Free Subspaces in quantum memory."
+            }
+        ]
+    },
+    {
+        title: "Stage 3: Controlled-Z (CZ)",
+        desc: "Implement a CZ gate using CNOTs and Hadamards.",
+        qubits: 2, cols: 5, set: ['X0', 'X1', 'H0', 'H1', 'CX01', 'CX10'],
+        levels: [
+            { 
+                name: "3.1: Build a CZ", circuits: [[['H0', 'H1'], ['H1'], ['CX01'], ['H1']]], hint: "H X H = Z. (The first column places both qubits in |+⟩ so the CZ effect is visible!)",
+                lesson: "<b>The Mechanism:</b> A Controlled-Z (CZ) applies a negative phase only when both qubits are |1⟩. Since H turns X into Z (and vice versa), sandwiching the target of a CNOT between two Hadamards transforms the controlled-bit-flip into a controlled-phase-flip.<br><br><b>Why it matters:</b> Real quantum hardware often only supports one type of native 2-qubit gate (like the CX gate on IBM hardware). 'Quantum Compilers' must rewrite advanced algorithms using these basic gate identities to physically run the code on the chip."
+            }
+        ]
+    },
+    {
+        title: "Stage 4: GHZ State",
+        desc: "Entangle three qubits symmetrically.",
+        qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
+        levels: [
+            { 
+                name: "4.1: GHZ State", circuits: [[['H0'], ['CX01'], ['CX12']]], hint: "Create a superposition, then chain the CNOTs down the line.",
+                lesson: "<b>The Mechanism:</b> The Greenberger–Horne–Zeilinger (GHZ) state entangles three qubits so they are either all |000⟩ or all |111⟩. We build it by creating a standard Bell pair, and then using a second CNOT to 'infect' a third qubit with the entanglement.<br><br><b>Why it matters:</b> GHZ states demonstrate quantum non-locality far more powerfully than 2-qubit Bell pairs. They are incredibly useful in Quantum Metrology (creating hyper-sensitive measurement devices) and Quantum Secret Sharing protocols."
+            }
+        ]
+    },
+    {
+        title: "Stage 5: SWAP Gate",
+        desc: "Construct SWAP and Controlled-SWAP (Fredkin) gates. (Strict Mode)",
+        qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120'],
+        levels: [
+            { 
+                name: "5.1: SWAP Gate", 
+                circuits: [
+                    [['X1'], ['CX12'], ['CX21'], ['CX12']],
+                    [['X1'], ['CX21'], ['CX12'], ['CX21']]
+                ], 
+                hint: "Set Q1 to |1⟩, then swap Q1 and Q2 using three alternating CNOT gates.",
+                lesson: "<b>The Mechanism:</b> The SWAP gate exchanges the states of two qubits. While it can be implemented as a single hardware operation, it is most often compiled into three alternating CNOT gates. This relies on the XOR logic of CNOT: applying it back-and-forth effectively swaps the amplitudes!<br><br><b>Why it matters:</b> Physical qubits on a microchip are usually only wired to their immediate neighbors. If an algorithm requires entangling two distant qubits on opposite sides of the chip, the compiler *must* route their information through the grid using SWAP networks."
+            },
+            { 
+                name: "5.2: CSWAP (3 CCX)", 
+                circuits: [
+                    [['H0', 'X1'], ['CCX012'], ['CCX021'], ['CCX012']],
+                    [['H0', 'X1'], ['CCX021'], ['CCX012'], ['CCX021']],
+                    [['X1'], ['H0'], ['CCX012'], ['CCX021'], ['CCX012']],
+                    [['H0'], ['X1'], ['CCX012'], ['CCX021'], ['CCX012']]
+                ], 
+                hint: "Superpose Q0 and flip Q1. Then conditionally swap Q1 & Q2 using three Toffolis.",
+                lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits *only* if the control qubit is |1⟩. We can build it directly by taking our 3-CNOT design from the last stage and upgrading all three gates into Toffoli (CCX) gates controlled by Q0.<br><br><b>Why it matters:</b> The Fredkin gate is a 'universal' reversible logic gate. In quantum algorithms, conditionally routing information allows us to compute similarities between complex states without measuring them directly, forming the backbone of Quantum Machine Learning."
+            },
+            { 
+                name: "5.3: CSWAP (1 CCX, 2 CX)", 
+                circuits: [
+                    [['H0', 'X1'], ['CX21'], ['CCX012'], ['CX21']],
+                    [['H0', 'X1'], ['CX12'], ['CCX021'], ['CX12']],
+                    [['X1'], ['H0'], ['CX21'], ['CCX012'], ['CX21']],
+                    [['X1'], ['H0'], ['CX12'], ['CCX021'], ['CX12']]
+                ], 
+                hint: "Wrap a single Toffoli gate in CNOTs to achieve the exact same state!",
+                lesson: "<b>The Mechanism:</b> We can optimize the CSWAP gate by noticing that we only need to conditionally flip one qubit based on the other, then use standard CNOTs to cascade the swap. This reduces the cost from 3 Toffolis to just 1 Toffoli and 2 CNOTs.<br><br><b>Why it matters:</b> Every gate you execute introduces a tiny bit of noise. Toffoli gates are notoriously noisy and slow. Compiling circuits to use fewer heavy gates—while achieving the exact same mathematical result—is a massive and vital sub-field of quantum software engineering."
+            }
+        ]
+    },
+    {
+        title: "Stage 6: The Swap Test",
+        desc: "Measure how similar two states are without directly measuring them. (Strict Mode)",
+        qubits: 3, cols: 8, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120'],
+        levels: [
+            {
+                name: "6.1: Identical States",
+                circuits: [
+                    [['H0'], ['CX21'], ['CCX012'], ['CX21'], ['H0']],
+                    [['H0'], ['CCX012'], ['CCX021'], ['CCX012'], ['H0']]
+                ],
+                hint: "Superpose the ancilla (Q0), apply a CSWAP across Q1 and Q2, and apply another Hadamard to Q0.",
+                lesson: "<b>The Mechanism:</b> The Swap Test algorithm checks how identical two target quantum states are. We superpose an ancilla (Q0), use it to CSWAP the target states (Q1, Q2), and interfere the ancilla again with a final Hadamard. The probability of measuring Q0 as |0⟩ is mathematically exactly P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Since |0⟩ and |0⟩ are totally identical, the math perfectly returns Q0 to |0⟩!<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test lets us compare massive quantum states using just *one* ancilla measurement, offering a potential exponential speedup for Quantum AI."
+            },
+            {
+                name: "6.2: Orthogonal States",
+                circuits: [
+                    [['X1'], ['H0'], ['CX21'], ['CCX012'], ['CX21'], ['H0']],
+                    [['X2'], ['H0'], ['CX12'], ['CCX021'], ['CX12'], ['H0']]
+                ],
+                hint: "Flip Q1 to |1⟩. Then run the exact same Swap Test logic as before!",
+                lesson: "<b>The Mechanism:</b> Now we test two completely orthogonal (opposite) states: |1⟩ (on Q1) and |0⟩ (on Q2). Their inner product is 0. Following our Swap Test formula: P(0) = 0.5 + 0.5(0) = 0.5. This means the ancilla qubit has exactly a 50% chance of being measured as |0⟩. Look at the Bloch sphere—Q0 is perfectly balanced on the equator!<br><br><b>Why it matters:</b> This demonstrates the lower bounds of the algorithm. When measuring the ancilla, P(0) = 0.5 is the absolute minimum you can get, proving that the datasets encoded in the qubits have absolutely zero overlap."
+            },
+            {
+                name: "6.3: Partial Overlap",
+                circuits: [
+                    [['H1'], ['H0'], ['CX21'], ['CCX012'], ['CX21'], ['H0']],
+                    [['H2'], ['H0'], ['CX12'], ['CCX021'], ['CX12'], ['H0']]
+                ],
+                hint: "Prep Q1 with a Hadamard to |+⟩. Run the Swap Test again to see what partial overlap looks like.",
+                lesson: "<b>The Mechanism:</b> What if the states are only partially similar? Here we compare |+⟩ and |0⟩. Their squared inner product is 0.5. The formula gives P(0) = 0.5 + 0.5(0.5) = 0.75 (or 75%). Look at the statevector amplitudes—by checking Q0, we measured the exact mathematical overlap of our two target states!<br><br><b>Why it matters:</b> This is the real magic of the Swap test. It doesn't just say 'yes' or 'no'; it computes the exact continuous inner product (the quantum equivalent of the classical dot product). This serves as the computational backbone for advanced algorithms like Quantum Support Vector Machines (QSVM)."
+            }
+        ]
+    },
+    {
+        title: "Stage 7: The Hadamard Test",
+        desc: "Differentiate between Bell states by measuring their eigenvalues. (Strict Mode)",
+        qubits: 3, cols: 8, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
+        levels: [
+            {
+                name: "7.1: X-Parity (+ vs -)",
+                circuits: [
+                    [['X1'], ['H1'], ['CX12'], ['H0'], ['CX01'], ['CX02'], ['H0']],
+                    [['X2'], ['H2'], ['CX21'], ['H0'], ['CX01'], ['CX02'], ['H0']]
+                ],
+                hint: "Prep Φ- on Q1 & Q2. Then H on Q0, apply CX from Q0 to Q1 and Q2, and H on Q0.",
+                lesson: "<b>The Mechanism:</b> The Hadamard Test is a general algorithm to measure the expectation value of an operator. However, when the target state is an *eigenstate* of the operator (like Bell states are to Pauli parities), the specific mechanism at play is <b>Phase Kickback</b>.<br><br>In Phase Kickback, applying a controlled operation doesn't change the target eigenstate; instead, its eigenvalue (+1 or -1) is 'kicked back' into the control qubit's phase.<br><br><b>Why it matters:</b> The Φ- state is an eigenstate of X₁X₂ with an eigenvalue of -1. So, the -1 phase is kicked back to Q0, changing its state from |+⟩ to |-⟩. The final Hadamard converts this to |1⟩, allowing us to read the eigenvalue perfectly!<br><br><b>Try it:</b> Remove the first X₁ gate from the board to prepare Φ+ instead. Since Φ+ has an eigenvalue of +1, no negative phase is kicked back, and Q0 returns safely to |0⟩!"
+            },
+            {
+                name: "7.2: Z-Parity (Φ vs Ψ)",
+                circuits: [
+                    [['X2'], ['H1'], ['CX12'], ['H0'], ['H1'], ['H2'], ['CX01'], ['CX02'], ['H0'], ['H1'], ['H2']],
+                    [['X1'], ['H2'], ['CX21'], ['H0'], ['H1'], ['H2'], ['CX01'], ['CX02'], ['H0'], ['H1'], ['H2']]
+                ],
+                hint: "Prep Ψ+ using X2, H1, CX12. Then wrap CX01 and CX02 in Hadamards to simulate Controlled-Z gates.",
+                lesson: "<b>The Mechanism:</b> To differentiate a Φ state from a Ψ state, we must measure their Z-parity (Z₁Z₂). Because we don't have a native Controlled-Z gate on this board, we build them by wrapping CNOTs in Hadamards. This creates a Hadamard test for the Z₁Z₂ operator.<br><br><b>Why it matters:</b> The Ψ+ state is anti-correlated, meaning its Z-parity eigenvalue is -1. This test kicks the -1 phase back, flipping Q0 to |1⟩. In quantum error correction, continuously measuring these X and Z parities (without measuring the actual data qubits) is exactly how we detect errors without collapsing the fragile computation!<br><br><b>Try it:</b> Remove the X₂ gate to test a Φ+ state instead. Q0 will stay at |0⟩ because Φ states are perfectly correlated (eigenvalue +1)!"
+            }
+        ]
+    }
+];
+
+// --- Quantum Math Engine ---
+const c = 1 / Math.sqrt(2);
+function mult(a, b) { return {r: a.r*b.r - a.i*b.i, i: a.r*b.i + a.i*b.r}; }
+function add(a, b) { return {r: a.r + b.r, i: a.i + b.i}; }
+
+const I2 = [[{r:1,i:0},{r:0,i:0}], [{r:0,i:0},{r:1,i:0}]];
+const X2 = [[{r:0,i:0},{r:1,i:0}], [{r:1,i:0},{r:0,i:0}]];
+const Y2 = [[{r:0,i:0},{r:0,i:-1}], [{r:0,i:1},{r:0,i:0}]];
+const Z2 = [[{r:1,i:0},{r:0,i:0}], [{r:0,i:0},{r:-1,i:0}]];
+const H2 = [[{r:c,i:0},{r:c,i:0}], [{r:c,i:0},{r:-c,i:0}]];
+const SX2 = [[{r:0.5,i:0.5},{r:0.5,i:-0.5}], [{r:0.5,i:-0.5},{r:0.5,i:0.5}]];
+
+const P0 = [[{r:1,i:0},{r:0,i:0}], [{r:0,i:0},{r:0,i:0}]]; 
+const P1 = [[{r:0,i:0},{r:0,i:0}], [{r:0,i:0},{r:1,i:0}]]; 
+
+const CX2 = [
+    [{r:1,i:0}, {r:0,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}]
+];
+const CX2_REV = [
+    [{r:1,i:0}, {r:0,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}]
+];
+
+function addMat(A, B) {
+    let rowA = A.length, colA = A[0].length;
+    let M = Array(rowA).fill().map(() => Array(colA));
+    for(let r=0; r<rowA; r++) for(let c=0; c<colA; c++) M[r][c] = add(A[r][c], B[r][c]);
+    return M;
+}
+
+function matMult(A, B) {
+    let size = A.length;
+    let M = Array(size).fill().map(() => Array(size));
+    for(let r=0; r<size; r++) {
+        for(let c=0; c<size; c++) {
+            let sum = {r:0, i:0};
+            for(let k=0; k<size; k++) sum = add(sum, mult(A[r][k], B[k][c]));
+            M[r][c] = sum;
+        }
+    }
+    return M;
+}
+
+function kron(A, B) {
+    let rowA = A.length, colA = A[0].length, rowB = B.length, colB = B[0].length;
+    let M = Array(rowA * rowB).fill().map(() => Array(colA * colB));
+    for(let r1=0; r1<rowA; r1++) {
+        for(let r2=0; r2<rowB; r2++) {
+            for(let c1=0; c1<colA; c1++) {
+                for(let c2=0; c2<colB; c2++) M[r1*rowB+r2][c1*colB+c2] = mult(A[r1][c1], B[r2][c2]);
+            }
+        }
+    }
+    return M;
+}
+
+function kronN(mats) {
+    let res = mats[0];
+    for(let i=1; i<mats.length; i++) res = kron(res, mats[i]);
+    return res;
+}
+
+let GATE_MATRICES = {};
+function generateMatrices(N) {
+    GATE_MATRICES = {};
+    GATE_MATRICES['I'] = kronN(Array(N).fill(I2));
+    
+    let singleGates = { 'X': X2, 'Y': Y2, 'H': H2, 'Z': Z2, 'SX': SX2 };
+    for (let q = 0; q < N; q++) {
+        for (let [name, mat] of Object.entries(singleGates)) {
+            let mats = Array(N).fill(I2);
+            mats[q] = mat;
+            GATE_MATRICES[`${name}${q}`] = kronN(mats);
+        }
+    }
+    
+    if (N >= 2) {
+        if (N === 2) {
+            GATE_MATRICES['CX01'] = CX2; GATE_MATRICES['CX10'] = CX2_REV;
+        } else if (N === 3) {
+            GATE_MATRICES['CX01'] = kron(CX2, I2); GATE_MATRICES['CX10'] = kron(CX2_REV, I2);
+            GATE_MATRICES['CX12'] = kron(I2, CX2); GATE_MATRICES['CX21'] = kron(I2, CX2_REV);
+            GATE_MATRICES['CX02'] = addMat(kronN([P0, I2, I2]), kronN([P1, I2, X2]));
+            GATE_MATRICES['CX20'] = addMat(kronN([I2, I2, P0]), kronN([X2, I2, P1]));
+            
+            let CCX012 = Array(8).fill().map((_, i) => {
+                let row = Array(8).fill().map(() => ({r:0, i:0}));
+                let j = (i === 6) ? 7 : (i === 7) ? 6 : i;
+                row[j] = {r:1, i:0}; return row;
+            }); GATE_MATRICES['CCX012'] = CCX012;
+
+            let CCX021 = Array(8).fill().map((_, i) => {
+                let row = Array(8).fill().map(() => ({r:0, i:0}));
+                let j = (i === 5) ? 7 : (i === 7) ? 5 : i;
+                row[j] = {r:1, i:0}; return row;
+            }); GATE_MATRICES['CCX021'] = CCX021;
+
+            let CCX120 = Array(8).fill().map((_, i) => {
+                let row = Array(8).fill().map(() => ({r:0, i:0}));
+                let j = (i === 3) ? 7 : (i === 7) ? 3 : i;
+                row[j] = {r:1, i:0}; return row;
+            }); GATE_MATRICES['CCX120'] = CCX120;
+        }
+    }
+}
+
+function removeGlobalPhase(v) {
+    let ref = null;
+    for (let i = 0; i < v.length; i++) {
+        if (Math.abs(v[i].r) > 1e-4 || Math.abs(v[i].i) > 1e-4) { ref = v[i]; break; }
+    }
+    if (!ref) return v; 
+    let mag = Math.sqrt(ref.r * ref.r + ref.i * ref.i);
+    let mR = ref.r / mag, mI = -ref.i / mag; 
+    let out = [];
+    for (let i = 0; i < v.length; i++) out.push({r: v[i].r * mR - v[i].i * mI, i: v[i].r * mI + v[i].i * mR});
+    return out;
+}
+
+function formatTerm(val, isImaginary) {
+    if (Math.abs(val) < 1e-4) return "0";
+    let sign = val < 0 ? "-" : ""; let v = Math.abs(val); let num = "";
+    const eps = 1e-4;
+    
+    if (Math.abs(v - 1) < eps) num = "1";
+    else if (Math.abs(v - 0.5) < eps) num = "1/2";
+    else if (Math.abs(v - 1/Math.sqrt(2)) < eps) num = "1/√2";
+    else if (Math.abs(v - 1/(2*Math.sqrt(2))) < eps) num = "1/2√2";
+    else if (Math.abs(v - 0.25) < eps) num = "1/4";
+    else num = v.toFixed(2);
+    
+    if (isImaginary) {
+        if (num === "1") return sign + "i";
+        if (num.includes("/")) return sign + num.replace("1/", "i/");
+        return sign + num + "i";
+    }
+    return sign + num;
+}
+
+function formatComplexExact(val) {
+    let r = val.r, i = val.i;
+    if (Math.abs(r) < 1e-4 && Math.abs(i) < 1e-4) return null;
+    if (Math.abs(r) < 1e-4) return formatTerm(i, true);
+    if (Math.abs(i) < 1e-4) return formatTerm(r, false);
+    
+    let rStr = formatTerm(r, false), iStr = formatTerm(i, true);
+    let op = iStr.startsWith("-") ? "-" : "+";
+    let iPart = iStr.startsWith("-") ? iStr.substring(1) : iStr;
+    return `${rStr} ${op} ${iPart}`;
+}
+
+function computeStateVector(sequence, N) {
+    let numStates = Math.pow(2, N);
+    let v = Array(numStates).fill().map(() => ({r:0, i:0}));
+    v[0] = {r:1, i:0}; 
+    
+    for (let column of sequence) {
+        if (column.length === 0) continue;
+        let colMatrix = GATE_MATRICES['I'];
+        for (let gate of column) colMatrix = matMult(colMatrix, GATE_MATRICES[gate]);
+        
+        let nextV = [];
+        for (let i = 0; i < numStates; i++) {
+            let sum = {r:0, i:0};
+            for (let j = 0; j < numStates; j++) sum = add(sum, mult(colMatrix[i][j], v[j]));
+            nextV.push(sum);
+        }
+        v = nextV;
+    }
+    return removeGlobalPhase(v);
+}
+
+function stateToString(v, N) {
+    let terms = [];
+    let numStates = Math.pow(2, N);
+    for (let i = 0; i < numStates; i++) {
+        let fmt = formatComplexExact(v[i]);
+        if (fmt) {
+            let bin = i.toString(2).padStart(N, '0');
+            terms.push(`${(fmt.includes(' + ') || fmt.includes(' - ')) ? `(${fmt})` : fmt}|${bin}⟩`);
+        }
+    }
+    return terms.length === 0 ? "0" : terms.join(' + ').replace(/\+ -/g, '- ');
+}
+
+function statesMatch(v1, v2, N) {
+    let numStates = Math.pow(2, N);
+    for (let i = 0; i < numStates; i++) {
+        if (Math.abs(v1[i].r - v2[i].r) > 1e-4 || Math.abs(v1[i].i - v2[i].i) > 1e-4) return false;
+    }
+    return true;
+}
+
+function getOccupiedQubits(gate) {
+    if (!gate || gate === 'I') return [];
+    if (gate.startsWith('CCX')) {
+        let c1 = parseInt(gate[3]), c2 = parseInt(gate[4]), t = parseInt(gate[5]);
+        let occ = [];
+        for(let i=Math.min(c1, c2, t); i<=Math.max(c1, c2, t); i++) occ.push(i); 
+        return occ;
+    }
+    if (gate.startsWith('CX')) {
+        let c = parseInt(gate[2]), t = parseInt(gate[3]);
+        let occ = [];
+        for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
+        return occ;
+    }
+    return [parseInt(gate.slice(-1))];
+}
+
+function canFit(columnGates, newGate) {
+    let newOcc = getOccupiedQubits(newGate);
+    for(let g of columnGates) {
+        let occ = getOccupiedQubits(g);
+        for(let q of newOcc) { if(occ.includes(q)) return false; }
+    }
+    return true;
+}
+
+function addGateToColumn(colArray, newGate) {
+    if (!newGate || newGate === 'I') return colArray;
+    let newOcc = getOccupiedQubits(newGate);
+    let filtered = colArray.filter(g => {
+        let occ = getOccupiedQubits(g);
+        return !newOcc.some(q => occ.includes(q));
+    });
+    filtered.push(newGate);
+    return filtered;
+}
+
+// --- Bloch Sphere ---
+function calcBlochVector(v, q, N) {
+    let z = 0, x = 0, y = 0;
+    let numStates = Math.pow(2, N);
+    for (let i = 0; i < numStates; i++) {
+        let bit = (i >> (N - 1 - q)) & 1;
+        if (bit === 0) {
+            let j = i ^ (1 << (N - 1 - q));
+            z += (v[i].r**2 + v[i].i**2) - (v[j].r**2 + v[j].i**2);
+            x += 2 * (v[i].r * v[j].r + v[i].i * v[j].i);
+            y += 2 * (v[i].r * v[j].i - v[i].i * v[j].r);
+        }
+    }
+    return {x, y, z};
+}
+
+function drawBlochSphere(canvasId, vec, label) {
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const cx = canvas.width / 2, cy = canvas.height / 2 - 10, R = 55;
+    
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2*Math.PI);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+    
+    ctx.beginPath(); ctx.ellipse(cx, cy, R, R*0.35, 0, 0, 2*Math.PI); ctx.stroke();
+    
+    const proj = (x, y, z) => ({ x: cx + R * (y - 0.5 * x), y: cy + R * (-z + 0.35 * x) });
+    
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    const drawAxis = (p1, p2, txt, pTxt) => {
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText(txt, pTxt.x, pTxt.y);
+    };
+    
+    let pZ1 = proj(0,0,-1), pZ2 = proj(0,0,1);
+    drawAxis(pZ1, pZ2, '|0⟩', {x: pZ2.x - 8, y: pZ2.y - 5}); ctx.fillText('|1⟩', pZ1.x - 8, pZ1.y + 12);
+    
+    let pY1 = proj(0,-1,0), pY2 = proj(0,1,0);
+    drawAxis(pY1, pY2, 'y', {x: pY2.x + 4, y: pY2.y + 4});
+    
+    let pX1 = proj(-1,0,0), pX2 = proj(1,0,0);
+    drawAxis(pX1, pX2, 'x', {x: pX2.x - 12, y: pX2.y + 12});
+    
+    let pv = proj(vec.x, vec.y, vec.z);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(pv.x, pv.y);
+    
+    let len = Math.sqrt(vec.x**2 + vec.y**2 + vec.z**2);
+    ctx.strokeStyle = len < 0.95 ? '#eab308' : '#ec4899'; 
+    ctx.lineWidth = 3; ctx.stroke();
+    
+    ctx.beginPath(); ctx.arc(pv.x, pv.y, 4, 0, 2*Math.PI); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+    
+    ctx.fillStyle = '#cbd5e1'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(label, cx, canvas.height - 10);
+}
+
+// --- UI Logic ---
+let currentMode = ''; 
+let currentLvl = 1;
+let currentP1 = 0;
+let currentP2 = 0;
+
+let numQubits = 1;
+let numCols = 4;
+let activeSet = [];
+let secretCircuits = []; 
+let targetState = [];
+let currentGuess = []; 
+let attempts = 0;
+let gameOver = false;
+
+function buildMenu() {
+    const container = document.getElementById('stages-container');
+    container.innerHTML = '';
+    
+    STAGES.forEach((stage, sIdx) => {
+        let box = document.createElement('div');
+        box.className = 'stage-box';
+        box.innerHTML = `<h3>${stage.title}</h3><p>${stage.desc}</p><div class="menu-row" id="sbg-${sIdx}"></div>`;
+        container.appendChild(box);
+        
+        let bg = document.getElementById(`sbg-${sIdx}`);
+        stage.levels.forEach((lvl, lIdx) => {
+            let btn = document.createElement('button');
+            btn.className = 'menu-btn';
+            
+            if (completedStages.includes(`${sIdx}-${lIdx}`)) {
+                btn.classList.add('completed');
+                btn.innerText = `✓ ${lvl.name.split(':')[0]}`;
+            } else {
+                btn.innerText = lvl.name.split(':')[0];
+            }
+            
+            btn.onclick = () => initGame('STAGE', sIdx, lIdx);
+            bg.appendChild(btn);
+        });
+    });
+}
+
+function showMainMenu() {
+    document.getElementById('game-view').style.display = 'none';
+    buildMenu(); 
+    document.getElementById('main-menu').style.display = 'flex';
+}
+
+function showHint() {
+    document.getElementById('hint-text').classList.remove('hidden');
+    document.getElementById('hint-btn').classList.add('hidden');
+}
+
+function showLesson() {
+    document.getElementById('lesson-text').classList.remove('hidden');
+    document.getElementById('lesson-btn').classList.add('hidden');
+}
+
+function initGame(mode, p1, p2) {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('game-view').style.display = 'flex';
+    
+    currentMode = mode;
+    let instructions = document.getElementById('instructions-text');
+    let submitBtn = document.getElementById('submit-btn');
+    let targetBox = document.getElementById('target-container');
+    let liveBox = document.getElementById('live-state-container');
+    
+    submitBtn.classList.remove('hidden');
+    document.getElementById('next-btn').classList.add('hidden');
+    document.getElementById('again-btn').classList.add('hidden');
+    submitBtn.disabled = false;
+    
+    if (mode === 'STAGE') {
+        currentP1 = p1;
+        currentP2 = p2;
+        let stage = STAGES[p1];
+        let lvl = stage.levels[p2];
+        numQubits = stage.qubits;
+        numCols = stage.cols;
+        activeSet = stage.set;
+        secretCircuits = lvl.circuits;
+        
+        let isStrict = (p1 >= 4); 
+        let rulesText = isStrict ? "<br><span style='color:#ef4444; font-size:0.85rem; font-weight:bold;'>Strict Mode: A canonical implementation is required!</span>" : "";
+        let lessonHTML = lvl.lesson ? `<button id="lesson-btn" class="hint-btn" style="background:#059669;" onclick="showLesson()">Read Lesson</button><div id="lesson-text" class="lesson-text hidden">${lvl.lesson}</div>` : "";
+
+        instructions.innerHTML = `<b>${stage.title}: ${lvl.name}</b>${rulesText}<br>
+                                  <button id="hint-btn" class="hint-btn" onclick="showHint()">Show Hint</button>
+                                  ${lessonHTML}
+                                  <div id="hint-text" class="hint-text hidden">Hint: ${lvl.hint}</div>`;
+        targetBox.style.display = 'block';
+        liveBox.style.display = 'none';
+        
+    } else if (mode === 'RANDOM') {
+        currentLvl = p1;
+        numQubits = LEVELS[p1].q;
+        numCols = LEVELS[p1].g;
+        activeSet = LEVELS[p1].set;
+        
+        let generatedCircuit = [];
+        let activeLength = Math.floor(Math.random() * (numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
+        for (let i = 0; i < numCols; i++) {
+            if (i < activeLength) {
+                let col = [activeSet[Math.floor(Math.random() * activeSet.length)]];
+                for(let a=0; a<numQubits-1; a++) {
+                    if(Math.random() > 0.5) {
+                        let gNext = activeSet[Math.floor(Math.random() * activeSet.length)];
+                        if(canFit(col, gNext)) col.push(gNext);
+                    }
+                }
+                generatedCircuit.push(col);
+            } else generatedCircuit.push([]);
+        }
+        secretCircuits = [generatedCircuit];
+        
+        instructions.innerHTML = `<b>Random Puzzle</b><br>Guess the circuit. Equivalent circuits win!`;
+        targetBox.style.display = 'block';
+        liveBox.style.display = 'none';
+        
+    } else if (mode === 'FREEPLAY') {
+        numQubits = p1;
+        numCols = 8;
+        activeSet = LEVELS[p1].set;
+        secretCircuits = [[]];
+        
+        instructions.innerHTML = `<b>Sandbox Free Play (${numQubits} Qubit${numQubits>1?'s':''})</b><br>Experiment freely. Click evaluate to take a snapshot of the state!`;
+        targetBox.style.display = 'none';
+        liveBox.style.display = 'block';
+    }
+    
+    generateMatrices(numQubits);
+    if (numQubits === 3) document.getElementById('board').classList.add('hard-mode');
+    else document.getElementById('board').classList.remove('hard-mode');
+    
+    if (mode !== 'FREEPLAY') {
+        targetState = computeStateVector(secretCircuits[0], numQubits);
+        document.getElementById('target-amplitudes').innerText = "|ψ⟩ = " + stateToString(targetState, numQubits);
+    }
+    
+    currentGuess = Array(numCols).fill().map(() => []);
+    attempts = 0;
+    gameOver = false;
+    document.getElementById('message').innerText = "";
+    
+    renderDynamicCanvases();
+    renderPalette();
+    renderBoard(); 
+    updateBlochSpheres();
+}
+
+function getColumnHTML(gates) {
+    let html = '';
+    for(let q=0; q<numQubits; q++) {
+        let top = ((q + 0.5) / numQubits * 100) + '%';
+        html += `<div class="wire" style="top: ${top}"></div>`;
+    }
+    for(let type of gates) {
+        if (type.startsWith('CCX')) {
+            let c1 = parseInt(type[3]), c2 = parseInt(type[4]), t = parseInt(type[5]);
+            let c1Top = ((c1 + 0.5) / numQubits * 100) + '%';
+            let c2Top = ((c2 + 0.5) / numQubits * 100) + '%';
+            let tTop = ((t + 0.5) / numQubits * 100) + '%';
+            let minQ = Math.min(c1, c2, t), maxQ = Math.max(c1, c2, t);
+            let lineTop = ((minQ + 0.5) / numQubits * 100) + '%';
+            let lineHeight = ((maxQ - minQ) / numQubits * 100) + '%';
+            
+            html += `<div class="ctrl-dot" style="top: ${c1Top}"></div>`;
+            html += `<div class="ctrl-dot" style="top: ${c2Top}"></div>`;
+            html += `<div class="tgt-cross" style="top: ${tTop}">⊕</div>`;
+            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+        } else if (type.startsWith('CX')) {
+            let c = parseInt(type[2]), t = parseInt(type[3]);
+            let cTop = ((c + 0.5) / numQubits * 100) + '%', tTop = ((t + 0.5) / numQubits * 100) + '%';
+            let lineTop = ((Math.min(c, t) + 0.5) / numQubits * 100) + '%';
+            let lineHeight = (Math.abs(c - t) / numQubits * 100) + '%';
+            
+            html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
+            html += `<div class="tgt-cross" style="top: ${tTop}">⊕</div>`;
+            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+        } else {
+            let gateName = type.replace(/\d/g, ''); 
+            let q = parseInt(type.slice(-1));
+            let top = ((q + 0.5) / numQubits * 100) + '%';
+            html += `<div class="gate-box" style="top: ${top}">${gateName}</div>`;
+        }
+    }
+    return html;
+}
+
+function renderDynamicCanvases() {
+    const wrap = document.getElementById('canvas-wrapper');
+    wrap.innerHTML = '';
+    for(let q=0; q<numQubits; q++){
+        wrap.innerHTML += `<canvas id="bloch-${q}" width="160" height="160"></canvas>`;
+    }
+}
+
+function renderPalette() {
+    const palette = document.getElementById('palette');
+    palette.innerHTML = '';
+    const h = Math.max(60, numQubits * 30);
+    
+    activeSet.forEach(type => {
+        const item = document.createElement('div');
+        item.className = 'palette-item';
+        item.style.height = `${h}px`;
+        item.draggable = true;
+        item.innerHTML = getColumnHTML([type]);
+        
+        item.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', type));
+        item.addEventListener('click', () => {
+            if(gameOver) return;
+            let reqQubits = getOccupiedQubits(type);
+            let latestCol = -1;
+            
+            for (let c = 0; c < numCols; c++) {
+                for (let g of currentGuess[c]) {
+                    if (reqQubits.some(q => getOccupiedQubits(g).includes(q))) latestCol = c;
+                }
+            }
+            
+            let targetCol = latestCol + 1;
+            if (targetCol < numCols) {
+                currentGuess[targetCol].push(type);
+                updateActiveRow();
+            } else {
+                let msg = document.getElementById('message');
+                msg.innerText = "No space left for this gate!";
+                msg.style.color = "#ef4444";
+                setTimeout(() => { if(!gameOver) msg.innerText = ""; }, 1500);
+            }
+        });
+        palette.appendChild(item);
+    });
+}
+
+function renderBoard() {
+    const board = document.getElementById('board');
+    board.innerHTML = ''; 
+    const rowHeight = Math.max(60, numQubits * 30);
+    const sub = ['₀', '₁', '₂'];
+    
+    const numRows = currentMode === 'FREEPLAY' ? 1 : 6;
+    
+    for (let r = 0; r < numRows; r++) {
+        const wrap = document.createElement('div');
+        wrap.className = `row-wrapper ${r === attempts ? 'active' : ''}`;
+        wrap.id = `row-${r}`;
+        
+        const circuitRow = document.createElement('div');
+        circuitRow.className = 'circuit-row';
+        circuitRow.style.height = `${rowHeight}px`;
+        
+        const labels = document.createElement('div');
+        labels.className = 'qubit-labels';
+        let lbls = '';
+        for(let q=0; q<numQubits; q++) lbls += `<span>q${sub[q]}</span>`;
+        labels.innerHTML = lbls;
+        circuitRow.appendChild(labels);
+        
+        for (let c = 0; c < numCols; c++) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.id = `slot-${r}-${c}`;
+            slot.innerHTML = getColumnHTML([]); 
+            
+            slot.addEventListener('dragover', (e) => {
+                if (r === attempts && !gameOver) { e.preventDefault(); slot.classList.add('drag-over'); }
+            });
+            slot.addEventListener('dragleave', () => {
+                if (r === attempts && !gameOver) slot.classList.remove('drag-over');
+            });
+            slot.addEventListener('drop', (e) => {
+                if (r === attempts && !gameOver) {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    const type = e.dataTransfer.getData('text/plain');
+                    if (type) {
+                        currentGuess[c] = addGateToColumn(currentGuess[c], type);
+                        updateActiveRow();
+                    }
+                }
+            });
+            slot.addEventListener('click', () => {
+                if (r === attempts && !gameOver && currentGuess[c].length > 0) {
+                    currentGuess[c].pop(); 
+                    updateActiveRow();
+                }
+            });
+            
+            circuitRow.appendChild(slot);
+        }
+        wrap.appendChild(circuitRow);
+        board.appendChild(wrap);
+    }
+}
+
+function updateActiveRow() {
+    for (let c = 0; c < numCols; c++) {
+        const slot = document.getElementById(`slot-${attempts}-${c}`);
+        if(slot) slot.innerHTML = getColumnHTML(currentGuess[c]);
+    }
+    updateBlochSpheres();
+    
+    if (currentMode === 'FREEPLAY') {
+        let v = computeStateVector(currentGuess, numQubits);
+        document.getElementById('live-state-amplitudes').innerText = "|ψ⟩ = " + stateToString(v, numQubits);
+    }
+}
+
+function updateBlochSpheres() {
+    let v = computeStateVector(currentGuess, numQubits);
+    const sub = ['₀', '₁', '₂'];
+    for(let q=0; q<numQubits; q++) {
+        drawBlochSphere(`bloch-${q}`, calcBlochVector(v, q, numQubits), `Qubit ${q} (q${sub[q]})`);
+    }
+}
+
+function showRevealCircuit(title, color, targetCircuit) {
+    const finalWrap = document.createElement('div');
+    finalWrap.className = 'row-wrapper';
+    finalWrap.style.marginTop = '10px';
+    finalWrap.style.borderColor = color;
+    
+    const label = document.createElement('div');
+    label.className = 'original-label';
+    label.style.backgroundColor = color;
+    label.innerText = title;
+    finalWrap.appendChild(label);
+    
+    const finalRow = document.createElement('div');
+    finalRow.className = 'circuit-row';
+    finalRow.style.height = `${Math.max(60, numQubits * 30)}px`;
+    
+    targetCircuit.forEach(gates => {
+        const s = document.createElement('div');
+        s.className = 'slot';
+        s.innerHTML = getColumnHTML(gates);
+        finalRow.appendChild(s);
+    });
+    
+    finalWrap.appendChild(finalRow);
+    document.getElementById('board').appendChild(finalWrap);
+}
+
+function nextStage() {
+    if (currentP2 + 1 < STAGES[currentP1].levels.length) {
+        initGame('STAGE', currentP1, currentP2 + 1);
+    } else if (currentP1 + 1 < STAGES.length) {
+        initGame('STAGE', currentP1 + 1, 0); 
+    } else {
+        showMainMenu(); 
+    }
+}
+
+function playAgain() {
+    if (currentMode === 'RANDOM') initGame('RANDOM', currentLvl);
+    else if (currentMode === 'STAGE') initGame('STAGE', currentP1, currentP2);
+}
+
+function submitGuess() {
+    if (gameOver) return;
+    
+    if (currentMode === 'FREEPLAY') {
+        const userState = computeStateVector(currentGuess, numQubits);
+        const ampResult = document.createElement('div');
+        ampResult.className = 'amplitudes-result';
+        ampResult.innerText = "↳ Snapshot |ψ⟩ = " + stateToString(userState, numQubits);
+        document.getElementById(`row-${attempts}`).appendChild(ampResult);
+        return; 
+    }
+    
+    const wrap = document.getElementById(`row-${attempts}`);
+    wrap.classList.remove('active');
+    
+    // Strict Mode: Multi-set DAG Checking
+    // By checking if the user used the EXACT same set of gates and achieved the exact state, 
+    // we bypass column-spacing issues and support all topological/parallel combinations.
+    let userMultiset = getGateMultiset(currentGuess);
+    let validMultisets = secretCircuits.map(c => getGateMultiset(c));
+    let matchedMultiset = validMultisets.includes(userMultiset);
+    
+    // Fallback: If they matched a multiset, let's pick the exact canonical circuit 
+    // that matches their layout best so we can color as much green as possible.
+    let matchedCircuit = null;
+    let bestMatchCount = -1;
+    let bestMatchCircuit = secretCircuits[0];
+
+    for (let possibleCircuit of secretCircuits) {
+        let currentMatchCount = 0;
+        for (let c = 0; c < numCols; c++) {
+            let guessStr = [...currentGuess[c]].sort().join(',');
+            let secretStr = possibleCircuit[c] ? [...possibleCircuit[c]].sort().join(',') : "";
+            if (guessStr === secretStr) {
+                currentMatchCount++;
+            }
+        }
+        if (currentMatchCount > bestMatchCount) {
+            bestMatchCount = currentMatchCount;
+            bestMatchCircuit = possibleCircuit;
+        }
+        if (currentMatchCount === numCols) {
+            matchedCircuit = possibleCircuit;
+            break;
+        }
+    }
+
+    let exactMatches = matchedCircuit ? numCols : bestMatchCount;
+    let compareCircuit = matchedCircuit || bestMatchCircuit;
+    
+    for (let c = 0; c < numCols; c++) {
+        const slot = document.getElementById(`slot-${attempts}-${c}`);
+        let guessStr = [...currentGuess[c]].sort().join(',');
+        let secretStr = compareCircuit[c] ? [...compareCircuit[c]].sort().join(',') : "";
+        
+        if (guessStr === secretStr) {
+            slot.classList.add('correct');
+        } else {
+            slot.classList.add('absent');
+        }
+    }
+    
+    const userState = computeStateVector(currentGuess, numQubits);
+    let hasWon = statesMatch(userState, targetState, numQubits);
+    
+    let isStrict = (currentMode === 'STAGE' && currentP1 >= 4);
+    if (isStrict && hasWon && !matchedMultiset) {
+        hasWon = false; 
+        let msg = document.getElementById('message');
+        msg.innerText = "Equivalent state found, but exact canonical algorithm required!";
+        msg.style.color = "#eab308";
+        setTimeout(() => { if(!gameOver) msg.innerText = ""; }, 2500);
+    }
+    
+    const ampResult = document.createElement('div');
+    ampResult.className = 'amplitudes-result';
+    ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, numQubits);
+    wrap.appendChild(ampResult);
+    
+    if (hasWon) {
+        gameOver = true;
+        document.getElementById('submit-btn').classList.add('hidden');
+        
+        // If they won via valid multiset (parallelization), color all their valid blocks green!
+        if (isStrict && matchedMultiset) {
+            for (let c = 0; c < numCols; c++) {
+                const slot = document.getElementById(`slot-${attempts}-${c}`);
+                if (currentGuess[c].length > 0) {
+                    slot.classList.remove('absent');
+                    slot.classList.add('correct');
+                }
+            }
+        }
+        
+        if (currentMode === 'STAGE') {
+            let winMsg = (matchedMultiset || matchedCircuit) ? "Stage Cleared!" : "Equivalent Circuit Found! Stage Cleared!";
+            markStageCompleted(currentP1, currentP2);
+            
+            // Check for true 100% completion
+            let totalLevels = 0;
+            STAGES.forEach(s => totalLevels += s.levels.length);
+            let allCompleted = (completedStages.length >= totalLevels);
+            
+            if (currentP1 + 1 < STAGES.length || currentP2 + 1 < STAGES[currentP1].levels.length) {
+                document.getElementById('next-btn').classList.remove('hidden');
+            } 
+            
+            if (allCompleted) {
+                document.getElementById('message').innerText = winMsg + " 🎉 All Stages Cleared! 🎉";
+            } else if (currentP1 === STAGES.length - 1 && currentP2 === STAGES[currentP1].levels.length - 1) {
+                document.getElementById('message').innerText = winMsg + " Final Stage Complete!";
+            } else {
+                document.getElementById('message').innerText = winMsg;
+            }
+            
+            document.getElementById('message').style.color = (matchedMultiset || matchedCircuit) ? "#22c55e" : "#3b82f6";
+            
+            if (!matchedMultiset && !matchedCircuit) {
+                showRevealCircuit("A Canonical Circuit Was:", "#3b82f6", secretCircuits[0]);
+            }
+            
+            document.getElementById('again-btn').innerText = "Play Again";
+            document.getElementById('again-btn').classList.remove('hidden');
+            
+        } else {
+            document.getElementById('message').innerText = matchedCircuit ? "Perfect Match! You won!" : "Equivalent Circuit Found! You won!";
+            document.getElementById('message').style.color = matchedCircuit ? "#22c55e" : "#3b82f6";
+            if (!matchedCircuit) showRevealCircuit("The Original Circuit Was:", "#3b82f6", secretCircuits[0]);
+            
+            document.getElementById('again-btn').innerText = "Play Again";
+            document.getElementById('again-btn').classList.remove('hidden');
+        }
+    } else {
+        attempts++;
+        if (attempts === 6) {
+            gameOver = true;
+            document.getElementById('submit-btn').classList.add('hidden');
+            document.getElementById('message').innerText = "Measurement collapsed! Game Over.";
+            document.getElementById('message').style.color = "#ef4444";
+            
+            if (currentMode === 'STAGE') {
+                showRevealCircuit("A Canonical Target Was:", "#ef4444", secretCircuits[0]);
+                document.getElementById('again-btn').innerText = "Retry Stage";
+                document.getElementById('again-btn').classList.remove('hidden');
+            } else {
+                showRevealCircuit("The Target Circuit Was:", "#ef4444", secretCircuits[0]);
+                document.getElementById('again-btn').innerText = "Play Again";
+                document.getElementById('again-btn').classList.remove('hidden');
+            }
+        } else {
+            currentGuess = Array(numCols).fill().map(() => []);
+            document.getElementById(`row-${attempts}`).classList.add('active');
+            updateBlochSpheres();
+        }
+    }
+}
+
+// Boot up
+buildMenu();
+</script>
+</body>
+</html>
