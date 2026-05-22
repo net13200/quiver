@@ -452,9 +452,6 @@ function getStage7_2Circuits() {
         [['H2'], ['H0', 'H1']]
     ];
     
-    // We also need to sandwich the cores in H1 and H2 for the target side, if not already in prefix/suffix.
-    // The strict multiset engine allows extreme flexibility as long as the state matches and multisets align.
-    // We will just provide the chronological unmerged baseline here and let the DAG multiset engine catch all the brilliant parallel combos.
     circuits.push([['X2'], ['H1'], ['CX12'], ['H0'], ['H1'], ['H2'], ['CX01'], ['CX02'], ['H0'], ['H1'], ['H2']]);
     circuits.push([['X2'], ['H1'], ['CX12'], ['H0', 'H1', 'H2'], ['CX01'], ['CX02'], ['H0', 'H1', 'H2']]);
     
@@ -803,16 +800,26 @@ function formatTerm(val, isImaginary) {
     let sign = val < 0 ? "-" : ""; let v = Math.abs(val); let num = "";
     const eps = 1e-4;
     
+    let cp8 = Math.cos(Math.PI/8);
+    let sp8 = Math.sin(Math.PI/8);
+
     if (Math.abs(v - 1) < eps) num = "1";
     else if (Math.abs(v - 0.5) < eps) num = "1/2";
     else if (Math.abs(v - 1/Math.sqrt(2)) < eps) num = "1/√2";
     else if (Math.abs(v - 1/(2*Math.sqrt(2))) < eps) num = "1/2√2";
     else if (Math.abs(v - 0.25) < eps) num = "1/4";
+    else if (Math.abs(v - cp8) < eps) num = "cos(π/8)";
+    else if (Math.abs(v - sp8) < eps) num = "sin(π/8)";
+    else if (Math.abs(v - cp8/Math.sqrt(2)) < eps) num = "cos(π/8)/√2";
+    else if (Math.abs(v - sp8/Math.sqrt(2)) < eps) num = "sin(π/8)/√2";
+    else if (Math.abs(v - cp8/2) < eps) num = "cos(π/8)/2";
+    else if (Math.abs(v - sp8/2) < eps) num = "sin(π/8)/2";
     else num = v.toFixed(2);
     
     if (isImaginary) {
         if (num === "1") return sign + "i";
-        if (num.includes("/")) return sign + num.replace("1/", "i/");
+        if (num.startsWith("1/")) return sign + num.replace("1/", "i/");
+        if (num.includes("/")) return sign + num.replace("/", "i/");
         return sign + num + "i";
     }
     return sign + num;
