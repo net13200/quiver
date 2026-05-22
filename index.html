@@ -304,6 +304,7 @@
                     <div class="guide-card"><b>RZ (Phase)</b><span class="math-expr">RZ(θ)|0⟩ = |0⟩<br>RZ(θ)|1⟩ = e^{iθ}|1⟩</span></div>
                     <div class="guide-card"><b>CP (Controlled-Phase)</b><span class="math-expr">Adds phase θ if both are |1⟩.</span></div>
                     <div class="guide-card" style="grid-column: 1/-1;"><b>CX (CNOT) & CCX (Toffoli)</b><span class="math-expr">Flips Target (⊕) if all Controls (•) are |1⟩.</span></div>
+                    <div class="guide-card" style="grid-column: 1/-1;"><b>SWAP</b><span class="math-expr">SWAP|x,y⟩ = |y,x⟩<br>Exchanges the states of two qubits (×).</span></div>
                 </div>
             </div>
         </div>
@@ -324,8 +325,8 @@ function markStageCompleted(sIdx, lIdx) {
 // --- Configuration & Content ---
 const LEVELS = {
     1: { q: 1, g: 4, minActive: 2, set: ['X0', 'Y0', 'H0', 'Z0', 'SX0', 'RZ0'] },
-    2: { q: 2, g: 6, minActive: 3, set: ['X0', 'X1', 'Y0', 'Y1', 'H0', 'H1', 'Z0', 'Z1', 'SX0', 'SX1', 'CX01', 'CX10', 'RZ0', 'RZ1'] },
-    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120', 'RZ0', 'RZ1', 'RZ2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20'] }
+    2: { q: 2, g: 6, minActive: 3, set: ['X0', 'X1', 'Y0', 'Y1', 'H0', 'H1', 'Z0', 'Z1', 'SX0', 'SX1', 'CX01', 'CX10', 'RZ0', 'RZ1', 'SWAP01'] },
+    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120', 'RZ0', 'RZ1', 'RZ2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20', 'SWAP01', 'SWAP12', 'SWAP02'] }
 };
 
 // Valid symmetrical CSWAP implementations
@@ -499,25 +500,22 @@ function getStage8_4Circuits() {
     return circuits;
 }
 
-// Stage 9.2 dynamically handles symmetries for 2-qubit QFT
+// Stage 9.2 dynamically handles symmetries for 2-qubit QFT using Native SWAP
 function getStage9_2Circuits() {
     return [
-        [['H0'], ['CP_PI2_10'], ['H1'], ['CX01'], ['CX10'], ['CX01']],
-        [['H0'], ['CP_PI2_01'], ['H1'], ['CX01'], ['CX10'], ['CX01']],
-        [['H0'], ['CP_PI2_10'], ['H1'], ['CX10'], ['CX01'], ['CX10']],
-        [['H0'], ['CP_PI2_01'], ['H1'], ['CX10'], ['CX01'], ['CX10']]
+        [['H0'], ['CP_PI2_10'], ['H1'], ['SWAP01']],
+        [['H0'], ['CP_PI2_01'], ['H1'], ['SWAP01']]
     ];
 }
 
-// Stage 9.3 dynamically handles symmetries for 3-qubit QFT
+// Stage 9.3 dynamically handles symmetries for 3-qubit QFT using Native SWAP
 function getStage9_3Circuits() {
     let circuits = [];
     let cp10 = ['CP_PI2_10', 'CP_PI2_01'];
     let cp20 = ['CP_PI4_20', 'CP_PI4_02'];
     let cp21 = ['CP_PI2_21', 'CP_PI2_12'];
     let swap02 = [
-        [['CX02'], ['CX20'], ['CX02']],
-        [['CX20'], ['CX02'], ['CX20']]
+        [['SWAP02']]
     ];
     cp10.forEach(c1 => {
         cp20.forEach(c2 => {
@@ -610,8 +608,8 @@ const STAGES = [
         ]
     },
     {
-        title: "Stage 5: SWAP Gate",
-        desc: "Construct SWAP and Controlled-SWAP (Fredkin) gates. (Strict Mode)",
+        title: "Stage 5: Build a SWAP Gate",
+        desc: "Construct SWAP and Controlled-SWAP (Fredkin) gates using CNOTs. (Strict Mode)",
         qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120'],
         levels: [
             { 
@@ -718,7 +716,7 @@ const STAGES = [
     {
         title: "Stage 9: Quantum Fourier Transform",
         desc: "Shift into the phase basis (XY plane) to encode data as angles. (Strict Mode)",
-        qubits: 3, cols: 9, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20'],
+        qubits: 3, cols: 9, set: ['X0','X1','X2', 'H0','H1','H2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20', 'SWAP01', 'SWAP12', 'SWAP02'],
         levels: [
             {
                 name: "9.1: 1-Qubit QFT (Phase Basis)",
@@ -729,7 +727,7 @@ const STAGES = [
             {
                 name: "9.2: 2-Qubit QFT",
                 circuits: getStage9_2Circuits(),
-                hint: "Apply H to Q0, then a Controlled-Phase (π/2) from Q1 to Q0. Apply H to Q1, then SWAP them!",
+                hint: "Apply H to Q0, then a Controlled-Phase (π/2) from Q1 to Q0. Apply H to Q1, then use the SWAP gate!",
                 lesson: "<b>The Mechanism:</b> To QFT multiple qubits, we apply H to the first qubit to put it in the XY plane, then use Controlled-Phase (CP) gates from the lower qubits to add fractional phase rotations. Finally, we SWAP the qubits because the QFT naturally outputs the binary fractions in reverse order.<br><br><b>Intuition:</b> Think of the qubits as hands on a clock. The least significant bit spins the fastest. By shifting to the Fourier regime, algorithms like Shor's Algorithm can find the 'period' (or frequency) of a mathematical function by watching how fast these phases spin!"
             },
             {
@@ -775,6 +773,13 @@ const CX2_REV = [
     [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}],
     [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}],
     [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}]
+];
+
+const SWAP2 = [
+    [{r:1,i:0}, {r:0,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}]
 ];
 
 function addMat(A, B) {
@@ -854,11 +859,26 @@ function generateMatrices(N) {
     if (N >= 2) {
         if (N === 2) {
             GATE_MATRICES['CX01'] = CX2; GATE_MATRICES['CX10'] = CX2_REV;
+            GATE_MATRICES['SWAP01'] = SWAP2; GATE_MATRICES['SWAP10'] = SWAP2;
         } else if (N === 3) {
             GATE_MATRICES['CX01'] = kron(CX2, I2); GATE_MATRICES['CX10'] = kron(CX2_REV, I2);
             GATE_MATRICES['CX12'] = kron(I2, CX2); GATE_MATRICES['CX21'] = kron(I2, CX2_REV);
             GATE_MATRICES['CX02'] = addMat(kronN([P0, I2, I2]), kronN([P1, I2, X2]));
             GATE_MATRICES['CX20'] = addMat(kronN([I2, I2, P0]), kronN([X2, I2, P1]));
+            
+            GATE_MATRICES['SWAP01'] = kron(SWAP2, I2); GATE_MATRICES['SWAP10'] = kron(SWAP2, I2);
+            GATE_MATRICES['SWAP12'] = kron(I2, SWAP2); GATE_MATRICES['SWAP21'] = kron(I2, SWAP2);
+            
+            let SWAP02_mat = Array(8).fill().map(()=>Array(8).fill({r:0,i:0}));
+            for(let i=0; i<8; i++) {
+                let b0 = (i >> 2) & 1;
+                let b1 = (i >> 1) & 1;
+                let b2 = i & 1;
+                let swapped = (b2 << 2) | (b1 << 1) | b0;
+                SWAP02_mat[i][swapped] = {r:1,i:0};
+            }
+            GATE_MATRICES['SWAP02'] = SWAP02_mat;
+            GATE_MATRICES['SWAP20'] = SWAP02_mat;
             
             let CCX012 = Array(8).fill().map((_, i) => {
                 let row = Array(8).fill().map(() => ({r:0, i:0}));
@@ -1004,6 +1024,13 @@ function getOccupiedQubits(gate) {
     }
     if (gate.startsWith('CX')) {
         let c = parseInt(gate[2]), t = parseInt(gate[3]);
+        let occ = [];
+        for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
+        return occ;
+    }
+    if (gate.startsWith('SWAP')) {
+        let parts = gate.replace('SWAP', '');
+        let c = parseInt(parts[0]), t = parseInt(parts[1]);
         let occ = [];
         for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
         return occ;
@@ -1311,6 +1338,18 @@ function getColumnHTML(gates) {
             
             html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
             html += `<div class="tgt-cross" style="top: ${tTop}">⊕</div>`;
+            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+        } else if (type.startsWith('SWAP')) {
+            let parts = type.replace('SWAP', '');
+            let c = parseInt(parts[0]), t = parseInt(parts[1]);
+            let cTop = ((c + 0.5) / numQubits * 100) + '%';
+            let tTop = ((t + 0.5) / numQubits * 100) + '%';
+            let minQ = Math.min(c, t), maxQ = Math.max(c, t);
+            let lineTop = ((minQ + 0.5) / numQubits * 100) + '%';
+            let lineHeight = ((maxQ - minQ) / numQubits * 100) + '%';
+
+            html += `<div class="tgt-cross" style="top: ${cTop}">×</div>`;
+            html += `<div class="tgt-cross" style="top: ${tTop}">×</div>`;
             html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else if (type.startsWith('RZ_')) {
             let parts = type.split('_'); 
