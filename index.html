@@ -130,6 +130,10 @@
             align-items: center;
             line-height: 1.1;
         }
+
+        .cp-gate {
+            background: #8b5cf6 !important; /* Purple for Controlled-Phase */
+        }
         
         .ctrl-dot {
             position: absolute; width: 12px; height: 12px; background: var(--cx-color); 
@@ -295,6 +299,7 @@
                     <div class="guide-card"><b>H (Hadamard)</b><span class="math-expr">H|0⟩ = 1/√2(|0⟩+|1⟩)<br>H|1⟩ = 1/√2(|0⟩-|1⟩)</span></div>
                     <div class="guide-card"><b>SX (√X Gate)</b><span class="math-expr">SX|0⟩ = ½(1+i)|0⟩ + ½(1-i)|1⟩<br>SX|1⟩ = ½(1-i)|0⟩ + ½(1+i)|1⟩</span></div>
                     <div class="guide-card"><b>RZ (Phase)</b><span class="math-expr">RZ(θ)|0⟩ = |0⟩<br>RZ(θ)|1⟩ = e^{iθ}|1⟩</span></div>
+                    <div class="guide-card"><b>CP (Controlled-Phase)</b><span class="math-expr">Adds phase θ if both are |1⟩.</span></div>
                     <div class="guide-card" style="grid-column: 1/-1;"><b>CX (CNOT) & CCX (Toffoli)</b><span class="math-expr">Flips Target (⊕) if all Controls (•) are |1⟩.</span></div>
                 </div>
             </div>
@@ -461,6 +466,39 @@ function getStage7_2Circuits() {
                 if (p.length + c.length + s.length <= 8) {
                     circuits.push([...p, ...c, ...s]);
                 }
+            });
+        });
+    });
+    return circuits;
+}
+
+// Stage 9.2 dynamically handles symmetries for 2-qubit QFT
+function getStage9_2Circuits() {
+    return [
+        [['H0'], ['CP_PI2_10'], ['H1'], ['CX01'], ['CX10'], ['CX01']],
+        [['H0'], ['CP_PI2_01'], ['H1'], ['CX01'], ['CX10'], ['CX01']],
+        [['H0'], ['CP_PI2_10'], ['H1'], ['CX10'], ['CX01'], ['CX10']],
+        [['H0'], ['CP_PI2_01'], ['H1'], ['CX10'], ['CX01'], ['CX10']]
+    ];
+}
+
+// Stage 9.3 dynamically handles symmetries for 3-qubit QFT
+function getStage9_3Circuits() {
+    let circuits = [];
+    let cp10 = ['CP_PI2_10', 'CP_PI2_01'];
+    let cp20 = ['CP_PI4_20', 'CP_PI4_02'];
+    let cp21 = ['CP_PI2_21', 'CP_PI2_12'];
+    let swap02 = [
+        [['CX02'], ['CX20'], ['CX02']],
+        [['CX20'], ['CX02'], ['CX20']]
+    ];
+    cp10.forEach(c1 => {
+        cp20.forEach(c2 => {
+            cp21.forEach(c3 => {
+                swap02.forEach(sw => {
+                    circuits.push([['H0'], [c1], [c2], ['H1'], [c3], ['H2'], ...sw]);
+                    circuits.push([['H0'], [c2], [c1], ['H1'], [c3], ['H2'], ...sw]);
+                });
             });
         });
     });
@@ -643,6 +681,31 @@ const STAGES = [
                 lesson: "<b>The Mechanism:</b> Z-rotations commute, meaning their angles simply add together! π/4 + π/4 + π/2 exactly equals π. An RZ(π) gate is equivalent to a Pauli-Z gate. So H -> (T + T + S) -> H is exactly mathematically identical to H -> Z -> H, which equals X!<br><br><b>Why it matters:</b> Because T gates are highly susceptible to noise, advanced quantum error correction schemes spend massive resources on 'Magic State Distillation' just to execute a single reliable T gate. Knowing how to combine and compile these phase rotations optimally determines how fast a quantum program can run before decoherence destroys it."
             }
         ]
+    },
+    {
+        title: "Stage 9: Quantum Fourier Transform",
+        desc: "Shift into the phase basis (XY plane) to encode data as angles. (Strict Mode)",
+        qubits: 3, cols: 9, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20'],
+        levels: [
+            {
+                name: "9.1: 1-Qubit QFT (Phase Basis)",
+                circuits: [[['X0'], ['H0']]],
+                hint: "Start with |1⟩ (using an X gate), then apply a 1-qubit QFT, which is literally just a single Hadamard gate.",
+                lesson: "<b>The Mechanism:</b> The Quantum Fourier Transform converts data from the computational (Z) basis into the phase (XY) basis. For a single qubit, this is exactly what the Hadamard gate does! It maps |0⟩ to |+⟩ (phase 0) and |1⟩ to |-⟩ (phase π).<br><br><b>Intuition:</b> In the normal Z-basis, information is stored as pure probabilities (0 or 1). In the XY-plane (Fourier regime), information is encoded as <i>angles of rotation</i> around the equator. This allows us to use phase-shifts to do powerful math!"
+            },
+            {
+                name: "9.2: 2-Qubit QFT",
+                circuits: getStage9_2Circuits(),
+                hint: "Apply H to Q0, then a Controlled-Phase (π/2) from Q1 to Q0. Apply H to Q1, then SWAP them!",
+                lesson: "<b>The Mechanism:</b> To QFT multiple qubits, we apply H to the first qubit to put it in the XY plane, then use Controlled-Phase (CP) gates from the lower qubits to add fractional phase rotations. Finally, we SWAP the qubits because the QFT naturally outputs the binary fractions in reverse order.<br><br><b>Intuition:</b> Think of the qubits as hands on a clock. The least significant bit spins the fastest. By shifting to the Fourier regime, algorithms like Shor's Algorithm can find the 'period' (or frequency) of a mathematical function by watching how fast these phases spin!"
+            },
+            {
+                name: "9.3: 3-Qubit QFT",
+                circuits: getStage9_3Circuits(),
+                hint: "H on Q0, CP(π/2) Q1->Q0, CP(π/4) Q2->Q0. Then H on Q1, CP(π/2) Q2->Q1. Finally H on Q2, and SWAP Q0 and Q2.",
+                lesson: "<b>The Mechanism:</b> The full QFT cascades H and increasingly smaller CP gates. Each subsequent qubit adds a finer and finer angle (π/2, π/4, π/8...) to the target. It perfectly maps a binary number |x⟩ into a phase state where each qubit's angle represents a fraction of a full circle.<br><br><b>Why it matters:</b> This is the heart of Quantum Phase Estimation and Shor's Algorithm. By working in this Fourier regime (the XY plane), a quantum computer can evaluate the global properties of a function exponentially faster than any classical supercomputer ever could!"
+            }
+        ]
     }
 ];
 
@@ -779,6 +842,23 @@ function generateMatrices(N) {
                 row[j] = {r:1, i:0}; return row;
             }); GATE_MATRICES['CCX120'] = CCX120;
         }
+        
+        // Controlled-Phase Gates for QFT
+        for (let ctrl = 0; ctrl < N; ctrl++) {
+            for (let targ = 0; targ < N; targ++) {
+                if (ctrl === targ) continue;
+                for (let [suffix, val] of Object.entries(rzVals)) {
+                    let mat = Array(Math.pow(2,N)).fill().map(() => Array(Math.pow(2,N)).fill({r:0, i:0}));
+                    for (let i = 0; i < Math.pow(2,N); i++) {
+                        let bitC = (i >> (N - 1 - ctrl)) & 1;
+                        let bitT = (i >> (N - 1 - targ)) & 1;
+                        if (bitC === 1 && bitT === 1) mat[i][i] = val;
+                        else mat[i][i] = {r:1, i:0};
+                    }
+                    GATE_MATRICES[`CP_${suffix}_${ctrl}${targ}`] = mat;
+                }
+            }
+        }
     }
 }
 
@@ -895,6 +975,13 @@ function getOccupiedQubits(gate) {
     }
     if (gate.startsWith('RZ_')) {
         return [parseInt(gate.split('_')[2])];
+    }
+    if (gate.startsWith('CP_')) {
+        let ct = gate.split('_')[2];
+        let c = parseInt(ct[0]), t = parseInt(ct[1]);
+        let occ = [];
+        for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
+        return occ;
     }
     return [parseInt(gate.slice(-1))];
 }
@@ -1095,19 +1182,23 @@ function initGame(mode, p1, p2) {
         for (let i = 0; i < numCols; i++) {
             if (i < activeLength) {
                 let baseGate = activeSet[Math.floor(Math.random() * activeSet.length)];
-                if (baseGate.startsWith('RZ')) {
+                if (baseGate.startsWith('RZ') || baseGate.startsWith('CP')) {
                     let angles = ['PI', 'PI2', 'PI4', 'PI8'];
                     let randAngle = angles[Math.floor(Math.random() * angles.length)];
-                    baseGate = `RZ_${randAngle}_${baseGate.slice(-1)}`;
+                    let prefix = baseGate.startsWith('RZ') ? 'RZ' : 'CP';
+                    let qSuffix = baseGate.startsWith('RZ') ? baseGate.slice(-1) : baseGate.slice(-2);
+                    baseGate = `${prefix}_${randAngle}_${qSuffix}`;
                 }
                 let col = [baseGate];
                 for(let a=0; a<numQubits-1; a++) {
                     if(Math.random() > 0.5) {
                         let gNext = activeSet[Math.floor(Math.random() * activeSet.length)];
-                        if (gNext.startsWith('RZ')) {
+                        if (gNext.startsWith('RZ') || gNext.startsWith('CP')) {
                             let angles = ['PI', 'PI2', 'PI4', 'PI8'];
                             let randAngle = angles[Math.floor(Math.random() * angles.length)];
-                            gNext = `RZ_${randAngle}_${gNext.slice(-1)}`;
+                            let prefix = gNext.startsWith('RZ') ? 'RZ' : 'CP';
+                            let qSuffix = gNext.startsWith('RZ') ? gNext.slice(-1) : gNext.slice(-2);
+                            gNext = `${prefix}_${randAngle}_${qSuffix}`;
                         }
                         if(canFit(col, gNext)) col.push(gNext);
                     }
@@ -1136,10 +1227,10 @@ function initGame(mode, p1, p2) {
     if (numQubits === 3) document.getElementById('board').classList.add('hard-mode');
     else document.getElementById('board').classList.remove('hard-mode');
     
-    // Configure RZ Palette dropdown visibility
-    let hasRZ = activeSet.some(g => g.startsWith('RZ'));
-    let rzContainer = document.getElementById('rz-angle-container');
-    if(rzContainer) rzContainer.style.display = hasRZ ? 'inline-block' : 'none';
+    // Configure Angle Palette dropdown visibility
+    let hasAngleGate = activeSet.some(g => g.startsWith('RZ') || g.startsWith('CP'));
+    let angleContainer = document.getElementById('rz-angle-container');
+    if(angleContainer) angleContainer.style.display = hasAngleGate ? 'inline-block' : 'none';
     
     if (mode !== 'FREEPLAY') {
         targetState = computeStateVector(secretCircuits[0], numQubits);
@@ -1200,6 +1291,27 @@ function getColumnHTML(gates) {
                         <span style="font-size: 11px;">Rz</span>
                         <span style="font-size: 8px;">${displayAngle}</span>
                      </div>`;
+        } else if (type.startsWith('CP_')) {
+            let parts = type.split('_'); 
+            let angleStr = parts[1];
+            let ct = parts[2];
+            let c = parseInt(ct[0]), t = parseInt(ct[1]);
+            let cTop = ((c + 0.5) / numQubits * 100) + '%';
+            let tTop = ((t + 0.5) / numQubits * 100) + '%';
+            let minQ = Math.min(c, t), maxQ = Math.max(c, t);
+            let lineTop = ((minQ + 0.5) / numQubits * 100) + '%';
+            let lineHeight = ((maxQ - minQ) / numQubits * 100) + '%';
+            
+            let displayAngle = angleStr === 'PI' ? 'π' :
+                               angleStr === 'PI2' ? 'π/2' :
+                               angleStr === 'PI4' ? 'π/4' : 'π/8';
+                               
+            html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
+            html += `<div class="gate-box rz-gate cp-gate" style="top: ${tTop};">
+                        <span style="font-size: 11px;">P</span>
+                        <span style="font-size: 8px;">${displayAngle}</span>
+                     </div>`;
+            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else {
             let gateName = type.replace(/\d/g, ''); 
             let q = parseInt(type.slice(-1));
@@ -1228,6 +1340,9 @@ function renderPalette() {
         if (baseType.startsWith('RZ')) {
             let q = baseType.slice(-1);
             type = `RZ_${currentRzAngle}_${q}`;
+        } else if (baseType.startsWith('CP')) {
+            let ct = baseType.slice(-2);
+            type = `CP_${currentRzAngle}_${ct}`;
         }
         
         const item = document.createElement('div');
