@@ -1036,10 +1036,12 @@ function getOccupiedQubits(gate) {
         return occ;
     }
     if (gate.startsWith('RZ_')) {
-        return [parseInt(gate.split('_')[2])];
+        let parts = gate.split('_');
+        return [parseInt(parts[parts.length - 1])];
     }
     if (gate.startsWith('CP_')) {
-        let ct = gate.split('_')[2];
+        let parts = gate.split('_');
+        let ct = parts[parts.length - 1];
         let c = parseInt(ct[0]), t = parseInt(ct[1]);
         let occ = [];
         for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
@@ -1353,8 +1355,8 @@ function getColumnHTML(gates) {
             html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else if (type.startsWith('RZ_')) {
             let parts = type.split('_'); 
-            let angleStr = parts[1];
-            let q = parseInt(parts[2]);
+            let angleStr = parts.slice(1, -1).join('_');
+            let q = parseInt(parts[parts.length - 1]);
             let top = ((q + 0.5) / numQubits * 100) + '%';
             
             let displayAngle = angleStr === 'PI' ? 'π' :
@@ -1370,8 +1372,8 @@ function getColumnHTML(gates) {
                      </div>`;
         } else if (type.startsWith('CP_')) {
             let parts = type.split('_'); 
-            let angleStr = parts[1];
-            let ct = parts[2];
+            let ct = parts[parts.length - 1];
+            let angleStr = parts.slice(1, -1).join('_');
             let c = parseInt(ct[0]), t = parseInt(ct[1]);
             let cTop = ((c + 0.5) / numQubits * 100) + '%';
             let tTop = ((t + 0.5) / numQubits * 100) + '%';
