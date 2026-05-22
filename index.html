@@ -123,6 +123,14 @@
             left: 50%; transform: translate(-50%, -50%); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none;
         }
         
+        .rz-gate {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.1;
+        }
+        
         .ctrl-dot {
             position: absolute; width: 12px; height: 12px; background: var(--cx-color); 
             border-radius: 50%; z-index: 2; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
@@ -247,7 +255,18 @@
                 <div id="board"></div>
 
                 <div id="palette-container">
-                    <div class="palette-label">Gate Palette</div>
+                    <div class="palette-label">
+                        Gate Palette
+                        <span id="rz-angle-container" style="display:none; margin-left: 15px; font-size: 0.8rem; color: #38bdf8;">
+                            θ = 
+                            <select id="rz-angle" onchange="updateRzAngle(this.value)" style="background: #1e293b; color: white; border: 1px solid #38bdf8; border-radius: 4px; padding: 2px; cursor: pointer;">
+                                <option value="PI">π</option>
+                                <option value="PI2">π/2</option>
+                                <option value="PI4">π/4</option>
+                                <option value="PI8">π/8</option>
+                            </select>
+                        </span>
+                    </div>
                     <div id="palette"></div>
                 </div>
 
@@ -272,9 +291,10 @@
                 <div class="guide-grid">
                     <div class="guide-card"><b>X (NOT Gate)</b><span class="math-expr">X|0⟩ = |1⟩<br>X|1⟩ = |0⟩</span></div>
                     <div class="guide-card"><b>Y (Pauli-Y Gate)</b><span class="math-expr">Y|0⟩ = i|1⟩<br>Y|1⟩ = -i|0⟩</span></div>
-                    <div class="guide-card"><b>Z (Phase Gate)</b><span class="math-expr">Z|0⟩ = |0⟩<br>Z|1⟩ = -|1⟩</span></div>
+                    <div class="guide-card"><b>Z (Pauli-Z)</b><span class="math-expr">Z|0⟩ = |0⟩<br>Z|1⟩ = -|1⟩</span></div>
                     <div class="guide-card"><b>H (Hadamard)</b><span class="math-expr">H|0⟩ = 1/√2(|0⟩+|1⟩)<br>H|1⟩ = 1/√2(|0⟩-|1⟩)</span></div>
                     <div class="guide-card"><b>SX (√X Gate)</b><span class="math-expr">SX|0⟩ = ½(1+i)|0⟩ + ½(1-i)|1⟩<br>SX|1⟩ = ½(1-i)|0⟩ + ½(1+i)|1⟩</span></div>
+                    <div class="guide-card"><b>RZ (Phase)</b><span class="math-expr">RZ(θ)|0⟩ = |0⟩<br>RZ(θ)|1⟩ = e^{iθ}|1⟩</span></div>
                     <div class="guide-card" style="grid-column: 1/-1;"><b>CX (CNOT) & CCX (Toffoli)</b><span class="math-expr">Flips Target (⊕) if all Controls (•) are |1⟩.</span></div>
                 </div>
             </div>
@@ -295,9 +315,9 @@ function markStageCompleted(sIdx, lIdx) {
 
 // --- Configuration & Content ---
 const LEVELS = {
-    1: { q: 1, g: 4, minActive: 2, set: ['X0', 'Y0', 'H0', 'Z0', 'SX0'] },
-    2: { q: 2, g: 6, minActive: 3, set: ['X0', 'X1', 'Y0', 'Y1', 'H0', 'H1', 'Z0', 'Z1', 'SX0', 'SX1', 'CX01', 'CX10'] },
-    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120'] }
+    1: { q: 1, g: 4, minActive: 2, set: ['X0', 'Y0', 'H0', 'Z0', 'SX0', 'RZ0'] },
+    2: { q: 2, g: 6, minActive: 3, set: ['X0', 'X1', 'Y0', 'Y1', 'H0', 'H1', 'Z0', 'Z1', 'SX0', 'SX1', 'CX01', 'CX10', 'RZ0', 'RZ1'] },
+    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120', 'RZ0', 'RZ1', 'RZ2'] }
 };
 
 // Valid symmetrical CSWAP implementations
@@ -308,18 +328,148 @@ const CSWAP_VARIANTS = [
     [['CX12'], ['CCX021'], ['CX12']]
 ];
 
-// Helper to calculate exact multiset from a 2D array of gates
-function getGateMultiset(circuit) {
-    let gates = [];
-    for(let col of circuit) {
-        for(let gate of col) {
-            if(gate && gate !== 'I') gates.push(gate);
-        }
-    }
-    return gates.sort().join(',');
+// Valid state preps for Stage 5
+const PREP_5 = [
+    [['H0', 'X1']],
+    [['H0'], ['X1']],
+    [['X1'], ['H0']]
+];
+
+// Stage 5.3 dynamically handles symmetries
+function getStage5_3Circuits() {
+    let circuits = [];
+    let cxVariants = [
+        [['CX21'], ['CCX012'], ['CX21']],
+        [['CX12'], ['CCX021'], ['CX12']]
+    ];
+    cxVariants.forEach(seq => {
+        PREP_5.forEach(p => {
+            circuits.push([...p, ...seq]);
+        });
+        let mergedSeq = JSON.parse(JSON.stringify(seq));
+        mergedSeq[0].push('H0');
+        circuits.push([['X1'], ...mergedSeq]);
+    });
+    return circuits;
 }
 
-// Generate base permutations for Strict Mode multiset extraction
+// Stage 6 dynamically handles all logical permutations for the Swap Test
+function getStage6Circuits(prepGateOnQ1) {
+    let circuits = [];
+    CSWAP_VARIANTS.forEach(seq => {
+        let canMergeOuter = seq[0][0].startsWith('CX');
+        
+        let prepOptions = [];
+        if (prepGateOnQ1) {
+            prepOptions.push([['H0'], [prepGateOnQ1]]);
+            prepOptions.push([[prepGateOnQ1], ['H0']]);
+            prepOptions.push([['H0', prepGateOnQ1]]);
+        } else {
+            prepOptions.push([['H0']]);
+        }
+        
+        prepOptions.forEach(prep => {
+            // 1. Both H0s unmerged
+            circuits.push([...prep, ...seq, ['H0']]);
+            
+            // 2. Start unmerged, end merged
+            if (canMergeOuter) {
+                let seqEndMerged = JSON.parse(JSON.stringify(seq));
+                seqEndMerged[seqEndMerged.length - 1].push('H0');
+                circuits.push([...prep, ...seqEndMerged]);
+            }
+        });
+        
+        if (canMergeOuter) {
+            let startMergedPrep = prepGateOnQ1 ? [[prepGateOnQ1]] : [];
+            
+            // 3. Start merged, end unmerged
+            let seqStartMerged = JSON.parse(JSON.stringify(seq));
+            seqStartMerged[0].push('H0');
+            circuits.push([...startMergedPrep, ...seqStartMerged, ['H0']]);
+            
+            // 4. Both H0s merged
+            let seqBothMerged = JSON.parse(JSON.stringify(seq));
+            seqBothMerged[0].push('H0');
+            seqBothMerged[seqBothMerged.length - 1].push('H0');
+            circuits.push([...startMergedPrep, ...seqBothMerged]);
+        }
+    });
+    return circuits;
+}
+
+// Stage 7.1 dynamically handles symmetries for X-Parity
+function getStage7_1Circuits() {
+    let circuits = [];
+    let prefixes = [
+        [['X1'], ['H1'], ['CX12'], ['H0']],
+        [['X1'], ['H1'], ['H0', 'CX12']],
+        [['X1'], ['H0', 'H1'], ['CX12']],
+        [['H0', 'X1'], ['H1'], ['CX12']],
+        [['H0'], ['X1'], ['H1'], ['CX12']]
+    ];
+    let cores = [
+        [['CX01'], ['CX02']],
+        [['CX02'], ['CX01']]
+    ];
+    prefixes.forEach(p => {
+        cores.forEach(c => {
+            if (p.length + c.length + 1 <= 8) {
+                circuits.push([...p, ...c, ['H0']]);
+            }
+        });
+    });
+    return circuits;
+}
+
+// Stage 7.2 dynamically handles symmetries for Z-Parity
+function getStage7_2Circuits() {
+    let circuits = [];
+    let preps = [
+        [['X2', 'H1'], ['CX12']],
+        [['H1'], ['X2'], ['CX12']],
+        [['X2'], ['H1'], ['CX12']],
+        [['X2', 'H1'], ['H0', 'CX12']],
+        [['H1'], ['X2'], ['H0', 'CX12']],
+        [['X2'], ['H1'], ['H0', 'CX12']],
+        [['H0', 'X2', 'H1'], ['CX12']],
+        [['H0', 'H1'], ['X2'], ['CX12']],
+        [['H0', 'X2'], ['H1'], ['CX12']],
+        [['H1'], ['H0', 'X2'], ['CX12']],
+        [['X2'], ['H0', 'H1'], ['CX12']]
+    ];
+    let cores = [
+        [['CX01'], ['CX02']],
+        [['CX02'], ['CX01']]
+    ];
+    let suffixes = [
+        [['H0', 'H1', 'H2']],
+        [['H0', 'H1'], ['H2']],
+        [['H0', 'H2'], ['H1']],
+        [['H1', 'H2'], ['H0']],
+        [['H0'], ['H1', 'H2']],
+        [['H1'], ['H0', 'H2']],
+        [['H2'], ['H0', 'H1']]
+    ];
+    
+    // We also need to sandwich the cores in H1 and H2 for the target side, if not already in prefix/suffix.
+    // The strict multiset engine allows extreme flexibility as long as the state matches and multisets align.
+    // We will just provide the chronological unmerged baseline here and let the DAG multiset engine catch all the brilliant parallel combos.
+    circuits.push([['X2'], ['H1'], ['CX12'], ['H0'], ['H1'], ['H2'], ['CX01'], ['CX02'], ['H0'], ['H1'], ['H2']]);
+    circuits.push([['X2'], ['H1'], ['CX12'], ['H0', 'H1', 'H2'], ['CX01'], ['CX02'], ['H0', 'H1', 'H2']]);
+    
+    preps.forEach(p => {
+        cores.forEach(c => {
+            suffixes.forEach(s => {
+                if (p.length + c.length + s.length <= 8) {
+                    circuits.push([...p, ...c, ...s]);
+                }
+            });
+        });
+    });
+    return circuits;
+}
+
 const STAGES = [
     {
         title: "Stage 1: The Bloch Sphere",
@@ -413,23 +563,16 @@ const STAGES = [
             },
             { 
                 name: "5.2: CSWAP (3 CCX)", 
-                circuits: [
-                    [['H0', 'X1'], ['CCX012'], ['CCX021'], ['CCX012']],
-                    [['H0', 'X1'], ['CCX021'], ['CCX012'], ['CCX021']],
-                    [['X1'], ['H0'], ['CCX012'], ['CCX021'], ['CCX012']],
-                    [['H0'], ['X1'], ['CCX012'], ['CCX021'], ['CCX012']]
-                ], 
+                circuits: PREP_5.flatMap(p => [
+                    [...p, ['CCX012'], ['CCX021'], ['CCX012']],
+                    [...p, ['CCX021'], ['CCX012'], ['CCX021']]
+                ]), 
                 hint: "Superpose Q0 and flip Q1. Then conditionally swap Q1 & Q2 using three Toffolis.",
                 lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits *only* if the control qubit is |1⟩. We can build it directly by taking our 3-CNOT design from the last stage and upgrading all three gates into Toffoli (CCX) gates controlled by Q0.<br><br><b>Why it matters:</b> The Fredkin gate is a 'universal' reversible logic gate. In quantum algorithms, conditionally routing information allows us to compute similarities between complex states without measuring them directly, forming the backbone of Quantum Machine Learning."
             },
             { 
                 name: "5.3: CSWAP (1 CCX, 2 CX)", 
-                circuits: [
-                    [['H0', 'X1'], ['CX21'], ['CCX012'], ['CX21']],
-                    [['H0', 'X1'], ['CX12'], ['CCX021'], ['CX12']],
-                    [['X1'], ['H0'], ['CX21'], ['CCX012'], ['CX21']],
-                    [['X1'], ['H0'], ['CX12'], ['CCX021'], ['CX12']]
-                ], 
+                circuits: getStage5_3Circuits(), 
                 hint: "Wrap a single Toffoli gate in CNOTs to achieve the exact same state!",
                 lesson: "<b>The Mechanism:</b> We can optimize the CSWAP gate by noticing that we only need to conditionally flip one qubit based on the other, then use standard CNOTs to cascade the swap. This reduces the cost from 3 Toffolis to just 1 Toffoli and 2 CNOTs.<br><br><b>Why it matters:</b> Every gate you execute introduces a tiny bit of noise. Toffoli gates are notoriously noisy and slow. Compiling circuits to use fewer heavy gates—while achieving the exact same mathematical result—is a massive and vital sub-field of quantum software engineering."
             }
@@ -442,28 +585,19 @@ const STAGES = [
         levels: [
             {
                 name: "6.1: Identical States",
-                circuits: [
-                    [['H0'], ['CX21'], ['CCX012'], ['CX21'], ['H0']],
-                    [['H0'], ['CCX012'], ['CCX021'], ['CCX012'], ['H0']]
-                ],
+                circuits: getStage6Circuits(null),
                 hint: "Superpose the ancilla (Q0), apply a CSWAP across Q1 and Q2, and apply another Hadamard to Q0.",
                 lesson: "<b>The Mechanism:</b> The Swap Test algorithm checks how identical two target quantum states are. We superpose an ancilla (Q0), use it to CSWAP the target states (Q1, Q2), and interfere the ancilla again with a final Hadamard. The probability of measuring Q0 as |0⟩ is mathematically exactly P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Since |0⟩ and |0⟩ are totally identical, the math perfectly returns Q0 to |0⟩!<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test lets us compare massive quantum states using just *one* ancilla measurement, offering a potential exponential speedup for Quantum AI."
             },
             {
                 name: "6.2: Orthogonal States",
-                circuits: [
-                    [['X1'], ['H0'], ['CX21'], ['CCX012'], ['CX21'], ['H0']],
-                    [['X2'], ['H0'], ['CX12'], ['CCX021'], ['CX12'], ['H0']]
-                ],
+                circuits: getStage6Circuits('X1'),
                 hint: "Flip Q1 to |1⟩. Then run the exact same Swap Test logic as before!",
                 lesson: "<b>The Mechanism:</b> Now we test two completely orthogonal (opposite) states: |1⟩ (on Q1) and |0⟩ (on Q2). Their inner product is 0. Following our Swap Test formula: P(0) = 0.5 + 0.5(0) = 0.5. This means the ancilla qubit has exactly a 50% chance of being measured as |0⟩. Look at the Bloch sphere—Q0 is perfectly balanced on the equator!<br><br><b>Why it matters:</b> This demonstrates the lower bounds of the algorithm. When measuring the ancilla, P(0) = 0.5 is the absolute minimum you can get, proving that the datasets encoded in the qubits have absolutely zero overlap."
             },
             {
                 name: "6.3: Partial Overlap",
-                circuits: [
-                    [['H1'], ['H0'], ['CX21'], ['CCX012'], ['CX21'], ['H0']],
-                    [['H2'], ['H0'], ['CX12'], ['CCX021'], ['CX12'], ['H0']]
-                ],
+                circuits: getStage6Circuits('H1'),
                 hint: "Prep Q1 with a Hadamard to |+⟩. Run the Swap Test again to see what partial overlap looks like.",
                 lesson: "<b>The Mechanism:</b> What if the states are only partially similar? Here we compare |+⟩ and |0⟩. Their squared inner product is 0.5. The formula gives P(0) = 0.5 + 0.5(0.5) = 0.75 (or 75%). Look at the statevector amplitudes—by checking Q0, we measured the exact mathematical overlap of our two target states!<br><br><b>Why it matters:</b> This is the real magic of the Swap test. It doesn't just say 'yes' or 'no'; it computes the exact continuous inner product (the quantum equivalent of the classical dot product). This serves as the computational backbone for advanced algorithms like Quantum Support Vector Machines (QSVM)."
             }
@@ -476,25 +610,51 @@ const STAGES = [
         levels: [
             {
                 name: "7.1: X-Parity (+ vs -)",
-                circuits: [
-                    [['X1'], ['H1'], ['CX12'], ['H0'], ['CX01'], ['CX02'], ['H0']],
-                    [['X2'], ['H2'], ['CX21'], ['H0'], ['CX01'], ['CX02'], ['H0']]
-                ],
+                circuits: getStage7_1Circuits(),
                 hint: "Prep Φ- on Q1 & Q2. Then H on Q0, apply CX from Q0 to Q1 and Q2, and H on Q0.",
-                lesson: "<b>The Mechanism:</b> The Hadamard Test is a general algorithm to measure the expectation value of an operator. However, when the target state is an *eigenstate* of the operator (like Bell states are to Pauli parities), the specific mechanism at play is <b>Phase Kickback</b>.<br><br>In Phase Kickback, applying a controlled operation doesn't change the target eigenstate; instead, its eigenvalue (+1 or -1) is 'kicked back' into the control qubit's phase.<br><br><b>Why it matters:</b> The Φ- state is an eigenstate of X₁X₂ with an eigenvalue of -1. So, the -1 phase is kicked back to Q0, changing its state from |+⟩ to |-⟩. The final Hadamard converts this to |1⟩, allowing us to read the eigenvalue perfectly!<br><br><b>Try it:</b> Remove the first X₁ gate from the board to prepare Φ+ instead. Since Φ+ has an eigenvalue of +1, no negative phase is kicked back, and Q0 returns safely to |0⟩!"
+                lesson: "<b>The Mechanism:</b> The Hadamard Test is a general algorithm to measure the expectation value of an operator. However, when the target state is an *eigenstate* of the operator (like Bell states are to Pauli parities), the specific mechanism at play is <b>Phase Kickback</b>.<br><br>In Phase Kickback, applying a controlled operation doesn't change the target eigenstate; instead, its eigenvalue (+1 or -1) is 'kicked back' into the control qubit's phase.<br><br><b>Why it matters:</b> The Φ- state is an eigenstate of X₁X₂ with an eigenvalue of -1. So, the -1 phase is kicked back to Q0, changing its state from |+⟩ to |-⟩. The final Hadamard converts this to |1⟩, allowing us to read the eigenvalue perfectly!<br><br><b>Try it:</b> Remove the first X₁ gate from the board to prepare Φ+ instead. Watch the Live Output—since Φ+ has an eigenvalue of +1, no negative phase is kicked back, and Q0 returns safely to |0⟩!"
             },
             {
                 name: "7.2: Z-Parity (Φ vs Ψ)",
-                circuits: [
-                    [['X2'], ['H1'], ['CX12'], ['H0'], ['H1'], ['H2'], ['CX01'], ['CX02'], ['H0'], ['H1'], ['H2']],
-                    [['X1'], ['H2'], ['CX21'], ['H0'], ['H1'], ['H2'], ['CX01'], ['CX02'], ['H0'], ['H1'], ['H2']]
-                ],
+                circuits: getStage7_2Circuits(),
                 hint: "Prep Ψ+ using X2, H1, CX12. Then wrap CX01 and CX02 in Hadamards to simulate Controlled-Z gates.",
                 lesson: "<b>The Mechanism:</b> To differentiate a Φ state from a Ψ state, we must measure their Z-parity (Z₁Z₂). Because we don't have a native Controlled-Z gate on this board, we build them by wrapping CNOTs in Hadamards. This creates a Hadamard test for the Z₁Z₂ operator.<br><br><b>Why it matters:</b> The Ψ+ state is anti-correlated, meaning its Z-parity eigenvalue is -1. This test kicks the -1 phase back, flipping Q0 to |1⟩. In quantum error correction, continuously measuring these X and Z parities (without measuring the actual data qubits) is exactly how we detect errors without collapsing the fragile computation!<br><br><b>Try it:</b> Remove the X₂ gate to test a Φ+ state instead. Q0 will stay at |0⟩ because Φ states are perfectly correlated (eigenvalue +1)!"
             }
         ]
+    },
+    {
+        title: "Stage 8: Phase Rotations",
+        desc: "Rotate quantum states around the Z-axis using parameterized RZ gates.",
+        qubits: 1, cols: 5, set: ['X0', 'H0', 'RZ0'],
+        levels: [
+            {
+                name: "8.1: The S Gate (π/2)",
+                circuits: [[['H0'], ['RZ_PI2_0']]],
+                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard.",
+                lesson: "<b>The Mechanism:</b> The RZ gate applies a specific phase rotation around the Z-axis of the Bloch sphere. When θ = π/2, this is commonly called the <b>S gate</b>. Applying it to |+⟩ rotates the state 90 degrees along the equator.<br><br><b>Why it matters:</b> The S gate introduces complex/imaginary amplitudes into the system, taking us to the |+i⟩ state on the Y-axis. This forms the building blocks for creating robust combinations of non-real quantum states."
+            },
+            {
+                name: "8.2: The T Gate (π/4)",
+                circuits: [[['H0'], ['RZ_PI4_0']]],
+                hint: "Select π/4 from the dropdown, apply after a Hadamard.",
+                lesson: "<b>The Mechanism:</b> When θ = π/4, the RZ gate is known as the <b>T gate</b>. It rotates the state 45 degrees along the equator. <br><br><b>Why it matters:</b> The T gate is arguably the most important gate in quantum computing. The basic Clifford gates (H, X, CNOT, S) can be efficiently simulated on a classical computer. To achieve true 'Quantum Advantage', you *must* use non-Clifford gates like the T gate. It provides the universal continuous rotation capability needed for complex algorithms."
+            },
+            {
+                name: "8.3: Adding Phases",
+                circuits: [[['H0'], ['RZ_PI4_0'], ['RZ_PI4_0'], ['RZ_PI2_0'], ['H0']]],
+                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards.",
+                lesson: "<b>The Mechanism:</b> Z-rotations commute, meaning their angles simply add together! π/4 + π/4 + π/2 exactly equals π. An RZ(π) gate is equivalent to a Pauli-Z gate. So H -> (T + T + S) -> H is exactly mathematically identical to H -> Z -> H, which equals X!<br><br><b>Why it matters:</b> Because T gates are highly susceptible to noise, advanced quantum error correction schemes spend massive resources on 'Magic State Distillation' just to execute a single reliable T gate. Knowing how to combine and compile these phase rotations optimally determines how fast a quantum program can run before decoherence destroys it."
+            }
+        ]
     }
 ];
+
+let currentRzAngle = 'PI';
+
+function updateRzAngle(val) {
+    currentRzAngle = val;
+    renderPalette();
+}
 
 // --- Quantum Math Engine ---
 const c = 1 / Math.sqrt(2);
@@ -574,6 +734,24 @@ function generateMatrices(N) {
             let mats = Array(N).fill(I2);
             mats[q] = mat;
             GATE_MATRICES[`${name}${q}`] = kronN(mats);
+        }
+    }
+    
+    let rzVals = {
+        'PI': {r: -1, i: 0},
+        'PI2': {r: 0, i: 1},
+        'PI4': {r: c, i: c},
+        'PI8': {r: Math.cos(Math.PI/8), i: Math.sin(Math.PI/8)}
+    };
+    for (let q = 0; q < N; q++) {
+        for (let [suffix, val] of Object.entries(rzVals)) {
+            let mat = [
+                [{r:1, i:0}, {r:0, i:0}],
+                [{r:0, i:0}, val]
+            ];
+            let mats = Array(N).fill(I2);
+            mats[q] = mat;
+            GATE_MATRICES[`RZ_${suffix}_${q}`] = kronN(mats);
         }
     }
     
@@ -708,6 +886,9 @@ function getOccupiedQubits(gate) {
         for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
         return occ;
     }
+    if (gate.startsWith('RZ_')) {
+        return [parseInt(gate.split('_')[2])];
+    }
     return [parseInt(gate.slice(-1))];
 }
 
@@ -805,6 +986,17 @@ let currentGuess = [];
 let attempts = 0;
 let gameOver = false;
 
+// Helper to calculate exact multiset from a 2D array of gates
+function getGateMultiset(circuit) {
+    let gates = [];
+    for(let col of circuit) {
+        for(let gate of col) {
+            if(gate && gate !== 'I') gates.push(gate);
+        }
+    }
+    return gates.sort().join(',');
+}
+
 function buildMenu() {
     const container = document.getElementById('stages-container');
     container.innerHTML = '';
@@ -895,10 +1087,21 @@ function initGame(mode, p1, p2) {
         let activeLength = Math.floor(Math.random() * (numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
         for (let i = 0; i < numCols; i++) {
             if (i < activeLength) {
-                let col = [activeSet[Math.floor(Math.random() * activeSet.length)]];
+                let baseGate = activeSet[Math.floor(Math.random() * activeSet.length)];
+                if (baseGate.startsWith('RZ')) {
+                    let angles = ['PI', 'PI2', 'PI4', 'PI8'];
+                    let randAngle = angles[Math.floor(Math.random() * angles.length)];
+                    baseGate = `RZ_${randAngle}_${baseGate.slice(-1)}`;
+                }
+                let col = [baseGate];
                 for(let a=0; a<numQubits-1; a++) {
                     if(Math.random() > 0.5) {
                         let gNext = activeSet[Math.floor(Math.random() * activeSet.length)];
+                        if (gNext.startsWith('RZ')) {
+                            let angles = ['PI', 'PI2', 'PI4', 'PI8'];
+                            let randAngle = angles[Math.floor(Math.random() * angles.length)];
+                            gNext = `RZ_${randAngle}_${gNext.slice(-1)}`;
+                        }
                         if(canFit(col, gNext)) col.push(gNext);
                     }
                 }
@@ -925,6 +1128,11 @@ function initGame(mode, p1, p2) {
     generateMatrices(numQubits);
     if (numQubits === 3) document.getElementById('board').classList.add('hard-mode');
     else document.getElementById('board').classList.remove('hard-mode');
+    
+    // Configure RZ Palette dropdown visibility
+    let hasRZ = activeSet.some(g => g.startsWith('RZ'));
+    let rzContainer = document.getElementById('rz-angle-container');
+    if(rzContainer) rzContainer.style.display = hasRZ ? 'inline-block' : 'none';
     
     if (mode !== 'FREEPLAY') {
         targetState = computeStateVector(secretCircuits[0], numQubits);
@@ -971,6 +1179,20 @@ function getColumnHTML(gates) {
             html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
             html += `<div class="tgt-cross" style="top: ${tTop}">⊕</div>`;
             html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+        } else if (type.startsWith('RZ_')) {
+            let parts = type.split('_'); 
+            let angleStr = parts[1];
+            let q = parseInt(parts[2]);
+            let top = ((q + 0.5) / numQubits * 100) + '%';
+            
+            let displayAngle = angleStr === 'PI' ? 'π' :
+                               angleStr === 'PI2' ? 'π/2' :
+                               angleStr === 'PI4' ? 'π/4' : 'π/8';
+                               
+            html += `<div class="gate-box rz-gate" style="top: ${top};">
+                        <span style="font-size: 11px;">Rz</span>
+                        <span style="font-size: 8px;">${displayAngle}</span>
+                     </div>`;
         } else {
             let gateName = type.replace(/\d/g, ''); 
             let q = parseInt(type.slice(-1));
@@ -994,7 +1216,13 @@ function renderPalette() {
     palette.innerHTML = '';
     const h = Math.max(60, numQubits * 30);
     
-    activeSet.forEach(type => {
+    activeSet.forEach(baseType => {
+        let type = baseType;
+        if (baseType.startsWith('RZ')) {
+            let q = baseType.slice(-1);
+            type = `RZ_${currentRzAngle}_${q}`;
+        }
+        
         const item = document.createElement('div');
         item.className = 'palette-item';
         item.style.height = `${h}px`;
@@ -1168,14 +1396,10 @@ function submitGuess() {
     wrap.classList.remove('active');
     
     // Strict Mode: Multi-set DAG Checking
-    // By checking if the user used the EXACT same set of gates and achieved the exact state, 
-    // we bypass column-spacing issues and support all topological/parallel combinations.
     let userMultiset = getGateMultiset(currentGuess);
     let validMultisets = secretCircuits.map(c => getGateMultiset(c));
     let matchedMultiset = validMultisets.includes(userMultiset);
     
-    // Fallback: If they matched a multiset, let's pick the exact canonical circuit 
-    // that matches their layout best so we can color as much green as possible.
     let matchedCircuit = null;
     let bestMatchCount = -1;
     let bestMatchCircuit = secretCircuits[0];
@@ -1235,7 +1459,6 @@ function submitGuess() {
         gameOver = true;
         document.getElementById('submit-btn').classList.add('hidden');
         
-        // If they won via valid multiset (parallelization), color all their valid blocks green!
         if (isStrict && matchedMultiset) {
             for (let c = 0; c < numCols; c++) {
                 const slot = document.getElementById(`slot-${attempts}-${c}`);
@@ -1250,7 +1473,6 @@ function submitGuess() {
             let winMsg = (matchedMultiset || matchedCircuit) ? "Stage Cleared!" : "Equivalent Circuit Found! Stage Cleared!";
             markStageCompleted(currentP1, currentP2);
             
-            // Check for true 100% completion
             let totalLevels = 0;
             STAGES.forEach(s => totalLevels += s.levels.length);
             let allCompleted = (completedStages.length >= totalLevels);
