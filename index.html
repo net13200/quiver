@@ -268,6 +268,9 @@
                                 <option value="PI2">π/2</option>
                                 <option value="PI4">π/4</option>
                                 <option value="PI8">π/8</option>
+                                <option value="MINUS_PI2">-π/2</option>
+                                <option value="MINUS_PI4">-π/4</option>
+                                <option value="MINUS_PI8">-π/8</option>
                             </select>
                         </span>
                     </div>
@@ -322,7 +325,7 @@ function markStageCompleted(sIdx, lIdx) {
 const LEVELS = {
     1: { q: 1, g: 4, minActive: 2, set: ['X0', 'Y0', 'H0', 'Z0', 'SX0', 'RZ0'] },
     2: { q: 2, g: 6, minActive: 3, set: ['X0', 'X1', 'Y0', 'Y1', 'H0', 'H1', 'Z0', 'Z1', 'SX0', 'SX1', 'CX01', 'CX10', 'RZ0', 'RZ1'] },
-    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120', 'RZ0', 'RZ1', 'RZ2'] }
+    3: { q: 3, g: 10, minActive: 4, set: ['X0','X1','X2', 'Y0','Y1','Y2', 'H0','H1','H2', 'Z0','Z1','Z2', 'SX0','SX1','SX2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120', 'RZ0', 'RZ1', 'RZ2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20'] }
 };
 
 // Valid symmetrical CSWAP implementations
@@ -467,6 +470,30 @@ function getStage7_2Circuits() {
                     circuits.push([...p, ...c, ...s]);
                 }
             });
+        });
+    });
+    return circuits;
+}
+
+// Stage 8.4 dynamically handles symmetries for the Controlled-Phase decomposition
+function getStage8_4Circuits() {
+    let circuits = [];
+    let preps = [
+        [['H0', 'H1']],
+        [['H0'], ['H1']],
+        [['H1'], ['H0']]
+    ];
+    let cores = [
+        [['RZ_PI4_0', 'RZ_PI4_1'], ['CX01'], ['RZ_MINUS_PI4_1'], ['CX01']],
+        [['RZ_PI4_0'], ['RZ_PI4_1'], ['CX01'], ['RZ_MINUS_PI4_1'], ['CX01']],
+        [['RZ_PI4_1'], ['RZ_PI4_0'], ['CX01'], ['RZ_MINUS_PI4_1'], ['CX01']],
+        [['RZ_PI4_0', 'RZ_PI4_1'], ['CX10'], ['RZ_MINUS_PI4_0'], ['CX10']],
+        [['RZ_PI4_0'], ['RZ_PI4_1'], ['CX10'], ['RZ_MINUS_PI4_0'], ['CX10']],
+        [['RZ_PI4_1'], ['RZ_PI4_0'], ['CX10'], ['RZ_MINUS_PI4_0'], ['CX10']]
+    ];
+    preps.forEach(p => {
+        cores.forEach(c => {
+            circuits.push([...p, ...c]);
         });
     });
     return circuits;
@@ -659,26 +686,32 @@ const STAGES = [
     },
     {
         title: "Stage 8: Phase Rotations",
-        desc: "Rotate quantum states around the Z-axis using parameterized RZ gates.",
-        qubits: 1, cols: 5, set: ['X0', 'H0', 'RZ0'],
+        desc: "Rotate states around the Z-axis using parameterized RZ gates. (Strict Mode)",
+        qubits: 2, cols: 6, set: ['X0', 'X1', 'H0', 'H1', 'CX01', 'CX10', 'RZ0', 'RZ1'],
         levels: [
             {
                 name: "8.1: The S Gate (π/2)",
                 circuits: [[['H0'], ['RZ_PI2_0']]],
-                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard.",
+                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard on Q0.",
                 lesson: "<b>The Mechanism:</b> The RZ gate applies a specific phase rotation around the Z-axis of the Bloch sphere. When θ = π/2, this is commonly called the <b>S gate</b>. Applying it to |+⟩ rotates the state 90 degrees along the equator.<br><br><b>Why it matters:</b> The S gate introduces complex/imaginary amplitudes into the system, taking us to the |+i⟩ state on the Y-axis. This forms the building blocks for creating robust combinations of non-real quantum states."
             },
             {
                 name: "8.2: The T Gate (π/4)",
                 circuits: [[['H0'], ['RZ_PI4_0']]],
-                hint: "Select π/4 from the dropdown, apply after a Hadamard.",
+                hint: "Select π/4 from the dropdown, apply after a Hadamard on Q0.",
                 lesson: "<b>The Mechanism:</b> When θ = π/4, the RZ gate is known as the <b>T gate</b>. It rotates the state 45 degrees along the equator. <br><br><b>Why it matters:</b> The T gate is arguably the most important gate in quantum computing. The basic Clifford gates (H, X, CNOT, S) can be efficiently simulated on a classical computer. To achieve true 'Quantum Advantage', you *must* use non-Clifford gates like the T gate. It provides the universal continuous rotation capability needed for complex algorithms."
             },
             {
                 name: "8.3: Adding Phases",
                 circuits: [[['H0'], ['RZ_PI4_0'], ['RZ_PI4_0'], ['RZ_PI2_0'], ['H0']]],
-                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards.",
+                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards on Q0.",
                 lesson: "<b>The Mechanism:</b> Z-rotations commute, meaning their angles simply add together! π/4 + π/4 + π/2 exactly equals π. An RZ(π) gate is equivalent to a Pauli-Z gate. So H -> (T + T + S) -> H is exactly mathematically identical to H -> Z -> H, which equals X!<br><br><b>Why it matters:</b> Because T gates are highly susceptible to noise, advanced quantum error correction schemes spend massive resources on 'Magic State Distillation' just to execute a single reliable T gate. Knowing how to combine and compile these phase rotations optimally determines how fast a quantum program can run before decoherence destroys it."
+            },
+            {
+                name: "8.4: The Controlled-Phase Gate",
+                circuits: getStage8_4Circuits(),
+                hint: "Prep Q0 and Q1 with H. Add RZ(π/4) to both, CX(0,1), RZ(-π/4) on Q1, and CX(0,1).",
+                lesson: "<b>The Mechanism:</b> A Controlled-Phase gate CP(θ) can be beautifully decomposed into standard CNOTs and single-qubit RZ gates! By adding fractional phases to both qubits, toggling the target with a CNOT, subtracting the phase, and toggling back, the phases mathematically cancel out for all states EXCEPT |11⟩.<br><br><b>Why it matters:</b> This exact trick is how quantum computers compile complex multi-qubit entanglements down to native hardware instructions. Every CP gate you use in algorithms like the Quantum Fourier Transform (Stage 9) is physically executed inside the microchip using this exact CNOT-sandwich technique!"
             }
         ]
     },
@@ -801,7 +834,10 @@ function generateMatrices(N) {
         'PI': {r: -1, i: 0},
         'PI2': {r: 0, i: 1},
         'PI4': {r: c, i: c},
-        'PI8': {r: Math.cos(Math.PI/8), i: Math.sin(Math.PI/8)}
+        'PI8': {r: Math.cos(Math.PI/8), i: Math.sin(Math.PI/8)},
+        'MINUS_PI2': {r: 0, i: -1},
+        'MINUS_PI4': {r: c, i: -c},
+        'MINUS_PI8': {r: Math.cos(-Math.PI/8), i: Math.sin(-Math.PI/8)}
     };
     for (let q = 0; q < N; q++) {
         for (let [suffix, val] of Object.entries(rzVals)) {
@@ -843,7 +879,6 @@ function generateMatrices(N) {
             }); GATE_MATRICES['CCX120'] = CCX120;
         }
         
-        // Controlled-Phase Gates for QFT
         for (let ctrl = 0; ctrl < N; ctrl++) {
             for (let targ = 0; targ < N; targ++) {
                 if (ctrl === targ) continue;
@@ -1183,7 +1218,7 @@ function initGame(mode, p1, p2) {
             if (i < activeLength) {
                 let baseGate = activeSet[Math.floor(Math.random() * activeSet.length)];
                 if (baseGate.startsWith('RZ') || baseGate.startsWith('CP')) {
-                    let angles = ['PI', 'PI2', 'PI4', 'PI8'];
+                    let angles = ['PI', 'PI2', 'PI4', 'PI8', 'MINUS_PI2', 'MINUS_PI4', 'MINUS_PI8'];
                     let randAngle = angles[Math.floor(Math.random() * angles.length)];
                     let prefix = baseGate.startsWith('RZ') ? 'RZ' : 'CP';
                     let qSuffix = baseGate.startsWith('RZ') ? baseGate.slice(-1) : baseGate.slice(-2);
@@ -1194,7 +1229,7 @@ function initGame(mode, p1, p2) {
                     if(Math.random() > 0.5) {
                         let gNext = activeSet[Math.floor(Math.random() * activeSet.length)];
                         if (gNext.startsWith('RZ') || gNext.startsWith('CP')) {
-                            let angles = ['PI', 'PI2', 'PI4', 'PI8'];
+                            let angles = ['PI', 'PI2', 'PI4', 'PI8', 'MINUS_PI2', 'MINUS_PI4', 'MINUS_PI8'];
                             let randAngle = angles[Math.floor(Math.random() * angles.length)];
                             let prefix = gNext.startsWith('RZ') ? 'RZ' : 'CP';
                             let qSuffix = gNext.startsWith('RZ') ? gNext.slice(-1) : gNext.slice(-2);
@@ -1285,7 +1320,10 @@ function getColumnHTML(gates) {
             
             let displayAngle = angleStr === 'PI' ? 'π' :
                                angleStr === 'PI2' ? 'π/2' :
-                               angleStr === 'PI4' ? 'π/4' : 'π/8';
+                               angleStr === 'PI4' ? 'π/4' : 
+                               angleStr === 'PI8' ? 'π/8' :
+                               angleStr === 'MINUS_PI2' ? '-π/2' :
+                               angleStr === 'MINUS_PI4' ? '-π/4' : '-π/8';
                                
             html += `<div class="gate-box rz-gate" style="top: ${top};">
                         <span style="font-size: 11px;">Rz</span>
@@ -1304,7 +1342,10 @@ function getColumnHTML(gates) {
             
             let displayAngle = angleStr === 'PI' ? 'π' :
                                angleStr === 'PI2' ? 'π/2' :
-                               angleStr === 'PI4' ? 'π/4' : 'π/8';
+                               angleStr === 'PI4' ? 'π/4' : 
+                               angleStr === 'PI8' ? 'π/8' :
+                               angleStr === 'MINUS_PI2' ? '-π/2' :
+                               angleStr === 'MINUS_PI4' ? '-π/4' : '-π/8';
                                
             html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
             html += `<div class="gate-box rz-gate cp-gate" style="top: ${tTop};">
