@@ -112,40 +112,29 @@
         }
         .slot:last-child { border-right: none; }
         .slot.drag-over { background: rgba(255, 255, 255, 0.1); }
-        .slot.correct { background: var(--correct-bg); border-color: var(--correct-border); border-style: solid; border-width: 0 1px 0 0;}
-        .slot.absent { background: var(--absent-bg); opacity: 0.5; }
 
         .wire { position: absolute; left: 0; right: 0; height: 2px; background: var(--wire-color); z-index: 1; pointer-events: none;}
         
+        /* Base Gate Styles */
         .gate-box {
             position: absolute; width: 30px; height: 30px; background: var(--gate-bg); color: white; 
             text-align: center; font-weight: bold; line-height: 30px; font-size: 14px; z-index: 2; 
             left: 50%; transform: translate(-50%, -50%); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none;
         }
+        .rz-gate { display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1.1; }
+        .cp-gate { background: #8b5cf6 !important; }
         
-        .rz-gate {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            line-height: 1.1;
-        }
-
-        .cp-gate {
-            background: #8b5cf6 !important;
-        }
-        
-        .ctrl-dot {
-            position: absolute; width: 12px; height: 12px; background: var(--cx-color); 
-            border-radius: 50%; z-index: 2; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
-        }
-        
-        .tgt-cross {
-            position: absolute; width: 20px; height: 20px; color: var(--cx-color); z-index: 2; 
-            left: 50%; transform: translate(-50%, -50%); font-size: 26px; line-height: 20px; text-align: center; pointer-events: none;
-        }
-        
+        .ctrl-dot { position: absolute; width: 12px; height: 12px; background: var(--cx-color); border-radius: 50%; z-index: 2; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        .tgt-cross { position: absolute; width: 20px; height: 20px; color: var(--cx-color); z-index: 2; left: 50%; transform: translate(-50%, -50%); font-size: 26px; line-height: 20px; text-align: center; pointer-events: none; }
         .ctrl-line { position: absolute; left: 50%; width: 2px; background: var(--cx-color); transform: translateX(-50%); z-index: 1; pointer-events: none;}
+
+        /* Evaluated Feedback Styles */
+        .eval-correct { background-color: #059669 !important; border-color: #34d399 !important; color: white !important; }
+        .eval-absent { background-color: #334155 !important; color: #94a3b8 !important; border-color: #1e293b !important; opacity: 0.8; }
+        .eval-correct.ctrl-dot, .eval-correct.ctrl-line { background-color: #059669 !important; border:none !important;}
+        .eval-correct.tgt-cross { color: #059669 !important; }
+        .eval-absent.ctrl-dot, .eval-absent.ctrl-line { background-color: #475569 !important; border:none !important;}
+        .eval-absent.tgt-cross { color: #475569 !important; opacity: 0.7;}
 
         #board.hard-mode .gate-box { width: 22px; height: 22px; line-height: 22px; font-size: 11px; }
         #board.hard-mode .tgt-cross { width: 16px; height: 16px; font-size: 20px; line-height: 16px; }
@@ -173,6 +162,8 @@
         .btn-green:hover { background-color: #047857 !important; }
         .btn-yellow { background-color: #eab308 !important; color: #000 !important; }
         .btn-yellow:hover { background-color: #ca8a04 !important; }
+        .btn-red { background-color: #ef4444 !important; }
+        .btn-red:hover { background-color: #dc2626 !important; }
         
         #message { font-size: 1.2rem; font-weight: bold; height: 1.5rem; text-align: center; margin-bottom: 20px; padding: 0 10px;}
 
@@ -304,6 +295,7 @@
 
                 <div class="controls">
                     <button id="submit-btn" class="btn" onclick="submitGuess()">Evaluate</button>
+                    <button id="clear-btn" class="btn btn-red hidden" onclick="clearSandbox()">Clear All</button>
                     <button id="next-btn" class="btn btn-green hidden" onclick="nextStage()">Next Stage</button>
                     <button id="again-btn" class="btn btn-yellow hidden" onclick="playAgain()">Play Again</button>
                     <button id="menu-btn" class="btn" onclick="showMainMenu()">Main Menu</button>
@@ -347,7 +339,7 @@ function markStageCompleted(sIdx, lIdx) {
     }
 }
 
-// --- Menu Toggle Logic ---
+// --- Menu Toggle & Sandbox UI Logic ---
 function toggleMenu(id) {
     ['learn-content', 'play-content', 'sandbox-content'].forEach(menuId => {
         const el = document.getElementById(menuId);
@@ -360,6 +352,19 @@ function toggleMenu(id) {
             header.classList.remove('active');
         }
     });
+}
+
+function clearSandbox() {
+    if (gameOver || currentMode !== 'FREEPLAY') return;
+    currentGuess = Array(numCols).fill().map(() => []);
+    
+    const wrap = document.getElementById('row-0');
+    if (wrap) {
+        const results = wrap.querySelectorAll('.amplitudes-result');
+        results.forEach(el => el.remove());
+    }
+    
+    updateActiveRow();
 }
 
 // --- Configuration & Content ---
@@ -418,10 +423,7 @@ function getStage6Circuits(prepGateOnQ1) {
         }
         
         prepOptions.forEach(prep => {
-            // 1. Both H0s unmerged
             circuits.push([...prep, ...seq, ['H0']]);
-            
-            // 2. Start unmerged, end merged
             if (canMergeOuter) {
                 let seqEndMerged = JSON.parse(JSON.stringify(seq));
                 seqEndMerged[seqEndMerged.length - 1].push('H0');
@@ -431,13 +433,10 @@ function getStage6Circuits(prepGateOnQ1) {
         
         if (canMergeOuter) {
             let startMergedPrep = prepGateOnQ1 ? [[prepGateOnQ1]] : [];
-            
-            // 3. Start merged, end unmerged
             let seqStartMerged = JSON.parse(JSON.stringify(seq));
             seqStartMerged[0].push('H0');
             circuits.push([...startMergedPrep, ...seqStartMerged, ['H0']]);
             
-            // 4. Both H0s merged
             let seqBothMerged = JSON.parse(JSON.stringify(seq));
             seqBothMerged[0].push('H0');
             seqBothMerged[seqBothMerged.length - 1].push('H0');
@@ -787,6 +786,422 @@ function updateRzAngle(val) {
     renderPalette();
 }
 
+// --- Quantum Math Engine ---
+const c = 1 / Math.sqrt(2);
+function mult(a, b) { return {r: a.r*b.r - a.i*b.i, i: a.r*b.i + a.i*b.r}; }
+function add(a, b) { return {r: a.r + b.r, i: a.i + b.i}; }
+
+const I2 = [[{r:1,i:0},{r:0,i:0}], [{r:0,i:0},{r:1,i:0}]];
+const X2 = [[{r:0,i:0},{r:1,i:0}], [{r:1,i:0},{r:0,i:0}]];
+const Y2 = [[{r:0,i:0},{r:0,i:-1}], [{r:0,i:1},{r:0,i:0}]];
+const Z2 = [[{r:1,i:0},{r:0,i:0}], [{r:0,i:0},{r:-1,i:0}]];
+const H2 = [[{r:c,i:0},{r:c,i:0}], [{r:c,i:0},{r:-c,i:0}]];
+const SX2 = [[{r:0.5,i:0.5},{r:0.5,i:-0.5}], [{r:0.5,i:-0.5},{r:0.5,i:0.5}]];
+
+const P0 = [[{r:1,i:0},{r:0,i:0}], [{r:0,i:0},{r:0,i:0}]]; 
+const P1 = [[{r:0,i:0},{r:0,i:0}], [{r:0,i:0},{r:1,i:0}]]; 
+
+const CX2 = [
+    [{r:1,i:0}, {r:0,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}]
+];
+const CX2_REV = [
+    [{r:1,i:0}, {r:0,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}]
+];
+
+const SWAP2 = [
+    [{r:1,i:0}, {r:0,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:1,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:1,i:0}, {r:0,i:0}, {r:0,i:0}],
+    [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}]
+];
+
+function addMat(A, B) {
+    let rowA = A.length, colA = A[0].length;
+    let M = Array(rowA).fill().map(() => Array(colA));
+    for(let r=0; r<rowA; r++) for(let c=0; c<colA; c++) M[r][c] = add(A[r][c], B[r][c]);
+    return M;
+}
+
+function matMult(A, B) {
+    let size = A.length;
+    let M = Array(size).fill().map(() => Array(size));
+    for(let r=0; r<size; r++) {
+        for(let c=0; c<size; c++) {
+            let sum = {r:0, i:0};
+            for(let k=0; k<size; k++) sum = add(sum, mult(A[r][k], B[k][c]));
+            M[r][c] = sum;
+        }
+    }
+    return M;
+}
+
+function kron(A, B) {
+    let rowA = A.length, colA = A[0].length, rowB = B.length, colB = B[0].length;
+    let M = Array(rowA * rowB).fill().map(() => Array(colA * colB));
+    for(let r1=0; r1<rowA; r1++) {
+        for(let r2=0; r2<rowB; r2++) {
+            for(let c1=0; c1<colA; c1++) {
+                for(let c2=0; c2<colB; c2++) M[r1*rowB+r2][c1*colB+c2] = mult(A[r1][c1], B[r2][c2]);
+            }
+        }
+    }
+    return M;
+}
+
+function kronN(mats) {
+    let res = mats[0];
+    for(let i=1; i<mats.length; i++) res = kron(res, mats[i]);
+    return res;
+}
+
+let GATE_MATRICES = {};
+function generateMatrices(N) {
+    GATE_MATRICES = {};
+    GATE_MATRICES['I'] = kronN(Array(N).fill(I2));
+    
+    let singleGates = { 'X': X2, 'Y': Y2, 'H': H2, 'Z': Z2, 'SX': SX2 };
+    for (let q = 0; q < N; q++) {
+        for (let [name, mat] of Object.entries(singleGates)) {
+            let mats = Array(N).fill(I2);
+            mats[q] = mat;
+            GATE_MATRICES[`${name}${q}`] = kronN(mats);
+        }
+    }
+    
+    let rzVals = {
+        'PI': {r: -1, i: 0},
+        'PI2': {r: 0, i: 1},
+        'PI4': {r: c, i: c},
+        'PI8': {r: Math.cos(Math.PI/8), i: Math.sin(Math.PI/8)},
+        'MINUS_PI2': {r: 0, i: -1},
+        'MINUS_PI4': {r: c, i: -c},
+        'MINUS_PI8': {r: Math.cos(-Math.PI/8), i: Math.sin(-Math.PI/8)}
+    };
+    for (let q = 0; q < N; q++) {
+        for (let [suffix, val] of Object.entries(rzVals)) {
+            let mat = [
+                [{r:1, i:0}, {r:0, i:0}],
+                [{r:0, i:0}, val]
+            ];
+            let mats = Array(N).fill(I2);
+            mats[q] = mat;
+            GATE_MATRICES[`RZ_${suffix}_${q}`] = kronN(mats);
+        }
+    }
+    
+    if (N >= 2) {
+        if (N === 2) {
+            GATE_MATRICES['CX01'] = CX2; GATE_MATRICES['CX10'] = CX2_REV;
+            GATE_MATRICES['SWAP01'] = SWAP2; GATE_MATRICES['SWAP10'] = SWAP2;
+        } else if (N === 3) {
+            GATE_MATRICES['CX01'] = kron(CX2, I2); GATE_MATRICES['CX10'] = kron(CX2_REV, I2);
+            GATE_MATRICES['CX12'] = kron(I2, CX2); GATE_MATRICES['CX21'] = kron(I2, CX2_REV);
+            GATE_MATRICES['CX02'] = addMat(kronN([P0, I2, I2]), kronN([P1, I2, X2]));
+            GATE_MATRICES['CX20'] = addMat(kronN([I2, I2, P0]), kronN([X2, I2, P1]));
+            
+            GATE_MATRICES['SWAP01'] = kron(SWAP2, I2); GATE_MATRICES['SWAP10'] = kron(SWAP2, I2);
+            GATE_MATRICES['SWAP12'] = kron(I2, SWAP2); GATE_MATRICES['SWAP21'] = kron(I2, SWAP2);
+            
+            let SWAP02_mat = Array(8).fill().map(()=>Array(8).fill({r:0,i:0}));
+            for(let i=0; i<8; i++) {
+                let b0 = (i >> 2) & 1;
+                let b1 = (i >> 1) & 1;
+                let b2 = i & 1;
+                let swapped = (b2 << 2) | (b1 << 1) | b0;
+                SWAP02_mat[i][swapped] = {r:1,i:0};
+            }
+            GATE_MATRICES['SWAP02'] = SWAP02_mat;
+            GATE_MATRICES['SWAP20'] = SWAP02_mat;
+            
+            let CCX012 = Array(8).fill().map((_, i) => {
+                let row = Array(8).fill().map(() => ({r:0, i:0}));
+                let j = (i === 6) ? 7 : (i === 7) ? 6 : i;
+                row[j] = {r:1, i:0}; return row;
+            }); GATE_MATRICES['CCX012'] = CCX012;
+
+            let CCX021 = Array(8).fill().map((_, i) => {
+                let row = Array(8).fill().map(() => ({r:0, i:0}));
+                let j = (i === 5) ? 7 : (i === 7) ? 5 : i;
+                row[j] = {r:1, i:0}; return row;
+            }); GATE_MATRICES['CCX021'] = CCX021;
+
+            let CCX120 = Array(8).fill().map((_, i) => {
+                let row = Array(8).fill().map(() => ({r:0, i:0}));
+                let j = (i === 3) ? 7 : (i === 7) ? 3 : i;
+                row[j] = {r:1, i:0}; return row;
+            }); GATE_MATRICES['CCX120'] = CCX120;
+        }
+        
+        for (let ctrl = 0; ctrl < N; ctrl++) {
+            for (let targ = 0; targ < N; targ++) {
+                if (ctrl === targ) continue;
+                for (let [suffix, val] of Object.entries(rzVals)) {
+                    let mat = Array(Math.pow(2,N)).fill().map(() => Array(Math.pow(2,N)).fill({r:0, i:0}));
+                    for (let i = 0; i < Math.pow(2,N); i++) {
+                        let bitC = (i >> (N - 1 - ctrl)) & 1;
+                        let bitT = (i >> (N - 1 - targ)) & 1;
+                        if (bitC === 1 && bitT === 1) mat[i][i] = val;
+                        else mat[i][i] = {r:1, i:0};
+                    }
+                    GATE_MATRICES[`CP_${suffix}_${ctrl}${targ}`] = mat;
+                }
+            }
+        }
+    }
+}
+
+function removeGlobalPhase(v) {
+    let ref = null;
+    for (let i = 0; i < v.length; i++) {
+        if (Math.abs(v[i].r) > 1e-4 || Math.abs(v[i].i) > 1e-4) { ref = v[i]; break; }
+    }
+    if (!ref) return v; 
+    let mag = Math.sqrt(ref.r * ref.r + ref.i * ref.i);
+    let mR = ref.r / mag, mI = -ref.i / mag; 
+    let out = [];
+    for (let i = 0; i < v.length; i++) out.push({r: v[i].r * mR - v[i].i * mI, i: v[i].r * mI + v[i].i * mR});
+    return out;
+}
+
+function formatTerm(val, isImaginary) {
+    if (Math.abs(val) < 1e-4) return "0";
+    let sign = val < 0 ? "-" : ""; let v = Math.abs(val); let num = "";
+    const eps = 1e-4;
+    
+    let cp8 = Math.cos(Math.PI/8);
+    let sp8 = Math.sin(Math.PI/8);
+    let cp16 = Math.cos(Math.PI/16);
+    let sp16 = Math.sin(Math.PI/16);
+
+    if (Math.abs(v - 1) < eps) num = "1";
+    else if (Math.abs(v - 0.5) < eps) num = "1/2";
+    else if (Math.abs(v - 1/Math.sqrt(2)) < eps) num = "1/√2";
+    else if (Math.abs(v - 1/(2*Math.sqrt(2))) < eps) num = "1/2√2";
+    else if (Math.abs(v - 0.25) < eps) num = "1/4";
+    else if (Math.abs(v - cp8) < eps) num = "cos(π/8)";
+    else if (Math.abs(v - sp8) < eps) num = "sin(π/8)";
+    else if (Math.abs(v - cp8/Math.sqrt(2)) < eps) num = "cos(π/8)/√2";
+    else if (Math.abs(v - sp8/Math.sqrt(2)) < eps) num = "sin(π/8)/√2";
+    else if (Math.abs(v - cp8/2) < eps) num = "cos(π/8)/2";
+    else if (Math.abs(v - sp8/2) < eps) num = "sin(π/8)/2";
+    else if (Math.abs(v - cp16) < eps) num = "cos(π/16)";
+    else if (Math.abs(v - sp16) < eps) num = "sin(π/16)";
+    else if (Math.abs(v - cp16/Math.sqrt(2)) < eps) num = "cos(π/16)/√2";
+    else if (Math.abs(v - sp16/Math.sqrt(2)) < eps) num = "sin(π/16)/√2";
+    else if (Math.abs(v - cp16/2) < eps) num = "cos(π/16)/2";
+    else if (Math.abs(v - sp16/2) < eps) num = "sin(π/16)/2";
+    else num = v.toFixed(3);
+    
+    if (isImaginary) {
+        if (num === "1") return sign + "i";
+        if (num.startsWith("1/")) return sign + num.replace("1/", "i/");
+        if (num.includes("/")) return sign + num.replace("/", "i/");
+        return sign + num + "i";
+    }
+    return sign + num;
+}
+
+function formatComplexExact(val) {
+    let r = val.r, i = val.i;
+    if (Math.abs(r) < 1e-4 && Math.abs(i) < 1e-4) return null;
+    if (Math.abs(r) < 1e-4) return formatTerm(i, true);
+    if (Math.abs(i) < 1e-4) return formatTerm(r, false);
+    
+    let rStr = formatTerm(r, false), iStr = formatTerm(i, true);
+    let op = iStr.startsWith("-") ? "-" : "+";
+    let iPart = iStr.startsWith("-") ? iStr.substring(1) : iStr;
+    return `${rStr} ${op} ${iPart}`;
+}
+
+function computeStateVector(sequence, N) {
+    let numStates = Math.pow(2, N);
+    let v = Array(numStates).fill().map(() => ({r:0, i:0}));
+    v[0] = {r:1, i:0}; 
+    
+    for (let column of sequence) {
+        if (column.length === 0) continue;
+        let colMatrix = GATE_MATRICES['I'];
+        for (let gate of column) colMatrix = matMult(colMatrix, GATE_MATRICES[gate]);
+        
+        let nextV = [];
+        for (let i = 0; i < numStates; i++) {
+            let sum = {r:0, i:0};
+            for (let j = 0; j < numStates; j++) sum = add(sum, mult(colMatrix[i][j], v[j]));
+            nextV.push(sum);
+        }
+        v = nextV;
+    }
+    return removeGlobalPhase(v);
+}
+
+function stateToString(v, N) {
+    let terms = [];
+    let numStates = Math.pow(2, N);
+    for (let i = 0; i < numStates; i++) {
+        let fmt = formatComplexExact(v[i]);
+        if (fmt) {
+            let bin = i.toString(2).padStart(N, '0');
+            terms.push(`${(fmt.includes(' + ') || fmt.includes(' - ')) ? `(${fmt})` : fmt}|${bin}⟩`);
+        }
+    }
+    return terms.length === 0 ? "0" : terms.join(' + ').replace(/\+ -/g, '- ');
+}
+
+function statesMatch(v1, v2, N) {
+    let numStates = Math.pow(2, N);
+    for (let i = 0; i < numStates; i++) {
+        if (Math.abs(v1[i].r - v2[i].r) > 1e-4 || Math.abs(v1[i].i - v2[i].i) > 1e-4) return false;
+    }
+    return true;
+}
+
+function getOccupiedQubits(gate) {
+    if (!gate || gate === 'I') return [];
+    if (gate.startsWith('CCX')) {
+        let c1 = parseInt(gate[3]), c2 = parseInt(gate[4]), t = parseInt(gate[5]);
+        let occ = [];
+        for(let i=Math.min(c1, c2, t); i<=Math.max(c1, c2, t); i++) occ.push(i); 
+        return occ;
+    }
+    if (gate.startsWith('CX')) {
+        let c = parseInt(gate[2]), t = parseInt(gate[3]);
+        let occ = [];
+        for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
+        return occ;
+    }
+    if (gate.startsWith('SWAP')) {
+        let parts = gate.replace('SWAP', '');
+        let c = parseInt(parts[0]), t = parseInt(parts[1]);
+        let occ = [];
+        for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
+        return occ;
+    }
+    if (gate.startsWith('RZ_')) {
+        let parts = gate.split('_');
+        return [parseInt(parts[parts.length - 1])];
+    }
+    if (gate.startsWith('CP_')) {
+        let parts = gate.split('_');
+        let ct = parts[parts.length - 1];
+        let c = parseInt(ct[0]), t = parseInt(ct[1]);
+        let occ = [];
+        for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
+        return occ;
+    }
+    return [parseInt(gate.slice(-1))];
+}
+
+function canFit(columnGates, newGate) {
+    let newOcc = getOccupiedQubits(newGate);
+    for(let g of columnGates) {
+        let occ = getOccupiedQubits(g);
+        for(let q of newOcc) { if(occ.includes(q)) return false; }
+    }
+    return true;
+}
+
+function addGateToColumn(colArray, newGate) {
+    if (!newGate || newGate === 'I') return colArray;
+    let newOcc = getOccupiedQubits(newGate);
+    let filtered = colArray.filter(g => {
+        let occ = getOccupiedQubits(g);
+        return !newOcc.some(q => occ.includes(q));
+    });
+    filtered.push(newGate);
+    return filtered;
+}
+
+// --- Bloch Sphere ---
+function calcBlochVector(v, q, N) {
+    let z = 0, x = 0, y = 0;
+    let numStates = Math.pow(2, N);
+    for (let i = 0; i < numStates; i++) {
+        let bit = (i >> (N - 1 - q)) & 1;
+        if (bit === 0) {
+            let j = i ^ (1 << (N - 1 - q));
+            z += (v[i].r**2 + v[i].i**2) - (v[j].r**2 + v[j].i**2);
+            x += 2 * (v[i].r * v[j].r + v[i].i * v[j].i);
+            y += 2 * (v[i].r * v[j].i - v[i].i * v[j].r);
+        }
+    }
+    return {x, y, z};
+}
+
+function drawBlochSphere(canvasId, vec, label) {
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const cx = canvas.width / 2, cy = canvas.height / 2 - 10, R = 55;
+    
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2*Math.PI);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+    
+    ctx.beginPath(); ctx.ellipse(cx, cy, R, R*0.35, 0, 0, 2*Math.PI); ctx.stroke();
+    
+    const proj = (x, y, z) => ({ x: cx + R * (y - 0.5 * x), y: cy + R * (-z + 0.35 * x) });
+    
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    const drawAxis = (p1, p2, txt, pTxt) => {
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText(txt, pTxt.x, pTxt.y);
+    };
+    
+    let pZ1 = proj(0,0,-1), pZ2 = proj(0,0,1);
+    drawAxis(pZ1, pZ2, '|0⟩', {x: pZ2.x - 8, y: pZ2.y - 5}); ctx.fillText('|1⟩', pZ1.x - 8, pZ1.y + 12);
+    
+    let pY1 = proj(0,-1,0), pY2 = proj(0,1,0);
+    drawAxis(pY1, pY2, 'y', {x: pY2.x + 4, y: pY2.y + 4});
+    
+    let pX1 = proj(-1,0,0), pX2 = proj(1,0,0);
+    drawAxis(pX1, pX2, 'x', {x: pX2.x - 12, y: pX2.y + 12});
+    
+    let pv = proj(vec.x, vec.y, vec.z);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(pv.x, pv.y);
+    
+    let len = Math.sqrt(vec.x**2 + vec.y**2 + vec.z**2);
+    ctx.strokeStyle = len < 0.95 ? '#eab308' : '#ec4899'; 
+    ctx.lineWidth = 3; ctx.stroke();
+    
+    ctx.beginPath(); ctx.arc(pv.x, pv.y, 4, 0, 2*Math.PI); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+    
+    ctx.fillStyle = '#cbd5e1'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(label, cx, canvas.height - 10);
+}
+
+// --- UI Logic ---
+let currentMode = ''; 
+let currentLvl = 1;
+let currentP1 = 0;
+let currentP2 = 0;
+
+let numQubits = 1;
+let numCols = 4;
+let activeSet = [];
+let secretCircuits = []; 
+let targetState = [];
+let currentGuess = []; 
+let attempts = 0;
+let gameOver = false;
+
+// Helper to calculate exact multiset from a 2D array of gates
+function getGateMultiset(circuit) {
+    let gates = [];
+    for(let col of circuit) {
+        for(let gate of col) {
+            if(gate && gate !== 'I') gates.push(gate);
+        }
+    }
+    return gates.sort().join(',');
+}
+
 function buildMenu() {
     const container = document.getElementById('stages-container');
     container.innerHTML = '';
@@ -840,6 +1255,7 @@ function initGame(mode, p1, p2) {
     let submitBtn = document.getElementById('submit-btn');
     let targetBox = document.getElementById('target-container');
     let liveBox = document.getElementById('live-state-container');
+    let clearBtn = document.getElementById('clear-btn');
     
     submitBtn.classList.remove('hidden');
     document.getElementById('next-btn').classList.add('hidden');
@@ -847,6 +1263,7 @@ function initGame(mode, p1, p2) {
     submitBtn.disabled = false;
     
     if (mode === 'STAGE') {
+        clearBtn.classList.add('hidden');
         currentP1 = p1;
         currentP2 = p2;
         let stage = STAGES[p1];
@@ -868,6 +1285,7 @@ function initGame(mode, p1, p2) {
         liveBox.style.display = 'none';
         
     } else if (mode === 'RANDOM') {
+        clearBtn.classList.add('hidden');
         currentLvl = p1;
         numQubits = LEVELS[p1].q;
         numCols = LEVELS[p1].g;
@@ -909,6 +1327,7 @@ function initGame(mode, p1, p2) {
         liveBox.style.display = 'none';
         
     } else if (mode === 'FREEPLAY') {
+        clearBtn.classList.remove('hidden');
         numQubits = p1;
         numCols = 8;
         activeSet = LEVELS[p1].set;
@@ -944,13 +1363,15 @@ function initGame(mode, p1, p2) {
     updateBlochSpheres();
 }
 
-function getColumnHTML(gates) {
+function getColumnHTML(gates, gateStatusMap = null) {
     let html = '';
     for(let q=0; q<numQubits; q++) {
         let top = ((q + 0.5) / numQubits * 100) + '%';
         html += `<div class="wire" style="top: ${top}"></div>`;
     }
     for(let type of gates) {
+        let statusClass = (gateStatusMap && gateStatusMap[type]) ? (gateStatusMap[type] === 'correct' ? 'eval-correct' : 'eval-absent') : '';
+        
         if (type.startsWith('CCX')) {
             let c1 = parseInt(type[3]), c2 = parseInt(type[4]), t = parseInt(type[5]);
             let c1Top = ((c1 + 0.5) / numQubits * 100) + '%';
@@ -960,19 +1381,19 @@ function getColumnHTML(gates) {
             let lineTop = ((minQ + 0.5) / numQubits * 100) + '%';
             let lineHeight = ((maxQ - minQ) / numQubits * 100) + '%';
             
-            html += `<div class="ctrl-dot" style="top: ${c1Top}"></div>`;
-            html += `<div class="ctrl-dot" style="top: ${c2Top}"></div>`;
-            html += `<div class="tgt-cross" style="top: ${tTop}">⊕</div>`;
-            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+            html += `<div class="ctrl-dot ${statusClass}" style="top: ${c1Top}"></div>`;
+            html += `<div class="ctrl-dot ${statusClass}" style="top: ${c2Top}"></div>`;
+            html += `<div class="tgt-cross ${statusClass}" style="top: ${tTop}">⊕</div>`;
+            html += `<div class="ctrl-line ${statusClass}" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else if (type.startsWith('CX')) {
             let c = parseInt(type[2]), t = parseInt(type[3]);
             let cTop = ((c + 0.5) / numQubits * 100) + '%', tTop = ((t + 0.5) / numQubits * 100) + '%';
             let lineTop = ((Math.min(c, t) + 0.5) / numQubits * 100) + '%';
             let lineHeight = (Math.abs(c - t) / numQubits * 100) + '%';
             
-            html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
-            html += `<div class="tgt-cross" style="top: ${tTop}">⊕</div>`;
-            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+            html += `<div class="ctrl-dot ${statusClass}" style="top: ${cTop}"></div>`;
+            html += `<div class="tgt-cross ${statusClass}" style="top: ${tTop}">⊕</div>`;
+            html += `<div class="ctrl-line ${statusClass}" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else if (type.startsWith('SWAP')) {
             let parts = type.replace('SWAP', '');
             let c = parseInt(parts[0]), t = parseInt(parts[1]);
@@ -982,9 +1403,9 @@ function getColumnHTML(gates) {
             let lineTop = ((minQ + 0.5) / numQubits * 100) + '%';
             let lineHeight = ((maxQ - minQ) / numQubits * 100) + '%';
 
-            html += `<div class="tgt-cross" style="top: ${cTop}">×</div>`;
-            html += `<div class="tgt-cross" style="top: ${tTop}">×</div>`;
-            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+            html += `<div class="tgt-cross ${statusClass}" style="top: ${cTop}">×</div>`;
+            html += `<div class="tgt-cross ${statusClass}" style="top: ${tTop}">×</div>`;
+            html += `<div class="ctrl-line ${statusClass}" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else if (type.startsWith('RZ_')) {
             let parts = type.split('_'); 
             let angleStr = parts.slice(1, -1).join('_');
@@ -998,7 +1419,7 @@ function getColumnHTML(gates) {
                                angleStr === 'MINUS_PI2' ? '-π/2' :
                                angleStr === 'MINUS_PI4' ? '-π/4' : '-π/8';
                                
-            html += `<div class="gate-box rz-gate" style="top: ${top};">
+            html += `<div class="gate-box rz-gate ${statusClass}" style="top: ${top};">
                         <span style="font-size: 11px;">Rz</span>
                         <span style="font-size: 8px;">${displayAngle}</span>
                      </div>`;
@@ -1020,17 +1441,17 @@ function getColumnHTML(gates) {
                                angleStr === 'MINUS_PI2' ? '-π/2' :
                                angleStr === 'MINUS_PI4' ? '-π/4' : '-π/8';
                                
-            html += `<div class="ctrl-dot" style="top: ${cTop}"></div>`;
-            html += `<div class="gate-box rz-gate cp-gate" style="top: ${tTop};">
+            html += `<div class="ctrl-dot ${statusClass}" style="top: ${cTop}"></div>`;
+            html += `<div class="gate-box rz-gate cp-gate ${statusClass}" style="top: ${tTop};">
                         <span style="font-size: 11px;">P</span>
                         <span style="font-size: 8px;">${displayAngle}</span>
                      </div>`;
-            html += `<div class="ctrl-line" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
+            html += `<div class="ctrl-line ${statusClass}" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else {
             let gateName = type.replace(/\d/g, ''); 
             let q = parseInt(type.slice(-1));
             let top = ((q + 0.5) / numQubits * 100) + '%';
-            html += `<div class="gate-box" style="top: ${top}">${gateName}</div>`;
+            html += `<div class="gate-box ${statusClass}" style="top: ${top}">${gateName}</div>`;
         }
     }
     return html;
@@ -1120,6 +1541,7 @@ function renderBoard() {
             const slot = document.createElement('div');
             slot.className = 'slot';
             slot.id = `slot-${r}-${c}`;
+            
             slot.innerHTML = getColumnHTML([]); 
             
             slot.addEventListener('dragover', (e) => {
@@ -1237,41 +1659,53 @@ function submitGuess() {
     let matchedMultiset = validMultisets.includes(userMultiset);
     
     let matchedCircuit = null;
-    let bestMatchCount = -1;
+    let bestMatchScore = -1;
     let bestMatchCircuit = secretCircuits[0];
 
+    // Find the canonical variation that aligns with the highest number of placed gates
     for (let possibleCircuit of secretCircuits) {
-        let currentMatchCount = 0;
+        let score = 0;
+        let allMatch = true;
         for (let c = 0; c < numCols; c++) {
             let guessStr = [...currentGuess[c]].sort().join(',');
             let secretStr = possibleCircuit[c] ? [...possibleCircuit[c]].sort().join(',') : "";
-            if (guessStr === secretStr) {
-                currentMatchCount++;
+            if (guessStr !== secretStr) {
+                allMatch = false;
             }
+            let targetGates = possibleCircuit[c] || [];
+            currentGuess[c].forEach(g => {
+                if (targetGates.includes(g)) score += 1;
+            });
+            if (guessStr === secretStr) score += 0.5; // Bonus tie-breaker for exact column match
         }
-        if (currentMatchCount > bestMatchCount) {
-            bestMatchCount = currentMatchCount;
+        if (score > bestMatchScore) {
+            bestMatchScore = score;
             bestMatchCircuit = possibleCircuit;
         }
-        if (currentMatchCount === numCols) {
+        if (allMatch) {
             matchedCircuit = possibleCircuit;
             break;
         }
     }
 
-    let exactMatches = matchedCircuit ? numCols : bestMatchCount;
     let compareCircuit = matchedCircuit || bestMatchCircuit;
     
+    // Color granularly based on exactly what gates match the chosen canonical circuit
     for (let c = 0; c < numCols; c++) {
         const slot = document.getElementById(`slot-${attempts}-${c}`);
-        let guessStr = [...currentGuess[c]].sort().join(',');
-        let secretStr = compareCircuit[c] ? [...compareCircuit[c]].sort().join(',') : "";
+        let guessGates = currentGuess[c] || [];
+        let targetGates = compareCircuit[c] || [];
         
-        if (guessStr === secretStr) {
-            slot.classList.add('correct');
-        } else {
-            slot.classList.add('absent');
-        }
+        let gateStatusMap = {};
+        guessGates.forEach(g => {
+            if (targetGates.includes(g)) {
+                gateStatusMap[g] = 'correct';
+            } else {
+                gateStatusMap[g] = 'absent';
+            }
+        });
+        
+        slot.innerHTML = getColumnHTML(guessGates, gateStatusMap);
     }
     
     const userState = computeStateVector(currentGuess, numQubits);
@@ -1295,13 +1729,13 @@ function submitGuess() {
         gameOver = true;
         document.getElementById('submit-btn').classList.add('hidden');
         
-        if (isStrict && matchedMultiset) {
+        // If they won via multiset parallelization, override the partial column graying and turn their valid gates green
+        if (isStrict && matchedMultiset && !matchedCircuit) {
             for (let c = 0; c < numCols; c++) {
                 const slot = document.getElementById(`slot-${attempts}-${c}`);
-                if (currentGuess[c].length > 0) {
-                    slot.classList.remove('absent');
-                    slot.classList.add('correct');
-                }
+                let gateStatusMap = {};
+                currentGuess[c].forEach(g => gateStatusMap[g] = 'correct');
+                slot.innerHTML = getColumnHTML(currentGuess[c], gateStatusMap);
             }
         }
         
