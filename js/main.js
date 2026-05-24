@@ -392,7 +392,7 @@ if (rzSelect) {
 // 6. Logo Click
 const gameLogo = document.getElementById('game-logo');
 if (gameLogo) {
-    gameLogo.addEventListener('click', () => window.showMainMenu());
+    gameLogo.addEventListener('click', () => showMainMenu());
 }
 
 // --- Boot App ---
