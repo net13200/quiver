@@ -381,7 +381,7 @@ document.getElementById('btn-free-2').addEventListener('click', () => initGame('
 document.getElementById('btn-free-3').addEventListener('click', () => initGame('FREEPLAY', 3));
 
 // 4. Game Controls
-document.getElementById('submit-btn').addEventListener('click', () => submitGuess(state));
+document.getElementById('submit-btn').addEventListener('click', () => submitGuess(state, renderBoard));
 document.getElementById('clear-btn').addEventListener('click', () => {
     if (state.gameOver || state.currentMode !== 'FREEPLAY') return;
     state.currentGuess = Array(state.numCols).fill().map(() => []);

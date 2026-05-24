@@ -5,15 +5,21 @@ import { markStageCompleted, completedStages, updateStats } from '../data/storag
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
 
-export function submitGuess(state) {
+// NEW: Accept the renderBoardCallback from main.js
+export function submitGuess(state, renderBoardCallback) {
     if (state.gameOver) return;
     
     if (state.currentMode === 'FREEPLAY') {
         const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
+        const wrap = document.getElementById('row-active');
+        
+        // NEW: Clear old snapshots before printing a new one so they don't pile up
+        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+
         const ampResult = document.createElement('div');
         ampResult.className = 'amplitudes-result';
         ampResult.innerText = "↳ Snapshot |ψ⟩ = " + stateToString(userState, state.numQubits);
-        document.getElementById('row-active').appendChild(ampResult);
+        wrap.appendChild(ampResult);
         return; 
     }
     
@@ -88,7 +94,7 @@ export function submitGuess(state) {
     ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
     wrap.appendChild(ampResult);
     
-if (hasWon) {
+    if (hasWon) {
         const submitBtn = document.getElementById('submit-btn');
         const rect = submitBtn.getBoundingClientRect();
         const startX = rect.left + (rect.width / 2);
@@ -113,7 +119,7 @@ if (hasWon) {
         let subTitle = matchedCircuit ? "Perfect Canonical Match!" : "Equivalent Circuit Found!";
         let statsText = null;
         let showNextBtn = false;
-        let revealObj = null; // NEW: Holds the circuit data for the modal
+        let revealObj = null; 
 
         if (state.currentMode === 'STAGE') {
             markStageCompleted(state.currentP1, state.currentP2);
@@ -129,14 +135,12 @@ if (hasWon) {
             if (allCompleted) subTitle = "🎉 All Stages Cleared! 🎉";
             else if (state.currentP1 === STAGES.length - 1 && state.currentP2 === STAGES[state.currentP1].levels.length - 1) subTitle = "Final Stage Complete!";
             
-            // Package the canonical circuit data for the modal
             if (!matchedMultiset && !matchedCircuit) {
                 revealObj = { revealTitle: "A Canonical Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
         } else if (state.currentMode === 'RANDOM') {
             mainTitle = "Puzzle Solved!";
             
-            // --- SCORING MATH ---
             let userGateCount = state.currentGuess.reduce((sum, col) => sum + col.length, 0);
             let secretGateCount = compareCircuit.reduce((sum, col) => sum + col.length, 0);
             
@@ -166,14 +170,12 @@ if (hasWon) {
             updateStats(pointsEarned, state.currentStreak);
             statsText = `+${pointsEarned} Points! <br><span style="font-size: 1rem; color: #cbd5e1;">🔥 Streak: ${state.currentStreak} &nbsp;&nbsp;|&nbsp;&nbsp; Gates Used: ${userGateCount} / ${secretGateCount}</span>${complimentHtml}`;
 
-            // Package the original circuit data for the modal
             if (!matchedCircuit) {
                 revealObj = { revealTitle: "The Original Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
         }
 
         setTimeout(() => {
-            // Pass the revealObj directly into the modal!
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
         }, 500);
 
@@ -190,7 +192,7 @@ if (hasWon) {
 
         if (state.attempts === 6) {
             state.gameOver = true;
-            state.currentStreak = 0; // RESET STREAK ON LOSS
+            state.currentStreak = 0; 
             
             wrap.classList.remove('active');
             document.getElementById('submit-btn').classList.add('hidden');
@@ -208,7 +210,10 @@ if (hasWon) {
             }
         } else {
             state.currentGuess = Array(state.numCols).fill().map(() => []);
-            updateActiveRow(state);
+            
+            // FIXED: Pass the callback here to correctly rebuild the visual grid!
+            updateActiveRow(state, renderBoardCallback); 
+            
             const activeAmpResult = wrap.querySelector('.amplitudes-result');
             if (activeAmpResult) activeAmpResult.remove();
         }
