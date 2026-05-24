@@ -234,6 +234,13 @@ function initGame(mode, p1, p2) {
     state.gameOver = false;
     document.getElementById('message').innerText = "";
     
+    // --- NEW: Force a hard wipe of the DOM for the new game ---
+    document.getElementById('board').innerHTML = '';
+    const historyBoard = document.getElementById('history-board');
+    if (historyBoard) historyBoard.innerHTML = ''; 
+    // Use querySelectorAll to catch any and all lingering canonical circuits
+    document.querySelectorAll('#reveal-circuit-wrap').forEach(el => el.remove());
+    
     renderDynamicCanvases(state.numQubits);
     renderPalette();
     renderBoard(); 

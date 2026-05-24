@@ -230,18 +230,52 @@ export function fireQuantumConfetti(startX, startY) {
 }
 
 // --- Modals ---
-export function showVictoryModal(title, subtitle, statsText, showNext) {
+export function showVictoryModal(title, subtitle, statsText, showNext, revealObj) {
     const overlay = document.getElementById('victory-modal');
     document.getElementById('victory-title').innerText = title;
     document.getElementById('victory-subtitle').innerText = subtitle;
     
-    // NEW: Render the score/streak text if provided
     const statsEl = document.getElementById('victory-stats');
     if (statsText) {
         statsEl.innerHTML = statsText;
         statsEl.style.display = 'block';
     } else {
         statsEl.style.display = 'none';
+    }
+    
+    // NEW: Render the revealed circuit inside the modal
+    const circuitContainer = document.getElementById('victory-circuit-container');
+    circuitContainer.innerHTML = ''; 
+    if (revealObj) {
+        const { revealTitle, color, targetCircuit, numQubits } = revealObj;
+
+        const finalWrap = document.createElement('div');
+        finalWrap.className = 'row-wrapper';
+        finalWrap.style.margin = '0 auto'; // Keeps it perfectly centered
+        finalWrap.style.borderColor = color;
+
+        const label = document.createElement('div');
+        label.className = 'original-label';
+        label.style.backgroundColor = color;
+        label.innerText = revealTitle;
+        finalWrap.appendChild(label);
+
+        const finalRow = document.createElement('div');
+        finalRow.className = 'circuit-row';
+        finalRow.style.height = `${Math.max(60, numQubits * 30)}px`;
+
+        targetCircuit.forEach(gates => {
+            const s = document.createElement('div');
+            s.className = 'slot';
+            s.innerHTML = getColumnHTML(gates, numQubits);
+            finalRow.appendChild(s);
+        });
+
+        finalWrap.appendChild(finalRow);
+        circuitContainer.appendChild(finalWrap);
+        circuitContainer.style.display = 'flex';
+    } else {
+        circuitContainer.style.display = 'none';
     }
     
     if (showNext) {

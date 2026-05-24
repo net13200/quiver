@@ -88,7 +88,7 @@ export function submitGuess(state) {
     ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
     wrap.appendChild(ampResult);
     
-    if (hasWon) {
+if (hasWon) {
         const submitBtn = document.getElementById('submit-btn');
         const rect = submitBtn.getBoundingClientRect();
         const startX = rect.left + (rect.width / 2);
@@ -113,6 +113,7 @@ export function submitGuess(state) {
         let subTitle = matchedCircuit ? "Perfect Canonical Match!" : "Equivalent Circuit Found!";
         let statsText = null;
         let showNextBtn = false;
+        let revealObj = null; // NEW: Holds the circuit data for the modal
 
         if (state.currentMode === 'STAGE') {
             markStageCompleted(state.currentP1, state.currentP2);
@@ -128,8 +129,9 @@ export function submitGuess(state) {
             if (allCompleted) subTitle = "🎉 All Stages Cleared! 🎉";
             else if (state.currentP1 === STAGES.length - 1 && state.currentP2 === STAGES[state.currentP1].levels.length - 1) subTitle = "Final Stage Complete!";
             
+            // Package the canonical circuit data for the modal
             if (!matchedMultiset && !matchedCircuit) {
-                showRevealCircuit("A Canonical Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);
+                revealObj = { revealTitle: "A Canonical Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
         } else if (state.currentMode === 'RANDOM') {
             mainTitle = "Puzzle Solved!";
@@ -143,7 +145,6 @@ export function submitGuess(state) {
             let bonus = 0;
             let complimentHtml = "";
 
-            // NEW: EFFICIENCY COMPLIMENT LOGIC
             if (userGateCount < secretGateCount) {
                 bonus = 5;
                 const compliments = [
@@ -159,21 +160,21 @@ export function submitGuess(state) {
             }
 
             let multi = state.currentLvl === 1 ? 1 : (state.currentLvl === 2 ? 1.5 : 2);
-            
             let pointsEarned = (base - penalty + bonus) * multi;
             state.currentStreak++;
             
             updateStats(pointsEarned, state.currentStreak);
-
             statsText = `+${pointsEarned} Points! <br><span style="font-size: 1rem; color: #cbd5e1;">🔥 Streak: ${state.currentStreak} &nbsp;&nbsp;|&nbsp;&nbsp; Gates Used: ${userGateCount} / ${secretGateCount}</span>${complimentHtml}`;
 
+            // Package the original circuit data for the modal
             if (!matchedCircuit) {
-                showRevealCircuit("The Original Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);
+                revealObj = { revealTitle: "The Original Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
         }
 
         setTimeout(() => {
-            showVictoryModal(mainTitle, subTitle, statsText, showNextBtn);
+            // Pass the revealObj directly into the modal!
+            showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
         }, 500);
 
     } else {
