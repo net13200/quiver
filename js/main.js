@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal } from './game/ui.js';
 import { attachDragDropHandlers, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -23,12 +23,11 @@ export const state = {
     currentRzAngle: 'PI'
 };
 
-// Expose these highly specific dynamic DOM hooks
+// --- Expose Global Hooks for dynamically created DOM elements ---
 window.showHint = () => {
     document.getElementById('hint-text').classList.remove('hidden');
     document.getElementById('hint-btn').classList.add('hidden');
 };
-
 window.showLesson = () => {
     document.getElementById('lesson-text').classList.remove('hidden');
     document.getElementById('lesson-btn').classList.add('hidden');
@@ -92,7 +91,6 @@ function expandGateSet(baseGates, numQubits) {
 
 // --- Game Initialization ---
 function initGame(mode, p1, p2) {
-    // 1. Selector Failsafe
     if (mode === 'RANDOM') {
         let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
         if (selectedBaseGates.length === 0) {
@@ -102,6 +100,7 @@ function initGame(mode, p1, p2) {
     }
 
     document.getElementById('main-menu').style.display = 'none';
+    hideVictoryModal(); // Ensure the modal is hidden when starting a new game
     document.getElementById('game-view').style.display = 'flex';
     
     state.currentMode = mode;
@@ -147,7 +146,6 @@ function initGame(mode, p1, p2) {
         let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
         state.activeSet = expandGateSet(selectedBaseGates, state.numQubits);
         
-        // Final fallback just in case the active pool doesn't fit the board 
         if (state.activeSet.length === 0) {
             state.activeSet = expandGateSet(['X', 'H'], state.numQubits);
         }
@@ -155,14 +153,13 @@ function initGame(mode, p1, p2) {
         let generatedCircuit = [];
         let activeLength = Math.floor(Math.random() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
         let singleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
-        let singleGatesToPlace = 2; // Target 2 explicit single qubit gates
+        let singleGatesToPlace = 2; 
 
         for (let i = 0; i < state.numCols; i++) {
             if (i < activeLength) {
                 let col = [];
                 let placedThisCol = 0;
 
-                // Force 2 single-qubit gates into the generated circuit early
                 if (singleGatesToPlace > 0 && singleQSet.length > 0) {
                     let g = singleQSet[Math.floor(Math.random() * singleQSet.length)];
                     col.push(formatAngleGate(g));
@@ -290,11 +287,9 @@ function renderBoard() {
     const historyBoard = document.getElementById('history-board');
     if (historyBoard) historyBoard.innerHTML = ''; // Clear history on new game
     
-    // NEW: Clean up the old canonical circuit if you hit Play Again
     const oldReveal = document.getElementById('reveal-circuit-wrap');
     if (oldReveal) oldReveal.remove();
 
-    // Manage Attempts Counter Display
     const attemptsCounter = document.getElementById('attempts-counter');
     if (state.currentMode === 'FREEPLAY') {
         attemptsCounter.style.display = 'none';
@@ -306,7 +301,6 @@ function renderBoard() {
     const rowHeight = Math.max(60, state.numQubits * 30);
     const sub = ['₀', '₁', '₂'];
     
-    // Create the single Active Row
     const wrap = document.createElement('div');
     wrap.className = `row-wrapper active`;
     wrap.id = `row-active`;
@@ -394,6 +388,29 @@ const gameLogo = document.getElementById('game-logo');
 if (gameLogo) {
     gameLogo.addEventListener('click', () => showMainMenu());
 }
+
+// 7. Modal Buttons (The Missing Links!)
+document.getElementById('modal-next-btn').addEventListener('click', () => {
+    hideVictoryModal();
+    if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
+        initGame('STAGE', state.currentP1, state.currentP2 + 1);
+    } else if (state.currentP1 + 1 < STAGES.length) {
+        initGame('STAGE', state.currentP1 + 1, 0); 
+    } else {
+        showMainMenu(); 
+    }
+});
+
+document.getElementById('modal-again-btn').addEventListener('click', () => {
+    hideVictoryModal();
+    if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
+    else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
+});
+
+document.getElementById('modal-menu-btn').addEventListener('click', () => {
+    hideVictoryModal();
+    showMainMenu();
+});
 
 // --- Boot App ---
 buildMenu();
