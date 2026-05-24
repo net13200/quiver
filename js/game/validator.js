@@ -1,13 +1,12 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
-import { getColumnHTML, showRevealCircuit, updateBlochSpheres } from './ui.js';
+import { getColumnHTML, showRevealCircuit, updateBlochSpheres, fireQuantumConfetti } from './ui.js';
 import { markStageCompleted, completedStages } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 
 export function submitGuess(state) {
     if (state.gameOver) return;
     
-    // Freeplay Mode just takes a snapshot
     if (state.currentMode === 'FREEPLAY') {
         const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
         const ampResult = document.createElement('div');
@@ -20,7 +19,6 @@ export function submitGuess(state) {
     const wrap = document.getElementById(`row-${state.attempts}`);
     wrap.classList.remove('active');
     
-    // Strict Mode: Multi-set DAG Checking
     let userMultiset = getGateMultiset(state.currentGuess);
     let validMultisets = state.secretCircuits.map(c => getGateMultiset(c));
     let matchedMultiset = validMultisets.includes(userMultiset);
@@ -29,7 +27,6 @@ export function submitGuess(state) {
     let bestMatchScore = -1;
     let bestMatchCircuit = state.secretCircuits[0];
 
-    // Find the canonical variation that aligns with the highest number of placed gates
     for (let possibleCircuit of state.secretCircuits) {
         let score = 0;
         let allMatch = true;
@@ -43,7 +40,7 @@ export function submitGuess(state) {
             state.currentGuess[c].forEach(g => {
                 if (targetGates.includes(g)) score += 1;
             });
-            if (guessStr === secretStr) score += 0.5; // Bonus tie-breaker for exact column match
+            if (guessStr === secretStr) score += 0.5; 
         }
         if (score > bestMatchScore) {
             bestMatchScore = score;
@@ -57,7 +54,6 @@ export function submitGuess(state) {
 
     let compareCircuit = matchedCircuit || bestMatchCircuit;
     
-    // Color granularly based on exactly what gates match the chosen canonical circuit
     for (let c = 0; c < state.numCols; c++) {
         const slot = document.getElementById(`slot-${state.attempts}-${c}`);
         let guessGates = state.currentGuess[c] || [];
@@ -92,11 +88,22 @@ export function submitGuess(state) {
     ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
     wrap.appendChild(ampResult);
     
+    // --- WIN LOGIC ---
     if (hasWon) {
+        // 1. Get the button's coordinates BEFORE we hide it!
+        const submitBtn = document.getElementById('submit-btn');
+        const rect = submitBtn.getBoundingClientRect();
+        const startX = rect.left + (rect.width / 2);
+        const startY = rect.top;
+
+        // 2. Hide the button and set game over
         state.gameOver = true;
-        document.getElementById('submit-btn').classList.add('hidden');
+        submitBtn.classList.add('hidden');
         
-        // If they won via multiset parallelization, override the partial column graying and turn their valid gates green
+        // 3. Fire the Confetti!
+        fireQuantumConfetti(startX, startY);
+        
+        // Rest of the game logic (UI updates, next stages, etc)
         if (isStrict && matchedMultiset && !matchedCircuit) {
             for (let c = 0; c < state.numCols; c++) {
                 const slot = document.getElementById(`slot-${state.attempts}-${c}`);
@@ -135,7 +142,7 @@ export function submitGuess(state) {
             document.getElementById('again-btn').innerText = "Play Again";
             document.getElementById('again-btn').classList.remove('hidden');
             
-        } else {
+        } else if (state.currentMode === 'RANDOM') {
             document.getElementById('message').innerText = matchedCircuit ? "Perfect Match! You won!" : "Equivalent Circuit Found! You won!";
             document.getElementById('message').style.color = matchedCircuit ? "#22c55e" : "#3b82f6";
             if (!matchedCircuit) showRevealCircuit("The Original Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);

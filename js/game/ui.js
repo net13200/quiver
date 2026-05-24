@@ -158,3 +158,79 @@ export function showRevealCircuit(title, color, targetCircuit, numQubits) {
     finalWrap.appendChild(finalRow);
     document.getElementById('board').appendChild(finalWrap);
 }
+
+// --- Quantum Confetti Effect ---
+export function fireQuantumConfetti() {
+    const button = document.getElementById('submit-btn');
+    if (!button) return;
+
+    // Get where the button is on the screen
+    const rect = button.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top;
+
+    const gateTypes = [
+        { label: 'H', class: 'gate-bg', bg: 'var(--gate-bg)' },
+        { label: 'X', class: 'gate-bg', bg: 'var(--gate-bg)' },
+        { label: 'Z', class: 'gate-bg', bg: 'var(--gate-bg)' },
+        { label: 'P', class: 'confetti-cp', bg: '#8b5cf6' },
+        { label: '•', class: 'confetti-cx', bg: 'var(--cx-color)' },
+        { label: '⊕', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' },
+        { label: '×', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' }
+    ];
+
+    const particles = [];
+    const numParticles = 40; // How many gates shoot out
+
+    // Create the DOM elements and assign initial velocities
+    for (let i = 0; i < numParticles; i++) {
+        const type = gateTypes[Math.floor(Math.random() * gateTypes.length)];
+        const el = document.createElement('div');
+        el.className = `quantum-confetti ${type.class}`;
+        el.innerText = type.label;
+        if (type.bg !== 'var(--gate-bg)') el.style.background = type.bg;
+        if (type.color) el.style.color = type.color;
+        if (type.size) el.style.fontSize = type.size;
+
+        document.body.appendChild(el);
+
+        particles.push({
+            el: el,
+            x: startX - 12, // Center the 24px box
+            y: startY - 12,
+            vx: (Math.random() - 0.5) * 15, // Horizontal spread
+            vy: (Math.random() * -10) - 10, // Initial upward burst
+            rot: Math.random() * 360,
+            rotSpeed: (Math.random() - 0.5) * 15
+        });
+    }
+
+    let gravity = 0.5;
+
+    // The animation loop
+    function animate() {
+        let activeParticles = false;
+
+        particles.forEach(p => {
+            if (p.y < window.innerHeight) {
+                activeParticles = true;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += gravity; // Apply gravity
+                p.rot += p.rotSpeed;
+
+                p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`;
+            } else if (p.el.parentElement) {
+                // Delete the element once it falls off the bottom of the screen
+                p.el.parentElement.removeChild(p.el);
+            }
+        });
+
+        // Keep animating until all particles are off-screen
+        if (activeParticles) {
+            requestAnimationFrame(animate);
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
