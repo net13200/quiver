@@ -135,7 +135,9 @@ export function updateBlochSpheres(currentGuess, numQubits) {
 export function showRevealCircuit(title, color, targetCircuit, numQubits) {
     const finalWrap = document.createElement('div');
     finalWrap.className = 'row-wrapper';
-    finalWrap.style.marginTop = '10px';
+    finalWrap.id = 'reveal-circuit-wrap'; // Added ID so we can clear it on restart
+    finalWrap.style.marginTop = '15px';
+    finalWrap.style.marginBottom = '10px';
     finalWrap.style.borderColor = color;
     
     const label = document.createElement('div');
@@ -156,7 +158,10 @@ export function showRevealCircuit(title, color, targetCircuit, numQubits) {
     });
     
     finalWrap.appendChild(finalRow);
-    document.getElementById('board').appendChild(finalWrap);
+    
+    // Insert it right below the message div (below the controls)
+    const msgDiv = document.getElementById('message');
+    msgDiv.parentNode.insertBefore(finalWrap, msgDiv.nextSibling);
 }
 
 // --- Quantum Confetti Effect ---
@@ -172,7 +177,7 @@ export function fireQuantumConfetti(startX, startY) {
     ];
 
     const particles = [];
-    const numParticles = 45; // Amount of gates to shoot
+    const numParticles = 45; 
 
     for (let i = 0; i < numParticles; i++) {
         const type = gateTypes[Math.floor(Math.random() * gateTypes.length)];
@@ -188,12 +193,12 @@ export function fireQuantumConfetti(startX, startY) {
 
         particles.push({
             el: el,
-            x: startX - 12, 
-            y: startY - 12,
-            vx: (Math.random() - 0.5) * 18, // Horizontal explosion spread
-            vy: (Math.random() * -12) - 8,  // Upward velocity
+            x: startX - 13, 
+            y: startY - 13,
+            vx: ((Math.random() - 0.5) * 18) * 0.9, // Horizontal explosion spread
+            vy: ((Math.random() * -12) - 8) * 0.9,  // Upward velocity
             rot: Math.random() * 360,
-            rotSpeed: (Math.random() - 0.5) * 15
+            rotSpeed: ((Math.random() - 0.5) * 15) * 0.9 
         });
     }
 
