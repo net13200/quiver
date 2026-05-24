@@ -216,12 +216,12 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
 /* --- Quantum Confetti --- */
 .quantum-confetti {
     position: fixed;
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
     text-align: center;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 13px;
     z-index: 9999;
     pointer-events: none; /* Prevents them from blocking your mouse clicks */
     user-select: none;
