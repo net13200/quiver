@@ -3,7 +3,7 @@ import { completedStages, totalPoints, highestStreak } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
 import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal } from './game/ui.js';
-import { attachDragDropHandlers, updateActiveRow } from './game/dragdrop.js';
+import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
 // --- Global Application State ---
@@ -21,7 +21,9 @@ export const state = {
     attempts: 0,
     gameOver: false,
     currentRzAngle: 'PI',
-    currentStreak: 0 // NEW: Track the live arcade streak!
+    currentStreak: 0,
+    selectedBaseGate: null, // NEW: Tracks palette taps
+    placement: { active: false, col: null, controls: [] } // NEW: Tracks multi-qubit placement
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -244,44 +246,33 @@ function renderPalette() {
     palette.innerHTML = '';
     const h = Math.max(60, state.numQubits * 30);
     
-    state.activeSet.forEach(baseType => {
-        let type = baseType;
-        if (baseType.startsWith('RZ')) {
-            let q = baseType.slice(-1);
-            type = `RZ_${state.currentRzAngle}_${q}`;
-        } else if (baseType.startsWith('CP')) {
-            let ct = baseType.slice(-2);
-            type = `CP_${state.currentRzAngle}_${ct}`;
-        }
-        
+    // Extract unique base gates instead of showing all permutations
+    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'];
+    const uniqueBases = allBases.filter(base => state.activeSet.some(g => g.startsWith(base)));
+
+    uniqueBases.forEach(baseType => {
         const item = document.createElement('div');
-        item.className = 'palette-item';
+        // Add selected glow effect if active
+        item.className = `palette-item ${state.selectedBaseGate === baseType ? 'selected' : ''}`;
         item.style.height = `${h}px`;
-        item.draggable = true;
-        item.innerHTML = getColumnHTML([type], state.numQubits);
         
-        item.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', type));
+        // Mock a beautifully formatted gate just for the palette display
+        let renderGate = baseType;
+        if (baseType.startsWith('RZ')) renderGate = `RZ_${state.currentRzAngle}_0`;
+        else if (baseType.startsWith('CP')) renderGate = `CP_${state.currentRzAngle}_01`;
+        else if (baseType === 'CX' || baseType === 'SWAP') renderGate = `${baseType}01`;
+        else if (baseType === 'CCX') renderGate = `CCX012`;
+        else renderGate = `${baseType}0`;
+
+        let mockQubits = (baseType === 'CCX' && state.numQubits > 2) ? 3 : (['CX', 'CP', 'SWAP'].includes(baseType) && state.numQubits > 1) ? 2 : 1;
+        item.innerHTML = getColumnHTML([renderGate], mockQubits);
+        
         item.addEventListener('click', () => {
             if(state.gameOver) return;
-            let reqQubits = getOccupiedQubits(type);
-            let latestCol = -1;
-            
-            for (let c = 0; c < state.numCols; c++) {
-                for (let g of state.currentGuess[c]) {
-                    if (reqQubits.some(q => getOccupiedQubits(g).includes(q))) latestCol = c;
-                }
-            }
-            
-            let targetCol = latestCol + 1;
-            if (targetCol < state.numCols) {
-                state.currentGuess[targetCol].push(type);
-                updateActiveRow(state);
-            } else {
-                let msg = document.getElementById('message');
-                msg.innerText = "No space left for this gate!";
-                msg.style.color = "#ef4444";
-                setTimeout(() => { if(!state.gameOver) msg.innerText = ""; }, 1500);
-            }
+            // Toggle selection
+            state.selectedBaseGate = (state.selectedBaseGate === baseType) ? null : baseType;
+            state.placement = { active: false, col: null, controls: [] }; // Reset placement
+            renderPalette(); // Redraw palette
         });
         palette.appendChild(item);
     });
@@ -289,12 +280,22 @@ function renderPalette() {
 
 function renderBoard() {
     const board = document.getElementById('board');
-    board.innerHTML = ''; 
-    const historyBoard = document.getElementById('history-board');
-    if (historyBoard) historyBoard.innerHTML = ''; 
     
-    const oldReveal = document.getElementById('reveal-circuit-wrap');
-    if (oldReveal) oldReveal.remove();
+    // Only clear history if row-active DOESN'T exist (meaning fresh game)
+    let wrap = document.getElementById('row-active');
+    if (!wrap) {
+        const historyBoard = document.getElementById('history-board');
+        if (historyBoard) historyBoard.innerHTML = ''; 
+        const oldReveal = document.getElementById('reveal-circuit-wrap');
+        if (oldReveal) oldReveal.remove();
+        
+        wrap = document.createElement('div');
+        wrap.className = `row-wrapper active`;
+        wrap.id = `row-active`;
+        board.appendChild(wrap);
+    } else {
+        wrap.innerHTML = ''; // Just clear the inside for a redraw
+    }
 
     const attemptsCounter = document.getElementById('attempts-counter');
     if (state.currentMode === 'FREEPLAY') {
@@ -307,10 +308,6 @@ function renderBoard() {
     const rowHeight = Math.max(60, state.numQubits * 30);
     const sub = ['₀', '₁', '₂'];
     
-    const wrap = document.createElement('div');
-    wrap.className = `row-wrapper active`;
-    wrap.id = `row-active`;
-    
     const circuitRow = document.createElement('div');
     circuitRow.className = 'circuit-row';
     circuitRow.style.height = `${rowHeight}px`;
@@ -322,17 +319,38 @@ function renderBoard() {
     labels.innerHTML = lbls;
     circuitRow.appendChild(labels);
     
+    // Build the Grid!
     for (let c = 0; c < state.numCols; c++) {
-        const slot = document.createElement('div');
-        slot.className = 'slot';
-        slot.id = `slot-active-${c}`; 
+        const slotCol = document.createElement('div');
+        slotCol.className = 'slot-column';
+        slotCol.id = `slot-active-${c}`; // Validator uses this to lock the board
         
-        slot.innerHTML = getColumnHTML([], state.numQubits); 
-        attachDragDropHandlers(slot, c, state); 
-        circuitRow.appendChild(slot);
+        // Layer 1: The visual gates
+        const gatesLayer = document.createElement('div');
+        gatesLayer.style.position = 'absolute';
+        gatesLayer.style.top = '0'; gatesLayer.style.left = '0'; gatesLayer.style.right = '0'; gatesLayer.style.bottom = '0';
+        gatesLayer.innerHTML = getColumnHTML(state.currentGuess[c] || [], state.numQubits);
+        slotCol.appendChild(gatesLayer);
+
+        // Layer 2: The invisible interactive tap zones
+        if (!state.gameOver) {
+            for(let q = 0; q < state.numQubits; q++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell-zone';
+                
+                // Highlight yellow if currently placing a multi-qubit gate
+                if (state.placement.active && state.placement.col === c && state.placement.controls.includes(q)) {
+                    cell.classList.add('pending');
+                }
+                
+                cell.addEventListener('click', () => handleCellTap(c, q, state, renderBoard));
+                slotCol.appendChild(cell);
+            }
+        }
+        
+        circuitRow.appendChild(slotCol);
     }
     wrap.appendChild(circuitRow);
-    board.appendChild(wrap);
 }
 
 // --- Attach Static Event Listeners ---
@@ -360,12 +378,14 @@ document.getElementById('submit-btn').addEventListener('click', () => submitGues
 document.getElementById('clear-btn').addEventListener('click', () => {
     if (state.gameOver || state.currentMode !== 'FREEPLAY') return;
     state.currentGuess = Array(state.numCols).fill().map(() => []);
+    state.placement = { active: false, col: null, controls: [] }; // Reset placement
+    
     const wrap = document.getElementById('row-active');
     if (wrap) {
         const results = wrap.querySelectorAll('.amplitudes-result');
         results.forEach(el => el.remove());
     }
-    updateActiveRow(state);
+    updateActiveRow(state, renderBoard); // Pass the callback!
 });
 document.getElementById('next-btn').addEventListener('click', () => {
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
