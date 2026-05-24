@@ -1,7 +1,7 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
 import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal } from './ui.js';
-import { markStageCompleted, completedStages } from '../data/storage.js';
+import { markStageCompleted, completedStages, updateStats } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
 
@@ -96,7 +96,7 @@ export function submitGuess(state) {
 
         state.gameOver = true;
         submitBtn.classList.add('hidden');
-        wrap.classList.remove('active'); // Remove active glow since game is won
+        wrap.classList.remove('active'); 
         
         fireQuantumConfetti(startX, startY);
         
@@ -109,9 +109,9 @@ export function submitGuess(state) {
             }
         }
         
-        // --- Calculate Banner Text ---
         let mainTitle = "Stage Cleared!";
         let subTitle = matchedCircuit ? "Perfect Canonical Match!" : "Equivalent Circuit Found!";
+        let statsText = null;
         let showNextBtn = false;
 
         if (state.currentMode === 'STAGE') {
@@ -133,24 +133,55 @@ export function submitGuess(state) {
             }
         } else if (state.currentMode === 'RANDOM') {
             mainTitle = "Puzzle Solved!";
+            
+            // --- SCORING MATH ---
+            let userGateCount = state.currentGuess.reduce((sum, col) => sum + col.length, 0);
+            let secretGateCount = compareCircuit.reduce((sum, col) => sum + col.length, 0);
+            
+            let base = 10;
+            let penalty = state.attempts; 
+            let bonus = 0;
+            let complimentHtml = "";
+
+            // NEW: EFFICIENCY COMPLIMENT LOGIC
+            if (userGateCount < secretGateCount) {
+                bonus = 5;
+                const compliments = [
+                    "Brilliant optimization!",
+                    "Quantum efficiency at its finest!",
+                    "You beat the algorithm!",
+                    "Masterful gate reduction!",
+                    "Compiler genius!",
+                    "Sleek and highly optimized!"
+                ];
+                let complimentText = compliments[Math.floor(Math.random() * compliments.length)];
+                complimentHtml = `<div style="color: #22c55e; font-weight: bold; margin-top: 10px; font-size: 1.15rem; text-shadow: 0 0 10px rgba(34, 197, 94, 0.4);">⚡ ${complimentText} ⚡</div>`;
+            }
+
+            let multi = state.currentLvl === 1 ? 1 : (state.currentLvl === 2 ? 1.5 : 2);
+            
+            let pointsEarned = (base - penalty + bonus) * multi;
+            state.currentStreak++;
+            
+            updateStats(pointsEarned, state.currentStreak);
+
+            statsText = `+${pointsEarned} Points! <br><span style="font-size: 1rem; color: #cbd5e1;">🔥 Streak: ${state.currentStreak} &nbsp;&nbsp;|&nbsp;&nbsp; Gates Used: ${userGateCount} / ${secretGateCount}</span>${complimentHtml}`;
+
             if (!matchedCircuit) {
                 showRevealCircuit("The Original Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);
             }
         }
 
-        // --- Trigger the Cinematic Banner (with a delay so the confetti pops first) ---
         setTimeout(() => {
-            showVictoryModal(mainTitle, subTitle, showNextBtn);
+            showVictoryModal(mainTitle, subTitle, statsText, showNextBtn);
         }, 500);
 
     } else {
-        // --- FAILED ATTEMPT LOGIC ---
         state.attempts++;
         document.getElementById('attempts-counter').innerText = `Attempts Remaining: ${6 - state.attempts}`;
 
-        // Clone the evaluated row and drop it into history
         const historyWrap = wrap.cloneNode(true);
-        historyWrap.removeAttribute('id'); // Remove specific ID to prevent duplicates
+        historyWrap.removeAttribute('id');
         historyWrap.classList.remove('active');
         const clonedSlots = historyWrap.querySelectorAll('.slot');
         clonedSlots.forEach(s => s.removeAttribute('id'));
@@ -158,6 +189,8 @@ export function submitGuess(state) {
 
         if (state.attempts === 6) {
             state.gameOver = true;
+            state.currentStreak = 0; // RESET STREAK ON LOSS
+            
             wrap.classList.remove('active');
             document.getElementById('submit-btn').classList.add('hidden');
             document.getElementById('message').innerText = "Measurement collapsed! Game Over.";
@@ -173,7 +206,6 @@ export function submitGuess(state) {
                 document.getElementById('again-btn').classList.remove('hidden');
             }
         } else {
-            // Quietly wipe the active board clean for the next guess
             state.currentGuess = Array(state.numCols).fill().map(() => []);
             updateActiveRow(state);
             const activeAmpResult = wrap.querySelector('.amplitudes-result');

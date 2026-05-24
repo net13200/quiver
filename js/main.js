@@ -1,8 +1,8 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal } from './game/ui.js';
 import { attachDragDropHandlers, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -20,7 +20,8 @@ export const state = {
     currentGuess: [],
     attempts: 0,
     gameOver: false,
-    currentRzAngle: 'PI'
+    currentRzAngle: 'PI',
+    currentStreak: 0 // NEW: Track the live arcade streak!
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -41,6 +42,11 @@ function showMainMenu() {
 
 // --- Main Menu Initialization ---
 function buildMenu() {
+    // 1. Update the Global Stats Bar
+    document.getElementById('menu-total-points').innerText = totalPoints;
+    document.getElementById('menu-highest-streak').innerText = highestStreak;
+
+    // 2. Build the Stages
     const container = document.getElementById('stages-container');
     container.innerHTML = '';
     
@@ -100,7 +106,7 @@ function initGame(mode, p1, p2) {
     }
 
     document.getElementById('main-menu').style.display = 'none';
-    hideVictoryModal(); // Ensure the modal is hidden when starting a new game
+    hideVictoryModal(); 
     document.getElementById('game-view').style.display = 'flex';
     
     state.currentMode = mode;
@@ -285,7 +291,7 @@ function renderBoard() {
     const board = document.getElementById('board');
     board.innerHTML = ''; 
     const historyBoard = document.getElementById('history-board');
-    if (historyBoard) historyBoard.innerHTML = ''; // Clear history on new game
+    if (historyBoard) historyBoard.innerHTML = ''; 
     
     const oldReveal = document.getElementById('reveal-circuit-wrap');
     if (oldReveal) oldReveal.remove();
@@ -319,10 +325,10 @@ function renderBoard() {
     for (let c = 0; c < state.numCols; c++) {
         const slot = document.createElement('div');
         slot.className = 'slot';
-        slot.id = `slot-active-${c}`; // Simplified active ID
+        slot.id = `slot-active-${c}`; 
         
         slot.innerHTML = getColumnHTML([], state.numQubits); 
-        attachDragDropHandlers(slot, c, state); // Removed the 'r' loop parameter
+        attachDragDropHandlers(slot, c, state); 
         circuitRow.appendChild(slot);
     }
     wrap.appendChild(circuitRow);
@@ -338,6 +344,8 @@ document.getElementById('header-sandbox').addEventListener('click', () => toggle
 
 // 2. Play Menu Configurations
 document.getElementById('btn-toggle-gates').addEventListener('click', toggleAllGates);
+document.getElementById('btn-score-info').addEventListener('click', () => showInfoModal());
+document.getElementById('close-info-btn').addEventListener('click', () => hideInfoModal());
 document.getElementById('btn-rand-1').addEventListener('click', () => initGame('RANDOM', 1));
 document.getElementById('btn-rand-2').addEventListener('click', () => initGame('RANDOM', 2));
 document.getElementById('btn-rand-3').addEventListener('click', () => initGame('RANDOM', 3));
@@ -372,7 +380,10 @@ document.getElementById('again-btn').addEventListener('click', () => {
     if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
     else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
 });
-document.getElementById('menu-btn').addEventListener('click', () => showMainMenu());
+document.getElementById('menu-btn').addEventListener('click', () => {
+    state.currentStreak = 0; // Reset streak if you run away!
+    showMainMenu();
+});
 
 // 5. Palette Selectors
 const rzSelect = document.getElementById('rz-angle');
@@ -386,10 +397,13 @@ if (rzSelect) {
 // 6. Logo Click
 const gameLogo = document.getElementById('game-logo');
 if (gameLogo) {
-    gameLogo.addEventListener('click', () => showMainMenu());
+    gameLogo.addEventListener('click', () => {
+        state.currentStreak = 0; 
+        showMainMenu();
+    });
 }
 
-// 7. Modal Buttons (The Missing Links!)
+// 7. Modal Buttons
 document.getElementById('modal-next-btn').addEventListener('click', () => {
     hideVictoryModal();
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {

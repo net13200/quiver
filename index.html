@@ -15,6 +15,10 @@
         <div class="intro-text">
             <b>Welcome to Quiver!</b> The goal of this game is to learn and experience quantum computing by doing. You will go from zero knowledge to mastering complex quantum algorithms through interactive, hands-on puzzles.
         </div>
+
+        <div id="global-stats" style="text-align: center; margin-bottom: 10px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; font-weight: bold; color: #eab308; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+            Total Points: <span id="menu-total-points">0</span> &nbsp;|&nbsp; Highest Streak: <span id="menu-highest-streak">0</span>
+        </div>
         
         <div class="menu-section">
             <div class="menu-header" id="header-learn">
@@ -28,7 +32,13 @@
 
         <div class="menu-section">
             <div class="menu-header" id="header-play">
-                <h2>Play <span>▼</span></h2>
+                <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    Play
+                    <div>
+                        <button id="btn-score-info" style="background: #3b82f6; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-right: 10px;">?</button>
+                        <span>▼</span>
+                    </div>
+                </h2>
                 <p>Test your skills with randomized quantum circuit puzzles. Equivalent circuits win!</p>
             </div>
             <div id="play-content" class="menu-content hidden">
@@ -119,7 +129,6 @@
                 </div>
     
                 <div id="message"></div>
-
                 <div id="history-board" style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px;"></div>
             </div>
 
@@ -146,10 +155,27 @@
         </div>
     </div>
 
+    <div id="info-modal" class="victory-overlay hidden">
+        <div class="victory-banner" style="max-width: 600px; border-color: #3b82f6; box-shadow: 0 0 40px rgba(59, 130, 246, 0.2);">
+            <h2 style="color: #3b82f6; margin-top: 0; font-size: 2rem;">Play Mode Scoring</h2>
+            <div style="color: #cbd5e1; font-size: 1rem; text-align: left; line-height: 1.6; margin-bottom: 25px;">
+                <ul>
+                    <li><b>Base Score:</b> +10 points for every solved circuit.</li>
+                    <li><b>Efficiency Bonus:</b> +5 points if you compile the state using <i>fewer</i> gates than the target algorithm!</li>
+                    <li><b>Attempt Penalty:</b> -1 point for every incorrect evaluation before solving.</li>
+                    <li><b>Multipliers:</b> Easy (x1), Medium (x1.5), Hard (x2).</li>
+                    <li><b>Streak:</b> Consecutive wins increase your Streak count. A collapsed measurement resets it to zero!</li>
+                </ul>
+            </div>
+            <button id="close-info-btn" class="btn" style="background: #3b82f6; padding: 10px 30px;">Got It</button>
+        </div>
+    </div>
+
     <div id="victory-modal" class="victory-overlay hidden">
         <div class="victory-banner">
             <h1 id="victory-title">Stage Cleared!</h1>
             <p id="victory-subtitle">Equivalent Circuit Found!</p>
+            <p id="victory-stats" style="color: #eab308; font-size: 1.3rem; margin-top: -15px; margin-bottom: 25px;"></p>
             <div class="victory-controls">
                 <button id="modal-next-btn" class="btn btn-green hidden">Next Stage</button>
                 <button id="modal-again-btn" class="btn btn-yellow">Play Again</button>

@@ -229,11 +229,20 @@ export function fireQuantumConfetti(startX, startY) {
     requestAnimationFrame(animate);
 }
 
-// --- Cinematic Victory Modal ---
-export function showVictoryModal(title, subtitle, showNext) {
+// --- Modals ---
+export function showVictoryModal(title, subtitle, statsText, showNext) {
     const overlay = document.getElementById('victory-modal');
     document.getElementById('victory-title').innerText = title;
     document.getElementById('victory-subtitle').innerText = subtitle;
+    
+    // NEW: Render the score/streak text if provided
+    const statsEl = document.getElementById('victory-stats');
+    if (statsText) {
+        statsEl.innerHTML = statsText;
+        statsEl.style.display = 'block';
+    } else {
+        statsEl.style.display = 'none';
+    }
     
     if (showNext) {
         document.getElementById('modal-next-btn').classList.remove('hidden');
@@ -242,16 +251,23 @@ export function showVictoryModal(title, subtitle, showNext) {
     }
     
     overlay.classList.remove('hidden');
-    // A tiny timeout forces the browser to apply display:block before running the slide animation
-    setTimeout(() => {
-        overlay.classList.add('show');
-    }, 10);
+    setTimeout(() => overlay.classList.add('show'), 10);
 }
 
 export function hideVictoryModal() {
     const overlay = document.getElementById('victory-modal');
     overlay.classList.remove('show');
-    setTimeout(() => {
-        overlay.classList.add('hidden');
-    }, 400); // Matches the CSS transition time
+    setTimeout(() => overlay.classList.add('hidden'), 400); 
+}
+
+export function showInfoModal() {
+    const overlay = document.getElementById('info-modal');
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.add('show'), 10);
+}
+
+export function hideInfoModal() {
+    const overlay = document.getElementById('info-modal');
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.classList.add('hidden'), 400); 
 }
