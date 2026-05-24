@@ -1,6 +1,6 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti } from './ui.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal } from './ui.js';
 import { markStageCompleted, completedStages } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
@@ -109,8 +109,12 @@ export function submitGuess(state) {
             }
         }
         
+        // --- Calculate Banner Text ---
+        let mainTitle = "Stage Cleared!";
+        let subTitle = matchedCircuit ? "Perfect Canonical Match!" : "Equivalent Circuit Found!";
+        let showNextBtn = false;
+
         if (state.currentMode === 'STAGE') {
-            let winMsg = (matchedMultiset || matchedCircuit) ? "Stage Cleared!" : "Equivalent Circuit Found! Stage Cleared!";
             markStageCompleted(state.currentP1, state.currentP2);
             
             let totalLevels = 0;
@@ -118,34 +122,27 @@ export function submitGuess(state) {
             let allCompleted = (completedStages.length >= totalLevels);
             
             if (state.currentP1 + 1 < STAGES.length || state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
-                document.getElementById('next-btn').classList.remove('hidden');
+                showNextBtn = true;
             } 
             
-            if (allCompleted) {
-                document.getElementById('message').innerText = winMsg + " 🎉 All Stages Cleared! 🎉";
-            } else if (state.currentP1 === STAGES.length - 1 && state.currentP2 === STAGES[state.currentP1].levels.length - 1) {
-                document.getElementById('message').innerText = winMsg + " Final Stage Complete!";
-            } else {
-                document.getElementById('message').innerText = winMsg;
-            }
-            
-            document.getElementById('message').style.color = (matchedMultiset || matchedCircuit) ? "#22c55e" : "#3b82f6";
+            if (allCompleted) subTitle = "🎉 All Stages Cleared! 🎉";
+            else if (state.currentP1 === STAGES.length - 1 && state.currentP2 === STAGES[state.currentP1].levels.length - 1) subTitle = "Final Stage Complete!";
             
             if (!matchedMultiset && !matchedCircuit) {
                 showRevealCircuit("A Canonical Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);
             }
-            
-            document.getElementById('again-btn').innerText = "Play Again";
-            document.getElementById('again-btn').classList.remove('hidden');
-            
         } else if (state.currentMode === 'RANDOM') {
-            document.getElementById('message').innerText = matchedCircuit ? "Perfect Match! You won!" : "Equivalent Circuit Found! You won!";
-            document.getElementById('message').style.color = matchedCircuit ? "#22c55e" : "#3b82f6";
-            if (!matchedCircuit) showRevealCircuit("The Original Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);
-            
-            document.getElementById('again-btn').innerText = "Play Again";
-            document.getElementById('again-btn').classList.remove('hidden');
+            mainTitle = "Puzzle Solved!";
+            if (!matchedCircuit) {
+                showRevealCircuit("The Original Circuit Was:", "#3b82f6", state.secretCircuits[0], state.numQubits);
+            }
         }
+
+        // --- Trigger the Cinematic Banner (with a delay so the confetti pops first) ---
+        setTimeout(() => {
+            showVictoryModal(mainTitle, subTitle, showNextBtn);
+        }, 500);
+
     } else {
         // --- FAILED ATTEMPT LOGIC ---
         state.attempts++;

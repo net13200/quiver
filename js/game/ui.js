@@ -228,3 +228,30 @@ export function fireQuantumConfetti(startX, startY) {
 
     requestAnimationFrame(animate);
 }
+
+// --- Cinematic Victory Modal ---
+export function showVictoryModal(title, subtitle, showNext) {
+    const overlay = document.getElementById('victory-modal');
+    document.getElementById('victory-title').innerText = title;
+    document.getElementById('victory-subtitle').innerText = subtitle;
+    
+    if (showNext) {
+        document.getElementById('modal-next-btn').classList.remove('hidden');
+    } else {
+        document.getElementById('modal-next-btn').classList.add('hidden');
+    }
+    
+    overlay.classList.remove('hidden');
+    // A tiny timeout forces the browser to apply display:block before running the slide animation
+    setTimeout(() => {
+        overlay.classList.add('show');
+    }, 10);
+}
+
+export function hideVictoryModal() {
+    const overlay = document.getElementById('victory-modal');
+    overlay.classList.remove('show');
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+    }, 400); // Matches the CSS transition time
+}
