@@ -1,8 +1,9 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
-import { getColumnHTML, showRevealCircuit, updateBlochSpheres, fireQuantumConfetti } from './ui.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti } from './ui.js';
 import { markStageCompleted, completedStages } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
+import { updateActiveRow } from './dragdrop.js';
 
 export function submitGuess(state) {
     if (state.gameOver) return;
@@ -12,12 +13,11 @@ export function submitGuess(state) {
         const ampResult = document.createElement('div');
         ampResult.className = 'amplitudes-result';
         ampResult.innerText = "↳ Snapshot |ψ⟩ = " + stateToString(userState, state.numQubits);
-        document.getElementById(`row-${state.attempts}`).appendChild(ampResult);
+        document.getElementById('row-active').appendChild(ampResult);
         return; 
     }
     
-    const wrap = document.getElementById(`row-${state.attempts}`);
-    wrap.classList.remove('active');
+    const wrap = document.getElementById('row-active');
     
     let userMultiset = getGateMultiset(state.currentGuess);
     let validMultisets = state.secretCircuits.map(c => getGateMultiset(c));
@@ -55,7 +55,7 @@ export function submitGuess(state) {
     let compareCircuit = matchedCircuit || bestMatchCircuit;
     
     for (let c = 0; c < state.numCols; c++) {
-        const slot = document.getElementById(`slot-${state.attempts}-${c}`);
+        const slot = document.getElementById(`slot-active-${c}`);
         let guessGates = state.currentGuess[c] || [];
         let targetGates = compareCircuit[c] || [];
         
@@ -88,25 +88,21 @@ export function submitGuess(state) {
     ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
     wrap.appendChild(ampResult);
     
-    // --- WIN LOGIC ---
     if (hasWon) {
-        // 1. Get the button's coordinates BEFORE we hide it!
         const submitBtn = document.getElementById('submit-btn');
         const rect = submitBtn.getBoundingClientRect();
         const startX = rect.left + (rect.width / 2);
         const startY = rect.top;
 
-        // 2. Hide the button and set game over
         state.gameOver = true;
         submitBtn.classList.add('hidden');
+        wrap.classList.remove('active'); // Remove active glow since game is won
         
-        // 3. Fire the Confetti!
         fireQuantumConfetti(startX, startY);
         
-        // Rest of the game logic (UI updates, next stages, etc)
         if (isStrict && matchedMultiset && !matchedCircuit) {
             for (let c = 0; c < state.numCols; c++) {
-                const slot = document.getElementById(`slot-${state.attempts}-${c}`);
+                const slot = document.getElementById(`slot-active-${c}`);
                 let gateStatusMap = {};
                 state.currentGuess[c].forEach(g => gateStatusMap[g] = 'correct');
                 slot.innerHTML = getColumnHTML(state.currentGuess[c], state.numQubits, gateStatusMap);
@@ -151,9 +147,21 @@ export function submitGuess(state) {
             document.getElementById('again-btn').classList.remove('hidden');
         }
     } else {
+        // --- FAILED ATTEMPT LOGIC ---
         state.attempts++;
+        document.getElementById('attempts-counter').innerText = `Attempts Remaining: ${6 - state.attempts}`;
+
+        // Clone the evaluated row and drop it into history
+        const historyWrap = wrap.cloneNode(true);
+        historyWrap.removeAttribute('id'); // Remove specific ID to prevent duplicates
+        historyWrap.classList.remove('active');
+        const clonedSlots = historyWrap.querySelectorAll('.slot');
+        clonedSlots.forEach(s => s.removeAttribute('id'));
+        document.getElementById('history-board').appendChild(historyWrap);
+
         if (state.attempts === 6) {
             state.gameOver = true;
+            wrap.classList.remove('active');
             document.getElementById('submit-btn').classList.add('hidden');
             document.getElementById('message').innerText = "Measurement collapsed! Game Over.";
             document.getElementById('message').style.color = "#ef4444";
@@ -168,9 +176,11 @@ export function submitGuess(state) {
                 document.getElementById('again-btn').classList.remove('hidden');
             }
         } else {
+            // Quietly wipe the active board clean for the next guess
             state.currentGuess = Array(state.numCols).fill().map(() => []);
-            document.getElementById(`row-${state.attempts}`).classList.add('active');
-            updateBlochSpheres(state.currentGuess, state.numQubits);
+            updateActiveRow(state);
+            const activeAmpResult = wrap.querySelector('.amplitudes-result');
+            if (activeAmpResult) activeAmpResult.remove();
         }
     }
 }

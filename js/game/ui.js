@@ -160,35 +160,27 @@ export function showRevealCircuit(title, color, targetCircuit, numQubits) {
 }
 
 // --- Quantum Confetti Effect ---
-export function fireQuantumConfetti() {
-    const button = document.getElementById('submit-btn');
-    if (!button) return;
-
-    // Get where the button is on the screen
-    const rect = button.getBoundingClientRect();
-    const startX = rect.left + rect.width / 2;
-    const startY = rect.top;
-
+export function fireQuantumConfetti(startX, startY) {
     const gateTypes = [
-        { label: 'H', class: 'gate-bg', bg: 'var(--gate-bg)' },
-        { label: 'X', class: 'gate-bg', bg: 'var(--gate-bg)' },
-        { label: 'Z', class: 'gate-bg', bg: 'var(--gate-bg)' },
-        { label: 'P', class: 'confetti-cp', bg: '#8b5cf6' },
-        { label: '•', class: 'confetti-cx', bg: 'var(--cx-color)' },
+        { label: 'H', class: 'gate-box', bg: 'var(--gate-bg)' },
+        { label: 'X', class: 'gate-box', bg: 'var(--gate-bg)' },
+        { label: 'Z', class: 'gate-box', bg: 'var(--gate-bg)' },
+        { label: 'P', class: 'confetti-cp' },
+        { label: '•', class: 'confetti-cx' },
         { label: '⊕', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' },
         { label: '×', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' }
     ];
 
     const particles = [];
-    const numParticles = 40; // How many gates shoot out
+    const numParticles = 45; // Amount of gates to shoot
 
-    // Create the DOM elements and assign initial velocities
     for (let i = 0; i < numParticles; i++) {
         const type = gateTypes[Math.floor(Math.random() * gateTypes.length)];
         const el = document.createElement('div');
         el.className = `quantum-confetti ${type.class}`;
         el.innerText = type.label;
-        if (type.bg !== 'var(--gate-bg)') el.style.background = type.bg;
+        
+        if (type.bg) el.style.background = type.bg;
         if (type.color) el.style.color = type.color;
         if (type.size) el.style.fontSize = type.size;
 
@@ -196,10 +188,10 @@ export function fireQuantumConfetti() {
 
         particles.push({
             el: el,
-            x: startX - 12, // Center the 24px box
+            x: startX - 12, 
             y: startY - 12,
-            vx: (Math.random() - 0.5) * 15, // Horizontal spread
-            vy: (Math.random() * -10) - 10, // Initial upward burst
+            vx: (Math.random() - 0.5) * 18, // Horizontal explosion spread
+            vy: (Math.random() * -12) - 8,  // Upward velocity
             rot: Math.random() * 360,
             rotSpeed: (Math.random() - 0.5) * 15
         });
@@ -207,7 +199,6 @@ export function fireQuantumConfetti() {
 
     let gravity = 0.5;
 
-    // The animation loop
     function animate() {
         let activeParticles = false;
 
@@ -216,17 +207,15 @@ export function fireQuantumConfetti() {
                 activeParticles = true;
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += gravity; // Apply gravity
+                p.vy += gravity; // Pull them down
                 p.rot += p.rotSpeed;
 
                 p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`;
             } else if (p.el.parentElement) {
-                // Delete the element once it falls off the bottom of the screen
-                p.el.parentElement.removeChild(p.el);
+                p.el.parentElement.removeChild(p.el); // Clean up DOM
             }
         });
 
-        // Keep animating until all particles are off-screen
         if (activeParticles) {
             requestAnimationFrame(animate);
         }

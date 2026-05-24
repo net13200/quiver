@@ -287,39 +287,48 @@ function renderPalette() {
 function renderBoard() {
     const board = document.getElementById('board');
     board.innerHTML = ''; 
+    const historyBoard = document.getElementById('history-board');
+    if (historyBoard) historyBoard.innerHTML = ''; // Clear history on new game
+    
+    // Manage Attempts Counter Display
+    const attemptsCounter = document.getElementById('attempts-counter');
+    if (state.currentMode === 'FREEPLAY') {
+        attemptsCounter.style.display = 'none';
+    } else {
+        attemptsCounter.style.display = 'block';
+        attemptsCounter.innerText = `Attempts Remaining: ${6 - state.attempts}`;
+    }
+
     const rowHeight = Math.max(60, state.numQubits * 30);
     const sub = ['₀', '₁', '₂'];
     
-    const numRows = state.currentMode === 'FREEPLAY' ? 1 : 6;
+    // Create the single Active Row
+    const wrap = document.createElement('div');
+    wrap.className = `row-wrapper active`;
+    wrap.id = `row-active`;
     
-    for (let r = 0; r < numRows; r++) {
-        const wrap = document.createElement('div');
-        wrap.className = `row-wrapper ${r === state.attempts ? 'active' : ''}`;
-        wrap.id = `row-${r}`;
+    const circuitRow = document.createElement('div');
+    circuitRow.className = 'circuit-row';
+    circuitRow.style.height = `${rowHeight}px`;
+    
+    const labels = document.createElement('div');
+    labels.className = 'qubit-labels';
+    let lbls = '';
+    for(let q=0; q<state.numQubits; q++) lbls += `<span>q${sub[q]}</span>`;
+    labels.innerHTML = lbls;
+    circuitRow.appendChild(labels);
+    
+    for (let c = 0; c < state.numCols; c++) {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.id = `slot-active-${c}`; // Simplified active ID
         
-        const circuitRow = document.createElement('div');
-        circuitRow.className = 'circuit-row';
-        circuitRow.style.height = `${rowHeight}px`;
-        
-        const labels = document.createElement('div');
-        labels.className = 'qubit-labels';
-        let lbls = '';
-        for(let q=0; q<state.numQubits; q++) lbls += `<span>q${sub[q]}</span>`;
-        labels.innerHTML = lbls;
-        circuitRow.appendChild(labels);
-        
-        for (let c = 0; c < state.numCols; c++) {
-            const slot = document.createElement('div');
-            slot.className = 'slot';
-            slot.id = `slot-${r}-${c}`;
-            
-            slot.innerHTML = getColumnHTML([], state.numQubits); 
-            attachDragDropHandlers(slot, r, c, state);
-            circuitRow.appendChild(slot);
-        }
-        wrap.appendChild(circuitRow);
-        board.appendChild(wrap);
+        slot.innerHTML = getColumnHTML([], state.numQubits); 
+        attachDragDropHandlers(slot, c, state); // Removed the 'r' loop parameter
+        circuitRow.appendChild(slot);
     }
+    wrap.appendChild(circuitRow);
+    board.appendChild(wrap);
 }
 
 // --- Attach Static Event Listeners ---
@@ -345,7 +354,7 @@ document.getElementById('submit-btn').addEventListener('click', () => submitGues
 document.getElementById('clear-btn').addEventListener('click', () => {
     if (state.gameOver || state.currentMode !== 'FREEPLAY') return;
     state.currentGuess = Array(state.numCols).fill().map(() => []);
-    const wrap = document.getElementById('row-0');
+    const wrap = document.getElementById('row-active');
     if (wrap) {
         const results = wrap.querySelectorAll('.amplitudes-result');
         results.forEach(el => el.remove());
