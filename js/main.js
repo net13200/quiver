@@ -290,6 +290,10 @@ function renderBoard() {
     const historyBoard = document.getElementById('history-board');
     if (historyBoard) historyBoard.innerHTML = ''; // Clear history on new game
     
+    // NEW: Clean up the old canonical circuit if you hit Play Again
+    const oldReveal = document.getElementById('reveal-circuit-wrap');
+    if (oldReveal) oldReveal.remove();
+
     // Manage Attempts Counter Display
     const attemptsCounter = document.getElementById('attempts-counter');
     if (state.currentMode === 'FREEPLAY') {
@@ -383,6 +387,12 @@ if (rzSelect) {
         state.currentRzAngle = e.target.value;
         renderPalette();
     });
+}
+
+// 6. Logo Click
+const gameLogo = document.getElementById('game-logo');
+if (gameLogo) {
+    gameLogo.addEventListener('click', () => window.showMainMenu());
 }
 
 // --- Boot App ---
