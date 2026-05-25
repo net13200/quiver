@@ -1,7 +1,7 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal } from './ui.js';
-import { markStageCompleted, completedStages, updateStats } from '../data/storage.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer } from './ui.js';
+import { markStageCompleted, completedStages, updateStats, setTutorialComplete } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
 
@@ -105,6 +105,13 @@ export function submitGuess(state, renderBoardCallback) {
         wrap.classList.remove('active'); 
         
         fireQuantumConfetti(startX, startY);
+
+        // NEW: Complete the Tutorial
+        if (state.isTutorial) {
+            state.isTutorial = false;
+            setTutorialComplete();
+            clearGhostPointer();
+        }
         
         if (isStrict && matchedMultiset && !matchedCircuit) {
             for (let c = 0; c < state.numCols; c++) {

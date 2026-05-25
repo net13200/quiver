@@ -305,3 +305,134 @@ export function hideInfoModal() {
     overlay.classList.remove('show');
     setTimeout(() => overlay.classList.add('hidden'), 400); 
 }
+
+// --- Tutorial System ---
+let currentTourStep = 0;
+const tourSteps = [
+    { sel: '.intro-text', text: "Welcome to Quiver! Let's take a quick 3-step tour of the interface." },
+    { sel: '#header-learn', text: "LEARN: A guided curriculum of puzzles to teach you quantum mechanics from scratch." },
+    { sel: '#header-sandbox', text: "SANDBOX: A free-play area to experiment with gates and watch the math change instantly." },
+    { sel: '#header-play', text: "PLAY: The arcade mode! Expand the Play menu and click 'Easy (1 Qubit)' to continue the interactive tutorial.", hideNext: true }
+];
+
+export function startTour() {
+    document.getElementById('tutorial-overlay').classList.add('show');
+    document.getElementById('tutorial-tooltip').classList.add('show');
+    currentTourStep = 0;
+    showTourStep();
+}
+
+export function showTourStep() {
+    // 1. Clean up old spotlights and inline styles
+    document.querySelectorAll('.tutorial-spotlight').forEach(el => {
+        el.classList.remove('tutorial-spotlight');
+        el.style.backgroundColor = ''; 
+        el.style.padding = '';
+    });
+    clearGhostPointer(); // Wipe any lingering ghost text
+
+    const step = tourSteps[currentTourStep];
+    const target = document.querySelector(step.sel);
+
+    if (target) {
+        // 2. FIX: Spotlight the entire parent wrapper so the buttons aren't trapped in the dark!
+        if (step.sel.includes('header-')) {
+            const parentSection = target.closest('.menu-section');
+            if (parentSection) {
+                parentSection.classList.add('tutorial-spotlight');
+                parentSection.style.backgroundColor = '#1e293b'; // Adds a solid background so the dark overlay doesn't bleed through
+                parentSection.style.padding = '5px 15px 15px 15px'; // Keeps it looking neat
+            }
+            
+            // Auto-expand the accordion
+            const contentId = step.sel.replace('header-', '') + '-content';
+            const contentEl = document.getElementById(contentId);
+            if (contentEl && contentEl.classList.contains('hidden')) {
+                target.click(); 
+            }
+
+            // 3. FIX: Summon the bouncy Ghost Pointer specifically onto the Easy button!
+            if (step.sel === '#header-play') {
+                setTimeout(() => setGhostPointer('MENU_EASY'), 350); // Small delay to let the menu slide open first
+            }
+        } else {
+            target.classList.add('tutorial-spotlight');
+        }
+
+        const tt = document.getElementById('tutorial-tooltip');
+        
+        document.getElementById('tt-text').innerText = step.text;
+        document.getElementById('tt-next').style.display = step.hideNext ? 'none' : 'block';
+        
+        tt.classList.add('show'); 
+        
+        // Measure coordinates based on the header so the tooltip doesn't overlap the buttons
+        const rect = target.getBoundingClientRect();
+        const ttRect = tt.getBoundingClientRect();
+        const gap = 15; 
+        
+        let topPos;
+        if (rect.bottom + gap + ttRect.height > window.innerHeight) {
+            topPos = rect.top + window.scrollY - gap - ttRect.height;
+        } else {
+            topPos = rect.bottom + window.scrollY + gap;
+        }
+        
+        tt.style.top = `${topPos}px`; 
+        
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+export function nextTourStep() {
+    currentTourStep++;
+    if (currentTourStep < tourSteps.length) showTourStep();
+    else endTour();
+}
+
+export function endTour() {
+    document.getElementById('tutorial-overlay').classList.remove('show');
+    document.getElementById('tutorial-tooltip').classList.remove('show');
+    document.querySelectorAll('.tutorial-spotlight').forEach(el => el.classList.remove('tutorial-spotlight'));
+}
+
+export function setGhostPointer(type, targetId) {
+    clearGhostPointer();
+    let targetEl;
+    let text = "";
+
+    if (type === 'PALETTE') {
+        const items = document.querySelectorAll('.palette-item');
+        items.forEach(el => { if (el.innerText.includes(targetId)) targetEl = el; });
+        text = "Tap to select the Hadamard (H) gate!";
+    } else if (type === 'GRID') {
+        targetEl = document.querySelector(`#slot-active-${targetId} .cell-zone`);
+        text = "Tap the grid to place the gate!";
+    } else if (type === 'EVALUATE') {
+        targetEl = document.getElementById('submit-btn');
+        text = "Hit Evaluate to test it!";
+    } else if (type === 'MENU_EASY') { // NEW TARGET ADDED!
+        targetEl = document.getElementById('btn-rand-1');
+        text = "Tap 'Easy' to start!";
+    }
+
+    if (targetEl) {
+        targetEl.classList.add('ghost-pulse');
+        // Ensure the element supports absolute positioning for the ghost text
+        if (window.getComputedStyle(targetEl).position === 'static') {
+            targetEl.style.position = 'relative';
+        }
+        const msg = document.createElement('div');
+        msg.className = 'ghost-text';
+        msg.innerText = text;
+        targetEl.appendChild(msg);
+    }
+}
+
+export function clearGhostPointer() {
+    document.querySelectorAll('.ghost-pulse').forEach(el => {
+        el.classList.remove('ghost-pulse');
+        const textEl = el.querySelector('.ghost-text');
+        if (textEl) textEl.remove();
+    });
+}

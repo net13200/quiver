@@ -1,6 +1,12 @@
 export let completedStages = JSON.parse(localStorage.getItem('quarks_completed') || '[]');
 export let totalPoints = parseFloat(localStorage.getItem('quiver_points') || '0');
 export let highestStreak = parseInt(localStorage.getItem('quiver_streak') || '0');
+export let tutorialComplete = JSON.parse(localStorage.getItem('quiver_tutorial') || 'false'); // NEW
+
+export function setTutorialComplete() {
+    tutorialComplete = true;
+    localStorage.setItem('quiver_tutorial', 'true');
+}
 
 export function markStageCompleted(sIdx, lIdx) {
     let id = `${sIdx}-${lIdx}`;

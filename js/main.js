@@ -1,8 +1,8 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -22,8 +22,10 @@ export const state = {
     gameOver: false,
     currentRzAngle: 'PI',
     currentStreak: 0,
-    selectedBaseGate: null, // NEW: Tracks palette taps
-    placement: { active: false, col: null, controls: [] } // NEW: Tracks multi-qubit placement
+    selectedBaseGate: null, 
+    placement: { active: false, col: null, controls: [] },
+    isTutorial: false,     // NEW
+    tutorialPhase: 'NONE'  // NEW
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -200,6 +202,14 @@ function initGame(mode, p1, p2) {
         }
         state.secretCircuits = [generatedCircuit];
         
+        // NEW: If the tutorial is active, hardcode the perfect Easy puzzle!
+        if (state.isTutorial) {
+            state.activeSet = ['X', 'H'];
+            state.secretCircuits = [[['H0'], [], [], []]];
+            // Fire the Ghost pointer at the Palette after the UI builds
+            setTimeout(() => setGhostPointer('PALETTE', 'H'), 300);
+        }
+
         instructions.innerHTML = `<b>Random Puzzle</b><br>Guess the circuit. Equivalent circuits win!`;
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
@@ -276,10 +286,15 @@ function renderPalette() {
         
         item.addEventListener('click', () => {
             if(state.gameOver) return;
-            // Toggle selection
             state.selectedBaseGate = (state.selectedBaseGate === baseType) ? null : baseType;
-            state.placement = { active: false, col: null, controls: [] }; // Reset placement
-            renderPalette(); // Redraw palette
+            state.placement = { active: false, col: null, controls: [] }; 
+            renderPalette(); 
+
+            // NEW: Advance the Ghost Pointer to the Grid!
+            if (state.isTutorial && state.tutorialPhase === 'SELECT_GATE') {
+                state.tutorialPhase = 'PLACE_GATE';
+                setGhostPointer('GRID', 0);
+            }
         });
         palette.appendChild(item);
     });
@@ -453,5 +468,32 @@ document.getElementById('modal-menu-btn').addEventListener('click', () => {
     showMainMenu();
 });
 
+document.getElementById('tt-next').addEventListener('click', nextTourStep);
+document.getElementById('tt-skip').addEventListener('click', () => {
+    endTour();
+    setTutorialComplete();
+    state.isTutorial = false;
+});
+document.getElementById('btn-replay-tutorial').addEventListener('click', () => {
+    showMainMenu();
+    state.isTutorial = true;
+    startTour();
+});
+
+document.getElementById('btn-rand-1').addEventListener('click', () => {
+    // Intercept the click if we are in the middle of the Tour
+    if (state.isTutorial) {
+        endTour();
+        state.tutorialPhase = 'SELECT_GATE';
+    }
+    initGame('RANDOM', 1);
+});
+
 // --- Boot App ---
 buildMenu();
+
+// NEW: Auto-start the tutorial if it's their first time
+if (!tutorialComplete) {
+    state.isTutorial = true;
+    setTimeout(startTour, 500); // Slight delay ensures the DOM is painted
+}

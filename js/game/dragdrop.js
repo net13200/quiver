@@ -1,4 +1,4 @@
-import { updateBlochSpheres } from './ui.js';
+import { updateBlochSpheres, setGhostPointer } from './ui.js';
 import { getOccupiedQubits, GATE_MATRICES } from '../quantum/gates.js';
 import { computeStateVector, stateToString } from '../quantum/engine.js';
 
@@ -33,12 +33,15 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
 
     if (reqClicks === 1) {
         let fullGate = isAngle ? `RZ${angleStr}${q}` : `${base}${q}`;
-        
-        // OVERRIDE LOGIC: Filter out any existing gate in this column that uses this wire
         state.currentGuess[c] = state.currentGuess[c].filter(g => !getOccupiedQubits(g).includes(q));
-        
         state.currentGuess[c].push(fullGate);
         updateActiveRow(state, renderBoardCallback);
+        
+        // NEW: Advance the Tutorial Pointer!
+        if (state.isTutorial && state.tutorialPhase === 'PLACE_GATE') {
+            state.tutorialPhase = 'EVALUATE';
+            setGhostPointer('EVALUATE');
+        }
         
     } else {
         // Multi-qubit Placement Logic
