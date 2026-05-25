@@ -91,6 +91,7 @@ export function formatTerm(val, isImaginary) {
     if (isImaginary) {
         if (num === "1") return sign + "i";
         if (num.startsWith("1/")) return sign + num.replace("1/", "i/");
+        if (num.startsWith("sin(") || num.startsWith("cos(")) return sign + "i·" + num;
         if (num.includes("/")) return sign + num.replace("/", "i/");
         return sign + num + "i";
     }
