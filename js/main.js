@@ -264,7 +264,7 @@ function renderPalette() {
     const h = Math.max(60, state.numQubits * 30);
     
     // Extract unique base gates instead of showing all permutations
-    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'];
+    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX', 'QFT', 'IQFT'];
     const uniqueBases = allBases.filter(base => state.activeSet.some(g => g.startsWith(base)));
 
     uniqueBases.forEach(baseType => {
@@ -279,10 +279,23 @@ function renderPalette() {
         else if (baseType.startsWith('CP')) renderGate = `CP_${state.currentRzAngle}_01`;
         else if (baseType === 'CX' || baseType === 'SWAP') renderGate = `${baseType}01`;
         else if (baseType === 'CCX') renderGate = `CCX012`;
+        else if (baseType === 'QFT' || baseType === 'IQFT') renderGate = baseType; 
         else renderGate = `${baseType}0`;
 
-        let mockQubits = (baseType === 'CCX' && state.numQubits > 2) ? 3 : (['CX', 'CP', 'SWAP'].includes(baseType) && state.numQubits > 1) ? 2 : 1;
-        item.innerHTML = getColumnHTML([renderGate], mockQubits);
+        // NEW: Force QFT to have mockQubits = 1 so it fits neatly in the menu
+        let mockQubits = (baseType === 'QFT' || baseType === 'IQFT') ? 1 :
+                         (baseType === 'CCX' && state.numQubits > 2) ? 3 : 
+                         (['CX', 'CP', 'SWAP'].includes(baseType) && state.numQubits > 1) ? 2 : 1;
+        
+        // FIX: Force the toolbar container wrapper to establish a strict relative context with absolute alignment flex
+        item.style.position = 'relative';
+        item.style.height = `${h}px`;
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'center';
+
+        // Wrap the standard column HTML generator inside an inner layout anchor that explicitly stretches full-width
+        item.innerHTML = `<div style="position: relative; width: 100%; height: 100%;">${getColumnHTML([renderGate], mockQubits)}</div>`;
         
         item.addEventListener('click', () => {
             if(state.gameOver) return;
@@ -290,7 +303,6 @@ function renderPalette() {
             state.placement = { active: false, col: null, controls: [] }; 
             renderPalette(); 
 
-            // NEW: Advance the Ghost Pointer to the Grid!
             if (state.isTutorial && state.tutorialPhase === 'SELECT_GATE') {
                 state.tutorialPhase = 'PLACE_GATE';
                 setGhostPointer('GRID', 0);

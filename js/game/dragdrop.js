@@ -32,12 +32,32 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
     if (base === 'CCX') reqClicks = 3;
 
     if (reqClicks === 1) {
-        let fullGate = isAngle ? `RZ${angleStr}${q}` : `${base}${q}`;
-        state.currentGuess[c] = state.currentGuess[c].filter(g => !getOccupiedQubits(g).includes(q));
+        let fullGate;
+        
+        // NEW: If placing a Column Command, don't attach any wire numbers!
+        if (base === 'QFT' || base === 'IQFT') {
+            fullGate = base; 
+        } else {
+            fullGate = isAngle ? `RZ${angleStr}${q}` : `${base}${q}`;
+        }
+        
+        // OVERRIDE LOGIC: 
+        if (fullGate === 'QFT' || fullGate === 'IQFT') {
+            // If placing a QFT, wipe the ENTIRE column to make room
+            state.currentGuess[c] = []; 
+        } else {
+            // If placing a normal gate, remove any QFTs or gates sharing this specific wire
+            state.currentGuess[c] = state.currentGuess[c].filter(g => {
+                if (g === 'QFT' || g === 'IQFT') return false; // Wipe existing QFTs
+                const occupied = getOccupiedQubits(g).map(Number);
+                return !occupied.includes(Number(q));
+            });
+        }
+        
         state.currentGuess[c].push(fullGate);
         updateActiveRow(state, renderBoardCallback);
         
-        // NEW: Advance the Tutorial Pointer!
+        // Advance the Tutorial Pointer
         if (state.isTutorial && state.tutorialPhase === 'PLACE_GATE') {
             state.tutorialPhase = 'EVALUATE';
             setGhostPointer('EVALUATE');

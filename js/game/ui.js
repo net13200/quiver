@@ -30,8 +30,12 @@ export function getColumnHTML(gates, numQubits, gateStatusMap = null) {
     }
     for(let type of gates) {
         let statusClass = (gateStatusMap && gateStatusMap[type]) ? (gateStatusMap[type] === 'correct' ? 'eval-correct' : 'eval-absent') : '';
-        
-        if (type.startsWith('CCX')) {
+        const rowHeight = Math.max(60, numQubits * 30) / numQubits;
+        if (type.startsWith('QFT') || type.startsWith('IQFT')) {
+            let cssClass = type === 'IQFT' ? 'iqft-gate' : 'qft-gate';
+            let heightPx = (numQubits * rowHeight);
+            html += `<div class="gate-box ${cssClass}${statusClass}" style="position: absolute; top: 45px; bottom: 5px; left: 50%; width: calc(100% - 4px); height: ${heightPx}px; display: flex; align-items: center; justify-content: center; z-index: 50; border-radius: 6px; box-sizing: border-box; pointer-events: none;">${type}</div>`;
+        } else if (type.startsWith('CCX')) {
             let c1 = parseInt(type[3]), c2 = parseInt(type[4]), t = parseInt(type[5]);
             let c1Top = ((c1 + 0.5) / numQubits * 100) + '%';
             let c2Top = ((c2 + 0.5) / numQubits * 100) + '%';

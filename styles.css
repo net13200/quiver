@@ -378,3 +378,15 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     0%, 100% { transform: translate(-50%, 0); }
     50% { transform: translate(-50%, -5px); }
 }
+
+/* --- Column Command Gates --- */
+.gate-box.qft-gate {
+    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+    border-color: #fef08a; color: #451a03; font-weight: 900;
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); z-index: 50;
+}
+.gate-box.iqft-gate {
+    background: linear-gradient(135deg, #d946ef 0%, #a21caf 100%);
+    border-color: #f0abfc; color: #4a044e; font-weight: 900;
+    box-shadow: 0 0 15px rgba(217, 70, 239, 0.4); z-index: 50;
+}

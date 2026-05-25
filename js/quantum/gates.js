@@ -30,11 +30,36 @@ export const SWAP2 = [
     [{r:0,i:0}, {r:0,i:0}, {r:0,i:0}, {r:1,i:0}]
 ];
 
+function buildQFTMatrix(numQubits, inverse = false) {
+    let N = 1 << numQubits;
+    let mat = [];
+    let sign = inverse ? -1 : 1;
+    
+    for (let r = 0; r < N; r++) {
+        let row = [];
+        for (let c = 0; c < N; c++) {
+            let theta = sign * (2 * Math.PI * r * c) / N;
+            row.push({ 
+                r: Math.cos(theta) / Math.sqrt(N), 
+                i: Math.sin(theta) / Math.sqrt(N) 
+            });
+        }
+        mat.push(row);
+    }
+    return mat;
+}
+
 export let GATE_MATRICES = {};
 
 export function generateMatrices(N) {
     GATE_MATRICES = {};
     GATE_MATRICES['I'] = kronN(Array(N).fill(I2));
+
+    // Add this right before the end of generateMatrices
+    if (N > 0) {
+        GATE_MATRICES['QFT'] = buildQFTMatrix(N, false);
+        GATE_MATRICES['IQFT'] = buildQFTMatrix(N, true);
+    }
     
     let singleGates = { 'X': X2, 'Y': Y2, 'H': H2, 'Z': Z2, 'SX': SX2 };
     for (let q = 0; q < N; q++) {
@@ -140,6 +165,9 @@ export function formatAngleGate(gNext) {
 
 export function getOccupiedQubits(gate) {
     if (!gate || gate === 'I') return [];
+    if (gate === 'QFT' || gate === 'IQFT') {
+        return [0, 1, 2, 3, 4, 5, 6, 7];
+    }
     if (gate.startsWith('CCX')) {
         let c1 = parseInt(gate[3]), c2 = parseInt(gate[4]), t = parseInt(gate[5]);
         let occ = [];

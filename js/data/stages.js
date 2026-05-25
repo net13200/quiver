@@ -406,5 +406,42 @@ export const STAGES = [
                 lesson: "<b>The Mechanism:</b> The full QFT cascades H and increasingly smaller CP gates. Each subsequent qubit adds a finer and finer angle (π/2, π/4, π/8...) to the target. It perfectly maps a binary number |x⟩ into a phase state where each qubit's angle represents a fraction of a full circle.<br><br><b>Why it matters:</b> This is the heart of Quantum Phase Estimation and Shor's Algorithm. By working in this Fourier regime (the XY plane), a quantum computer can evaluate the global properties of a function exponentially faster than any classical supercomputer ever could!"
             }
         ]
+    },
+    {
+        title: "Stage 10: The QFT Adder",
+        desc: "Master Draper's addition algorithm in the Fourier domain.",
+        qubits: 3,
+        cols: 6,
+        set: ['X', 'QFT', 'IQFT', 'RZ'],
+        levels: [
+            {
+                name: "Fourier Addition (+1)",
+                hint: "Use an X gate on q2 to prepare |1>. Apply QFT. Add phase for +1 (RZ(π/4) on q2, RZ(π/2) on q1, RZ(π) on q0). Apply IQFT.",
+                lesson: "Classical computers need extra 'scratchpad' bits to handle carry-overs when adding numbers. In 2000, Thomas Draper showed we can add numbers using **zero** extra space by computing in the Fourier domain!\n\n**1. Transform:** The QFT shifts our state into the frequency domain. Numbers are now encoded as phase shifts.\n\n**2. Rotate:** To add $+1$, we rotate the least significant qubit (q2) by $\\pi/4$, the middle (q1) by $\\pi/2$, and the most significant (q0) by $\\pi$.\n\n**3. Return:** The Inverse QFT (IQFT) brings us back to standard binary.\n\nPrepare the state $|1\\rangle$ using an X gate on q2, add $1$ to it in the Fourier domain, and bring it back!",
+                circuits: [
+                    [
+                        ['X2'], 
+                        ['QFT'],
+                        ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'], 
+                        ['IQFT'],
+                        []
+                    ]
+                ]
+            },
+            {
+                name: "Fourier Addition (+2)",
+                hint: "Prepare |1> on q2. Apply QFT. To add +2, double the phase shifts from the previous level! Apply IQFT.",
+                lesson: "Now let's add $+2$ to our initial state of $|1\\rangle$.\n\nIn the Fourier domain, adding a larger number simply multiplies the phase shift. If adding $+1$ applied a $\\pi/4$ rotation to the lowest qubit, adding $+2$ will require $2 \\times \\pi/4 = \\pi/2$.\n\nCalculate the doubled phase shifts for q1 and q2 (a $2\\pi$ shift on q0 acts like a full rotation and can be skipped). Apply the math, and hit evaluate to see $1 + 2 = 3$!",
+                circuits: [
+                    [
+                        ['X2'], 
+                        ['QFT'],
+                        ['RZ_PI2_2', 'RZ_PI_1'], 
+                        ['IQFT'],
+                        []
+                    ]
+                ]
+            }
+        ]
     }
 ];
