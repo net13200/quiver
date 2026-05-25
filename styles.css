@@ -11,6 +11,25 @@
     --panel-bg: #1e293b;
 }
 
+/* --- iOS Centering & Mobile Fixes --- */
+html, body {
+    overflow-x: hidden; /* Prevents the entire screen from sliding left/right */
+    width: 100%;
+    position: relative;
+    box-sizing: border-box;
+}
+
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+
+/* Ensure the board scrolls internally on small screens without breaking the page layout */
+#board, #history-board {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Enables buttery-smooth momentum scrolling on iPhones */
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg-color);
