@@ -133,9 +133,9 @@ function initGame(mode, p1, p2) {
         state.currentP2 = p2;
         let stage = STAGES[p1];
         let lvl = stage.levels[p2];
-        state.numQubits = stage.qubits;
-        state.numCols = stage.cols;
-        state.activeSet = stage.set;
+        state.numQubits = lvl.qubits || stage.qubits;
+        state.numCols = lvl.cols || stage.cols;
+        state.activeSet = lvl.set || stage.set;
         state.secretCircuits = lvl.circuits;
         
         let isStrict = (p1 >= 4); 
