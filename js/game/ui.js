@@ -2,6 +2,77 @@ import { drawBlochSphere, calcBlochVector } from '../quantum/bloch.js';
 import { stateToString, computeStateVector } from '../quantum/engine.js';
 import { GATE_MATRICES } from '../quantum/gates.js';
 
+export function parseMarkdownAndMath(text) {
+    if (!text) return '';
+
+    let html = text;
+
+    // Instantly translate raw backslash commands into clean Unicode characters
+    html = html.replace(/\\left|left(?=\s*\||\s*\\)/g, '')
+               .replace(/\\right|right(?=\s*⟩|\s*\\rangle|\s*\|)/g, '');
+    
+    html = html.replace(/\|0\s*angle/gi, '|0⟩')
+               .replace(/\|1\s*angle/gi, '|1⟩')
+               .replace(/angle\s*\$/gi, '⟩')
+               .replace(/0\s*\$/gi, '0');
+
+    html = html.replace(/\\sqrt\{(.*?)\}/g, '√$1')
+               .replace(/\\frac\{1\}\{\\sqrt\{2\}\}/g, '1/1/√2') // Handles overlapping fractions safely
+               .replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1/$2')
+               .replace(/\\psi/g, 'ψ')
+               .replace(/\\phi/g, 'ϕ')
+               .replace(/\\theta/g, 'θ')
+               .replace(/\\pi/g, 'π')
+               .replace(/\\rangle/g, '⟩')
+               .replace(/\\langle/g, '⟨')
+               .replace(/\\left\|/g, '|')
+               .replace(/\\right\|/g, '|')
+               .replace(/\\text\{(.*?)\}/g, '$1')
+               .replace(/\\%/g, '%') // Cleans up escaped percentage signs like \%
+               .replace(/\\\s/g, ' ');
+    
+    // 1. Convert Display Math Block: $$ math $$ -> Clean centered block
+    html = html.replace(/\$\$(.*?)\$\$/gs, (match, p1) => {
+        let math = p1.replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1/$2')
+                     .replace(/\\left\|/g, '|')
+                     .replace(/\\right\\rangle/g, '⟩')
+                     .replace(/\\rangle/g, '⟩')
+                     .replace(/\\psi/g, 'ψ')
+                     .replace(/\\text\{(.*?)\}/g, '$1')
+                     .replace(/\\\s/g, ' ');
+        return `<div style="text-align: center; margin: 16px 0; font-size: 1.25em; font-weight: bold; color: #22d3ee; font-family: monospace;">${math}</div>`;
+    });
+
+    // 2. Convert Inline Math: $ math $ -> Crisp variable highlights
+    html = html.replace(/\$(.*?)\$/g, (match, p1) => {
+        let math = p1.replace(/\\rangle/g, '⟩')
+                     .replace(/\\psi/g, 'ψ')
+                     .replace(/\\left\|/g, '|')
+                     .replace(/\\right\|/g, '|')
+                     .replace(/\^2/g, '²')
+                     .replace(/\\frac\{1\}\{\\sqrt\{2\}\}/g, '1/√2');
+        return `<span style="font-family: monospace; font-weight: bold; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px;">${math}</span>`;
+    });
+
+    // 2.5 Convert Horizontal Lines: *** -> Clean divider line
+    html = html.replace(/^\*\*\*\s*$/gm, '<hr style="border: 0; height: 1px; background: #334155; margin: 24px 0;">');
+
+    // 3. Convert Headers: ### Header
+    html = html.replace(/^###\s+(.*)$/gm, '<h3 style="color: #38bdf8; margin-top: 24px; margin-bottom: 12px; font-size: 1.35em; border-bottom: 1px solid #334155; padding-bottom: 6px; font-weight: 700;">$1</h3>');
+
+    // 4. Convert Bold Text: **text** -> Bold HTML tag
+    html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+    // 5. Convert Markdown Bullet Points: * item -> Styled list items
+    // First, convert individual bullet lines into HTML list items
+    html = html.replace(/^\*\s+(.*)$/gm, '<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: disc;">$1</li>');
+
+    // 6. Convert Newlines into real paragraph breaks
+    html = html.replace(/\n\n/g, '<br><br>');
+
+    return html;
+}
+
 export function toggleMenu(id) {
     ['learn-content', 'play-content', 'sandbox-content'].forEach(menuId => {
         const el = document.getElementById(menuId);

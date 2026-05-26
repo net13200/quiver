@@ -201,6 +201,39 @@ function getStage9_3Circuits() {
 
 export const STAGES = [
     {
+        title: "Stage 0: Quantum Foundations",
+        desc: "Decode the language of the quantum world: Bra-Kets, amplitudes, wave interference, and the Bloch Sphere.",
+        qubits: 1, 
+        cols: 4,
+        set: ['X', 'Z', 'H'],
+        levels: [
+            {
+                name: "1. Reading the Map",
+                hint: "The board starts completely empty. Since it already matches the target state, just hit Evaluate!",
+                lesson: "### Welcome to the Quantum Realm!\n\nTo build quantum algorithms, you first need to learn how to read the map. A quantum circuit is read from **left to right**, just like a musical score. Each horizontal line represents a **qubit** (a quantum bit).\n\n### The Container: Bra-Ket Notation\nIn classical computing, a bit is rigidly a $0$ or a $1$. In quantum computing, we write states using **Dirac Bra-Ket notation**: $|\\ \\rangle$.\n\nThink of the bracket as a labeled container holding a measurement outcome:\n* $|0\\rangle$ means 'if we look at this qubit, it will land on 0.'\n* $|1\\rangle$ means 'if we look at this qubit, it will land on 1.'\n\n### The Weight: Amplitudes\nThe number sitting *in front* of the bracket is called the **amplitude**. Amplitudes represent the probability weight of that specific outcome.\n\nIf the target at the top of your screen says:\n$$\\left|\\psi\\right\\rangle = 1|0\\rangle$$\nThis tells you that the qubit has an amplitude of $1$ on the $|0\rangle$ state. Squaring this number gives the actual probability: $1^2 = 1.00 = 100\\%$. It is definitely a 0!\n\nSince every wire on your board naturally starts at $|0\rangle$, an empty column does exactly what we need. **You don't need to place any gates here.** Just hit **Evaluate** to clear your very first level!",
+                circuits: [[[]]]
+            },
+            {
+                name: "2. Shattering the Bit",
+                hint: "Place a single Hadamard (H) gate on the wire to split the qubit into a 50/50 superposition.",
+                lesson: "### Breaking Free From Binary\n\nClassical bits are boring—they are stuck being a 0 or a 1. Qubits are exciting because they can exist in a **superposition** of *both* states simultaneously!\n\nWhen you apply a Hadamard (**H**) gate to a $|0\rangle$ qubit, it shatters its reality, splitting it into a perfect 50/50 blend of both possibilities:\n$$\\left|\\psi\\right\\rangle = \\frac{1}{\\sqrt{2}}|0\\rangle + \\frac{1}{\\sqrt{2}}|1\\rangle$$\n\n### Where did $\\frac{1}{\\sqrt{2}}$ come from?\nThis looks like a terrifying fraction, but it is actually simple arithmetic. In quantum physics, **probabilities are calculated by squaring the amplitudes**.\n\nIf we want a perfect 50/50 coin flip, we need a percentage of $\\frac{1}{2}$ ($50\\%$) for each state. To find the amplitude needed to get that percentage, we work backward and take the square root:\n$$\\text{Probability} = \\left(\\frac{1}{\\sqrt{2}}\\right)^2 = \\frac{1}{2} = 50\\%$$\n\nTherefore, $\\frac{1}{\\sqrt{2}}$ is literally just the mathematical 'square root of 50%'.\n\n### The Action Plan\nGrab an **H** gate from your palette and drop it onto the wire. Before hitting evaluate, look over at the **Live Bloch Spheres** panel on the right side of your screen. Notice how your pink state vector line moved from the North Pole down to the side? You just created a superposition!",
+                circuits: [[['H0']]]
+            },
+            {
+                name: "3. The Map of a Qubit's Mind",
+                hint: "Combine an H gate with a Z gate to flip the phase of the superposition to negative.",
+                lesson: "### Reading the Bloch Sphere\n\nLook closely at the **Live Bloch Spheres** panel on the right side of your screen. That sphere is a 3D map of a single qubit's mental state:\n* **The North Pole ($|0\rangle$):** Pointing straight up means the qubit is $100\\%$ a $0$.\n* **The South Pole ($|1\rangle$):** Pointing straight down means it is $100\\%$ a $1$.\n* **The Equator:** Pointing horizontally sideways means it is in a 50/50 superposition!\n\n### The Power of Phase\nQuantum amplitudes aren't locked to positive numbers—they can be negative or even complex numbers! Look at your new target state:\n$$\\left|\\psi\\right\\rangle = \\frac{1}{\\sqrt{2}}|0\\rangle - \\frac{1}{\\sqrt{2}}|1\\rangle$$\n\nNotice the minus sign? If you square a negative amplitude, it still becomes a positive probability: $\\left(-\\frac{1}{\\sqrt{2}}\\right)^2 = \\frac{1}{2} = 50\\%$. Measuring this qubit *still* gives you a 50/50 coin toss between 0 and 1.\n\nHowever, that minus sign introduces a **phase shift**, changing the direction the qubit faces on the equator:\n* A positive superposition ($+$) points straight **Forward/Right ($+X$ axis)**.\n* A negative superposition ($-$) points straight **Backward/Left ($-X$ axis)**.\n\n### Wave Interference: The Secret to Quantum Speed\nWhy do we care about phase? Because amplitudes behave exactly like water waves. A positive amplitude ($+$) is a wave crest; a negative amplitude ($-$) is a wave trough.\n\nBy manipulating phase, we can make wrong answers cancel each other out to flat water ($0\\%$ probability) via **destructive interference**, forcing the correct answer's crests to combine and grow to $100\\%$ via **constructive interference**! This is how quantum computers solve massive equations instantly.\n\n### The Goal\nUse an **H** gate to push the qubit to the equator, then apply a phase-flipping **Z** gate to spin the sphere around and turn the phase negative!",
+                circuits: [[['H0'], ['Z0']]]
+            },
+            {
+                name: "4. The Quantum Register",
+                hint: "This level expands the board to 3 qubits (q0, q1, q2 from top to bottom). Place an X gate on the middle wire to flip it to 1.",
+                lesson: "### Combining Wires\n\nWhen we chain multiple qubits together side-by-side, they form a **register**. To read a multi-qubit system, we read the horizontal wires from **top to bottom** as a single binary number string.\n\nOn this 3-qubit board:\n* The top wire is Qubit 0 ($q_0$)\n* The middle wire is Qubit 1 ($q_1$)\n* The bottom wire is Qubit 2 ($q_2$)\n\n### Splitting the State Container\nOur target state container is now written with three digits inside a single bracket: `1|010⟩`. This breaks down into three simple instructions:\n1. We want $q_0$ to be a $0$\n2. We want $q_1$ to be a $1$\n3. We want $q_2$ to be a $0$\n\n### How Gates Route Amplitudes\nEvery single wire on your board starts automatically at $0$. To flip a specific qubit from $0$ to $1$, we use a NOT gate (represented as **X** in quantum computing).\n\nThink of the **X gate** like a manual train track router: it physically takes the amplitude sitting on the $|0\rangle$ path and moves it over to the $|1\rangle$ path.\n\nLook at your target string `1|010⟩`. Find the *one* qubit wire that needs to be flipped to a $1$, place an **X** gate directly on that line, and watch the corresponding Bloch Sphere flip completely upside down to point at the South Pole!",
+                circuits: [[['X1']]]
+            }
+        ]
+    },
+    {
         title: "Stage 1: The Bloch Sphere",
         desc: "Learn to navigate the 6 poles of the Bloch sphere using 1 qubit.",
         qubits: 1, cols: 3, set: ['X0', 'Y0', 'Z0', 'H0', 'SX0'],

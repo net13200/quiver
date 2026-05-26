@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -35,7 +35,9 @@ window.showHint = () => {
 };
 window.showLesson = () => {
     document.getElementById('lesson-text').classList.remove('hidden');
+    document.getElementById('lesson-text').innerHTML = parseMarkdownAndMath(document.getElementById('lesson-text').innerHTML);
     document.getElementById('lesson-btn').classList.add('hidden');
+    
 };
 
 function showMainMenu() {
