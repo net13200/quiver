@@ -11,6 +11,16 @@ export function parseMarkdownAndMath(text) {
     html = html.replace(/\\left|left(?=\s*\||\s*\\)/g, '')
                .replace(/\\right|right(?=\s*⟩|\s*\\rangle|\s*\|)/g, '');
     
+    // Target and swap out exact QFT decimal strings with their trig definitions
+    html = html.replace(/0\.831/g, 'cos(3π/16)')
+               .replace(/0\.556/g, 'sin(3π/16)')
+               .replace(/0\.195/g, 'sin(π/16)')
+               .replace(/0\.981/g, 'cos(π/16)');
+
+    // Keep your existing loose left/right markers and brackets rules directly below it...
+    html = html.replace(/\\left|left(?=\s*\||\s*\\)/g, '')
+               .replace(/\\right|right(?=\s*⟩|\s*\\rangle|\s*\|)/g, '');
+    
     html = html.replace(/\|0\s*angle/gi, '|0⟩')
                .replace(/\|1\s*angle/gi, '|1⟩')
                .replace(/angle\s*\$/gi, '⟩')

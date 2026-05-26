@@ -1,6 +1,6 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer } from './ui.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
@@ -18,7 +18,7 @@ export function submitGuess(state, renderBoardCallback) {
 
         const ampResult = document.createElement('div');
         ampResult.className = 'amplitudes-result';
-        ampResult.innerText = "↳ Snapshot |ψ⟩ = " + stateToString(userState, state.numQubits);
+        ampResult.innerText = "↳ Snapshot |ψ⟩ = " + parseMarkdownAndMath(stateToString(userState, state.numQubits));
         wrap.appendChild(ampResult);
         return; 
     }
