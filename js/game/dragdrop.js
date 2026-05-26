@@ -21,7 +21,7 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
         return;
     }
 
-    // 2. PLACE MODE (A gate is selected!)
+    // 2. TOGGLE / PLACE MODE (A gate is selected)
     let base = state.selectedBaseGate;
     let isAngle = base === 'RZ' || base === 'CP';
     let angleStr = isAngle ? `_${state.currentRzAngle}_` : '';
@@ -34,31 +34,45 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
     if (reqClicks === 1) {
         let fullGate;
         
-        // NEW: If placing a Column Command, don't attach any wire numbers!
         if (base === 'QFT' || base === 'IQFT') {
             fullGate = base; 
         } else {
             fullGate = isAngle ? `RZ${angleStr}${q}` : `${base}${q}`;
         }
         
-        // OVERRIDE LOGIC: 
+        // Check if the exact gate we are trying to place already exists on this wire
+        let gateAlreadyExists = false;
+        
         if (fullGate === 'QFT' || fullGate === 'IQFT') {
-            // If placing a QFT, wipe the ENTIRE column to make room
-            state.currentGuess[c] = []; 
+            // For column commands, just check if it's already in the column
+            gateAlreadyExists = state.currentGuess[c].includes(fullGate);
+            state.currentGuess[c] = []; // Clear the column either way to make room or remove it
         } else {
-            // If placing a normal gate, remove any QFTs or gates sharing this specific wire
+            // For standard gates, check if it exists AND clear any overlapping gates
             state.currentGuess[c] = state.currentGuess[c].filter(g => {
-                if (g === 'QFT' || g === 'IQFT') return false; // Wipe existing QFTs
+                if (g === 'QFT' || g === 'IQFT') return false; 
+                
+                // If we found the exact gate we are holding, mark it!
+                if (g === fullGate) {
+                    gateAlreadyExists = true;
+                    return false; // Remove it (Toggle OFF)
+                }
+                
                 const occupied = getOccupiedQubits(g).map(Number);
-                return !occupied.includes(Number(q));
+                return !occupied.includes(Number(q)); // Remove any *other* gates on this wire
             });
         }
         
-        state.currentGuess[c].push(fullGate);
+        // Only push the new gate if we DIDN'T just toggle it off
+        if (!gateAlreadyExists) {
+            state.currentGuess[c].push(fullGate);
+        }
+        // ------------------------------
+
         updateActiveRow(state, renderBoardCallback);
         
         // Advance the Tutorial Pointer
-        if (state.isTutorial && state.tutorialPhase === 'PLACE_GATE') {
+        if (state.isTutorial && state.tutorialPhase === 'PLACE_GATE' && !gateAlreadyExists) {
             state.tutorialPhase = 'EVALUATE';
             setGhostPointer('EVALUATE');
         }
@@ -89,15 +103,23 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
                     fullGate = `CCX${c1}${c2}${c3}`;
                 }
 
-                // OVERRIDE LOGIC: Find all wires this new gate will touch, and clear them
+                // --- NEW MULTI-QUBIT TOGGLE LOGIC ---
+                let gateAlreadyExists = false;
                 const requiredQubits = getOccupiedQubits(fullGate);
+                
                 state.currentGuess[c] = state.currentGuess[c].filter(g => {
+                    if (g === fullGate) {
+                        gateAlreadyExists = true;
+                        return false; // Remove exact match
+                    }
                     const existingQubits = getOccupiedQubits(g);
-                    // Keep the old gate ONLY if it shares absolutely zero wires with the new gate
-                    return !existingQubits.some(eq => requiredQubits.includes(eq));
+                    return !existingQubits.some(eq => requiredQubits.includes(eq)); // Clear overlapping
                 });
 
-                state.currentGuess[c].push(fullGate);
+                if (!gateAlreadyExists) {
+                    state.currentGuess[c].push(fullGate);
+                }
+                // ------------------------------------
                 
                 // Reset placement state
                 state.placement = { active: false, col: null, controls: [] };
