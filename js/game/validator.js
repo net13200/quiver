@@ -1,6 +1,6 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath } from './ui.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
@@ -106,6 +106,23 @@ export function submitGuess(state, renderBoardCallback) {
 
         fireQuantumConfetti(startX, startY);
 
+        // --- TIMED MODE: skip modal, auto-advance ---
+        if (state.currentMode === 'TIMED') {
+            state.timerRemaining = Math.min(state.timerRemaining + 20, 999);
+            state.timedScore += state.currentLvl;
+            state.timedCircuitsSolved++;
+            updateTimedStatusBar(state);
+
+            const msg = document.getElementById('message');
+            msg.innerText = 'Solved! +20s';
+            msg.style.color = '#22c55e';
+            setTimeout(() => {
+                msg.innerText = '';
+                state.timedNextPuzzle && state.timedNextPuzzle();
+            }, 1500);
+            return;
+        }
+
         const wasTutorial = state.isTutorial;
         if (state.isTutorial) {
             state.isTutorial = false;
@@ -208,6 +225,43 @@ export function submitGuess(state, renderBoardCallback) {
 
     } else {
         state.attempts++;
+
+        // --- TIMED MODE: 3-attempt limit, -5s penalty, auto-advance ---
+        if (state.currentMode === 'TIMED') {
+            state.timerRemaining = Math.max(0, state.timerRemaining - 5);
+            updateTimedStatusBar(state);
+
+            if (state.timerRemaining <= 0) {
+                state.timedEndSession && state.timedEndSession();
+                return;
+            }
+
+            if (state.attempts >= 3) {
+                state.gameOver = true;
+                wrap.classList.remove('active');
+                document.getElementById('submit-btn').classList.add('hidden');
+                const msg = document.getElementById('message');
+                msg.innerText = 'Out of attempts! Loading next...';
+                msg.style.color = '#ef4444';
+                setTimeout(() => {
+                    msg.innerText = '';
+                    state.timedNextPuzzle && state.timedNextPuzzle();
+                }, 1500);
+                return;
+            }
+
+            const attemptsLeft = 3 - state.attempts;
+            const msg = document.getElementById('message');
+            msg.innerText = `−5s penalty! ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} left.`;
+            msg.style.color = '#eab308';
+            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
+            state.currentGuess = Array(state.numCols).fill().map(() => []);
+            updateActiveRow(state, renderBoardCallback);
+            const activeAmpResult = wrap.querySelector('.amplitudes-result');
+            if (activeAmpResult) activeAmpResult.remove();
+            return;
+        }
+
         document.getElementById('attempts-counter').innerText = `Attempts Remaining: ${6 - state.attempts}`;
 
         const historyWrap = wrap.cloneNode(true);

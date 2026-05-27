@@ -83,6 +83,19 @@
         </div>
 
         <div class="menu-section">
+            <div class="menu-header" id="header-timed">
+                <h2>Time Collapse <span>▼</span></h2>
+                <p>Race against the clock! Solve as many circuits as possible before the wavefunction collapses. +20s per solve, −5s per wrong attempt.</p>
+            </div>
+            <div id="timed-content" class="menu-content hidden">
+                <div class="menu-row">
+                    <button class="menu-btn btn-green" id="btn-timed-1">Easy<br><small>1 Qubit</small><br><small id="timed-best-1" style="opacity:0.7;">Best: —</small></button>
+                    <button class="menu-btn btn-yellow" id="btn-timed-2">Medium<br><small>2 Qubits</small><br><small id="timed-best-2" style="opacity:0.7;">Best: —</small></button>
+                    <button class="menu-btn" style="background:#ef4444;" id="btn-timed-3">Hard<br><small>3 Qubits</small><br><small id="timed-best-3" style="opacity:0.7;">Best: —</small></button>
+                </div>
+            </div>
+        </div>
+        <div class="menu-section">
             <div class="menu-header" id="header-sandbox">
                 <h2>Sandbox <span>▼</span></h2>
                 <p>Experiment freely on an infinite board. Place gates and evaluate your snapshots to see the output.</p>
@@ -112,6 +125,11 @@
                 <div id="live-state-container" class="state-container hidden">
                     <div class="state-label">Current Live Output:</div>
                     <div id="live-state-amplitudes" class="state-amplitudes">|ψ⟩ = |0⟩</div>
+                </div>
+                <div id="timed-status-bar" class="hidden" style="display:flex; justify-content:space-between; align-items:center; background:var(--panel-bg); border:1px solid var(--border-color); border-radius:8px; padding:8px 16px; margin-bottom:12px; font-weight:bold;">
+                    <span id="timed-timer" style="font-size:1.3rem; color:#eab308;">⏱ 0:30</span>
+                    <span id="timed-score" style="color:#22c55e;">Score: 0</span>
+                    <span id="timed-attempts" style="color:#94a3b8;">Attempts: 3</span>
                 </div>
                 <div id="attempts-counter" style="text-align: center; color: #94a3b8; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem;">Attempts Remaining: 6</div>
                 <div id="board"></div>

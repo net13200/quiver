@@ -1,8 +1,8 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -26,7 +26,13 @@ export const state = {
     placement: { active: false, col: null, controls: [] },
     isTutorial: false,
     tutorialPhase: 'NONE',
-    tutorialJustCompleted: false
+    tutorialJustCompleted: false,
+    timerRemaining: 0,
+    _timerIntervalId: null,
+    timedScore: 0,
+    timedCircuitsSolved: 0,
+    timedNextPuzzle: null,
+    timedEndSession: null
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -147,6 +153,15 @@ function buildMenu() {
                 btn.classList.remove('completed');
                 btn.innerText = baseText;
             }
+        }
+    });
+
+    // Update timed best scores in menu
+    [1, 2, 3].forEach(lvl => {
+        const bestEl = document.getElementById(`timed-best-${lvl}`);
+        if (bestEl) {
+            const best = timedBest[lvl - 1];
+            bestEl.innerText = best > 0 ? `Best: ${best}` : 'Best: —';
         }
     });
 }
@@ -306,7 +321,75 @@ function initGame(mode, p1, p2) {
 
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
-        
+
+    } else if (mode === 'TIMED') {
+        const isContinuingTimedSession = state._timerIntervalId !== null;
+
+        clearBtn.classList.add('hidden');
+        state.currentLvl = p1;
+        state.numQubits = LEVELS[p1].q;
+        state.numCols = LEVELS[p1].g;
+        state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
+
+        const timedRng = Math.random.bind(Math);
+        let timedCircuit = [];
+        let timedActiveLength = Math.floor(timedRng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
+        let timedSingleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
+        let timedSingleToPlace = 2;
+        for (let i = 0; i < state.numCols; i++) {
+            if (i < timedActiveLength) {
+                let col = [];
+                let placed = 0;
+                if (timedSingleToPlace > 0 && timedSingleQSet.length > 0) {
+                    let g = timedSingleQSet[Math.floor(timedRng() * timedSingleQSet.length)];
+                    col.push(formatAngleGateSeeded(g, timedRng));
+                    timedSingleToPlace--; placed++;
+                    if (timedSingleToPlace > 0 && state.numQubits >= 2) {
+                        let g2 = formatAngleGateSeeded(timedSingleQSet[Math.floor(timedRng() * timedSingleQSet.length)], timedRng);
+                        if (canFit(col, g2)) { col.push(g2); timedSingleToPlace--; placed++; }
+                    }
+                } else {
+                    col.push(formatAngleGateSeeded(state.activeSet[Math.floor(timedRng() * state.activeSet.length)], timedRng));
+                    placed++;
+                }
+                for (let a = placed; a < state.numQubits; a++) {
+                    if (timedRng() > 0.5) {
+                        let gNext = formatAngleGateSeeded(state.activeSet[Math.floor(timedRng() * state.activeSet.length)], timedRng);
+                        if (canFit(col, gNext)) col.push(gNext);
+                    }
+                }
+                timedCircuit.push(col);
+            } else timedCircuit.push([]);
+        }
+        state.secretCircuits = [timedCircuit];
+
+        const diffNames = ['Easy', 'Medium', 'Hard'];
+        instructions.innerHTML = `<b>Time Collapse — ${diffNames[p1 - 1]}</b><br>Solve as many circuits as possible! +20s per solve, −5s per wrong attempt.`;
+        targetBox.style.display = 'block';
+        liveBox.style.display = 'none';
+
+        if (isContinuingTimedSession) {
+            updateTimedStatusBar(state);
+        } else {
+            state.timerRemaining = 30;
+            state.timedScore = 0;
+            state.timedCircuitsSolved = 0;
+            updateTimedStatusBar(state);
+            state._timerIntervalId = setInterval(() => {
+                state.timerRemaining--;
+                updateTimedStatusBar(state);
+                if (state.timerRemaining <= 0) {
+                    endTimedSession();
+                }
+            }, 1000);
+        }
+
+        state.timedNextPuzzle = () => {
+            if (state.timerRemaining <= 0) return;
+            initGame('TIMED', state.currentLvl);
+        };
+        state.timedEndSession = endTimedSession;
+
     } else if (mode === 'FREEPLAY') {
         clearBtn.classList.remove('hidden');
         state.numQubits = p1;
@@ -431,11 +514,18 @@ function renderBoard() {
     }
 
     const attemptsCounter = document.getElementById('attempts-counter');
+    const timedBar = document.getElementById('timed-status-bar');
     if (state.currentMode === 'FREEPLAY') {
         attemptsCounter.style.display = 'none';
+        timedBar.classList.add('hidden');
+    } else if (state.currentMode === 'TIMED') {
+        attemptsCounter.style.display = 'none';
+        timedBar.classList.remove('hidden');
+        updateTimedStatusBar(state);
     } else {
         attemptsCounter.style.display = 'block';
         attemptsCounter.innerText = `Attempts Remaining: ${6 - state.attempts}`;
+        timedBar.classList.add('hidden');
     }
 
     const rowHeight = Math.max(60, state.numQubits * 30);
@@ -486,6 +576,33 @@ function renderBoard() {
     wrap.appendChild(circuitRow);
 }
 
+function endTimedSession() {
+    if (state._timerIntervalId) {
+        clearInterval(state._timerIntervalId);
+        state._timerIntervalId = null;
+    }
+    if (state.gameOver) return;
+    state.gameOver = true;
+    document.getElementById('submit-btn').classList.add('hidden');
+
+    const isNewBest = saveTimedBest(state.currentLvl, state.timedScore);
+    const bestScore = timedBest[state.currentLvl - 1];
+    const diffNames = ['Easy', 'Medium', 'Hard'];
+    const statsText = isNewBest
+        ? `Score: ${state.timedScore} 🎉 New Best!`
+        : `Score: ${state.timedScore} | Best: ${bestScore}`;
+
+    setTimeout(() => {
+        showVictoryModal(
+            "Time's Up!",
+            `${diffNames[state.currentLvl - 1]} — ${state.timedCircuitsSolved} circuit${state.timedCircuitsSolved !== 1 ? 's' : ''} solved`,
+            statsText,
+            false,
+            null
+        );
+    }, 300);
+}
+
 // --- Attach Static Event Listeners ---
 
 // 1. Menu Accordions
@@ -493,6 +610,7 @@ document.getElementById('header-learn').addEventListener('click', () => toggleMe
 document.getElementById('header-play').addEventListener('click', () => toggleMenu('play-content'));
 document.getElementById('header-sandbox').addEventListener('click', () => toggleMenu('sandbox-content'));
 document.getElementById('header-daily').addEventListener('click', () => toggleMenu('daily-content'));
+document.getElementById('header-timed').addEventListener('click', () => toggleMenu('timed-content'));
 
 // 2. Play Menu Configurations
 document.getElementById('btn-toggle-gates').addEventListener('click', toggleAllGates);
@@ -502,7 +620,12 @@ document.getElementById('btn-rand-1').addEventListener('click', () => initGame('
 document.getElementById('btn-rand-2').addEventListener('click', () => initGame('RANDOM', 2));
 document.getElementById('btn-rand-3').addEventListener('click', () => initGame('RANDOM', 3));
 
-// 3. Sandbox Menu
+// 3. Timed Menu
+document.getElementById('btn-timed-1').addEventListener('click', () => initGame('TIMED', 1));
+document.getElementById('btn-timed-2').addEventListener('click', () => initGame('TIMED', 2));
+document.getElementById('btn-timed-3').addEventListener('click', () => initGame('TIMED', 3));
+
+// 4. Sandbox Menu
 document.getElementById('btn-free-1').addEventListener('click', () => initGame('FREEPLAY', 1));
 document.getElementById('btn-free-2').addEventListener('click', () => initGame('FREEPLAY', 2));
 document.getElementById('btn-free-3').addEventListener('click', () => initGame('FREEPLAY', 3));
@@ -533,6 +656,7 @@ document.getElementById('next-btn').addEventListener('click', () => {
 
 document.getElementById('menu-btn').addEventListener('click', () => {
     state.currentStreak = 0; // Reset streak if you run away!
+    if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
     showMainMenu();
 });
 
@@ -549,7 +673,8 @@ if (rzSelect) {
 const gameLogo = document.getElementById('game-logo');
 if (gameLogo) {
     gameLogo.addEventListener('click', () => {
-        state.currentStreak = 0; 
+        state.currentStreak = 0;
+        if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
         showMainMenu();
     });
 }
@@ -575,8 +700,9 @@ document.getElementById('again-btn').addEventListener('click', () => {
 document.getElementById('modal-again-btn').addEventListener('click', () => {
     hideVictoryModal();
     if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
-    else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl); // <-- ADDED
+    else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl);
     else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
+    else if (state.currentMode === 'TIMED') initGame('TIMED', state.currentLvl);
 });
 
 document.getElementById('btn-daily-1')?.addEventListener('click', () => initGame('DAILY', 1));
@@ -585,6 +711,7 @@ document.getElementById('btn-daily-3')?.addEventListener('click', () => initGame
 
 document.getElementById('modal-menu-btn').addEventListener('click', () => {
     hideVictoryModal();
+    if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
     showMainMenu();
 });
 

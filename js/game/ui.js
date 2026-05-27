@@ -449,6 +449,7 @@ const tourSteps = [
     { sel: '#header-learn',  title: 'Learn Mode',     text: "LEARN: A structured curriculum that takes you from zero to mastering quantum algorithms. Start here!" },
     { sel: '#header-daily',  title: 'Daily Puzzles',  text: "DAILY: Three fresh puzzles every 24 hours — Easy, Medium, and Hard. A great daily challenge once you know the basics!" },
     { sel: '#header-sandbox',title: 'Sandbox',        text: "SANDBOX: A free-play area to experiment with any gates and watch the quantum math update in real time." },
+    { sel: '#header-timed',  title: 'Time Collapse',  text: "TIME COLLAPSE: A timed blitz mode! Solve as many circuits as possible before the clock hits zero. Each solve adds +20s — each wrong attempt costs −5s." },
     { sel: '#header-play',   title: 'Play Mode',      text: "PLAY: The arcade mode! Expand the Play menu and click 'Easy (1 Qubit)' to try an interactive puzzle.", hideNext: true }
 ];
 
@@ -635,4 +636,24 @@ export function clearGhostPointer() {
         const textEl = el.querySelector('.ghost-text');
         if (textEl) textEl.remove();
     });
+}
+
+export function updateTimedStatusBar(state) {
+    const timerEl = document.getElementById('timed-timer');
+    const scoreEl = document.getElementById('timed-score');
+    const attemptsEl = document.getElementById('timed-attempts');
+    if (!timerEl) return;
+
+    const secs = state.timerRemaining % 60;
+    const mins = Math.floor(state.timerRemaining / 60);
+    timerEl.innerText = `⏱ ${mins}:${secs.toString().padStart(2, '0')}`;
+    timerEl.style.color = state.timerRemaining <= 10 ? '#ef4444' : '#eab308';
+    if (state.timerRemaining <= 10) {
+        timerEl.classList.add('timer-warning');
+    } else {
+        timerEl.classList.remove('timer-warning');
+    }
+
+    scoreEl.innerText = `Score: ${state.timedScore}`;
+    attemptsEl.innerText = `Attempts: ${3 - state.attempts}`;
 }
