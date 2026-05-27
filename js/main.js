@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -24,8 +24,9 @@ export const state = {
     currentStreak: 0,
     selectedBaseGate: null, 
     placement: { active: false, col: null, controls: [] },
-    isTutorial: false,     // NEW
-    tutorialPhase: 'NONE'  // NEW
+    isTutorial: false,
+    tutorialPhase: 'NONE',
+    tutorialJustCompleted: false
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -64,8 +65,30 @@ function formatAngleGateSeeded(gNext, rng) {
 
 function showMainMenu() {
     document.getElementById('game-view').style.display = 'none';
-    buildMenu(); 
+    buildMenu();
     document.getElementById('main-menu').style.display = 'flex';
+
+    if (state.tutorialJustCompleted) {
+        state.tutorialJustCompleted = false;
+        toggleMenu('learn-content');
+        setTimeout(() => {
+            const learnHeader = document.getElementById('header-learn');
+            if (learnHeader) {
+                learnHeader.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                learnHeader.classList.add('ghost-pulse');
+                learnHeader.style.position = 'relative';
+                const msg = document.createElement('div');
+                msg.className = 'ghost-text';
+                msg.innerText = 'Start your quantum journey here!';
+                learnHeader.appendChild(msg);
+                setTimeout(() => {
+                    learnHeader.classList.remove('ghost-pulse');
+                    learnHeader.style.position = '';
+                    msg.remove();
+                }, 5000);
+            }
+        }, 400);
+    }
 }
 
 // --- Main Menu Initialization ---
@@ -160,6 +183,8 @@ function initGame(mode, p1, p2) {
             return;
         }
     }
+
+    if (!state.isTutorial) state.tutorialJustCompleted = false;
 
     document.getElementById('main-menu').style.display = 'none';
     hideVictoryModal(); 
@@ -269,11 +294,14 @@ function initGame(mode, p1, p2) {
         }
         state.secretCircuits = [generatedCircuit];
         
-        // NEW: If the tutorial is active, hardcode the perfect Easy puzzle!
+        // If the tutorial is active, hardcode a simple 1-gate puzzle and run the in-game tour
         if (state.isTutorial && mode === 'RANDOM') {
             state.activeSet = ['X', 'H'];
             state.secretCircuits = [[['H0'], [], [], []]];
-            setTimeout(() => setGhostPointer('PALETTE', 'H'), 300);
+            setTimeout(() => startInGameTour(() => {
+                state.tutorialPhase = 'SELECT_GATE';
+                setGhostPointer('PALETTE', 'H');
+            }), 300);
         }
 
         targetBox.style.display = 'block';
@@ -565,18 +593,20 @@ document.getElementById('tt-skip').addEventListener('click', () => {
     endTour();
     setTutorialComplete();
     state.isTutorial = false;
+    state.tutorialPhase = 'NONE';
 });
 document.getElementById('btn-replay-tutorial').addEventListener('click', () => {
     showMainMenu();
     state.isTutorial = true;
+    state.tutorialPhase = 'NONE';
+    state.tutorialJustCompleted = false;
     startTour();
 });
 
 document.getElementById('btn-rand-1').addEventListener('click', () => {
-    // Intercept the click if we are in the middle of the Tour
     if (state.isTutorial) {
         endTour();
-        state.tutorialPhase = 'SELECT_GATE';
+        state.tutorialPhase = 'INTRO'; // In-game overlay tour will set SELECT_GATE when done
     }
     initGame('RANDOM', 1);
 });

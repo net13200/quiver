@@ -439,15 +439,61 @@ export function hideInfoModal() {
 }
 
 // --- Tutorial System ---
+let tourMode = 'none'; // 'menu' | 'ingame' | 'none'
 let currentTourStep = 0;
+let currentInGameStep = 0;
+let _onInGameTourComplete = null;
+
 const tourSteps = [
-    { sel: '.intro-text', text: "Welcome to Quiver! Let's take a quick 3-step tour of the interface." },
-    { sel: '#header-learn', text: "LEARN: A guided curriculum of puzzles to teach you quantum mechanics from scratch." },
-    { sel: '#header-sandbox', text: "SANDBOX: A free-play area to experiment with gates and watch the math change instantly." },
-    { sel: '#header-play', text: "PLAY: The arcade mode! Expand the Play menu and click 'Easy (1 Qubit)' to continue the interactive tutorial.", hideNext: true }
+    { sel: '.intro-text',    title: 'Welcome!',       text: "Welcome to Quiver! Let's take a quick tour of the main features." },
+    { sel: '#header-learn',  title: 'Learn Mode',     text: "LEARN: A structured curriculum that takes you from zero to mastering quantum algorithms. Start here!" },
+    { sel: '#header-daily',  title: 'Daily Puzzles',  text: "DAILY: Three fresh puzzles every 24 hours — Easy, Medium, and Hard. A great daily challenge once you know the basics!" },
+    { sel: '#header-sandbox',title: 'Sandbox',        text: "SANDBOX: A free-play area to experiment with any gates and watch the quantum math update in real time." },
+    { sel: '#header-play',   title: 'Play Mode',      text: "PLAY: The arcade mode! Expand the Play menu and click 'Easy (1 Qubit)' to try an interactive puzzle.", hideNext: true }
 ];
 
+const inGameTourSteps = [
+    {
+        sel: '#target-container',
+        title: 'Your Target',
+        text: "This is the Target State — the quantum output your circuit must produce. Win by building a circuit that generates these exact amplitudes!"
+    },
+    {
+        sel: '.right-col',
+        title: 'Live Bloch Spheres',
+        text: "The Bloch Spheres show your qubits' states as a 3D map, updated live as you place gates. North Pole = |0⟩, South Pole = |1⟩, Equator = superposition!"
+    },
+    {
+        sel: '#palette-container',
+        title: 'Gate Palette',
+        text: "Select a gate from the palette, then tap a circuit cell to place it. To delete a placed gate, tap it with nothing selected. Now select the H gate to begin!"
+    }
+];
+
+function cleanupSpotlights() {
+    document.querySelectorAll('.tutorial-spotlight').forEach(el => {
+        el.classList.remove('tutorial-spotlight');
+        el.style.backgroundColor = '';
+        el.style.padding = '';
+    });
+}
+
+function positionTooltip(target) {
+    const tt = document.getElementById('tutorial-tooltip');
+    const rect = target.getBoundingClientRect();
+    const ttRect = tt.getBoundingClientRect();
+    const gap = 15;
+    let topPos;
+    if (rect.bottom + gap + ttRect.height > window.innerHeight) {
+        topPos = rect.top + window.scrollY - gap - ttRect.height;
+    } else {
+        topPos = rect.bottom + window.scrollY + gap;
+    }
+    tt.style.top = `${topPos}px`;
+}
+
 export function startTour() {
+    tourMode = 'menu';
     document.getElementById('tutorial-overlay').classList.add('show');
     document.getElementById('tutorial-tooltip').classList.add('show');
     currentTourStep = 0;
@@ -455,77 +501,99 @@ export function startTour() {
 }
 
 export function showTourStep() {
-    // 1. Clean up old spotlights and inline styles
-    document.querySelectorAll('.tutorial-spotlight').forEach(el => {
-        el.classList.remove('tutorial-spotlight');
-        el.style.backgroundColor = ''; 
-        el.style.padding = '';
-    });
-    clearGhostPointer(); // Wipe any lingering ghost text
+    cleanupSpotlights();
+    clearGhostPointer();
 
     const step = tourSteps[currentTourStep];
     const target = document.querySelector(step.sel);
 
+    document.getElementById('tt-title').innerText = step.title || 'Tutorial';
+    document.getElementById('tt-text').innerText = step.text;
+    document.getElementById('tt-next').style.display = step.hideNext ? 'none' : 'block';
+
     if (target) {
-        // 2. FIX: Spotlight the entire parent wrapper so the buttons aren't trapped in the dark!
         if (step.sel.includes('header-')) {
             const parentSection = target.closest('.menu-section');
             if (parentSection) {
                 parentSection.classList.add('tutorial-spotlight');
-                parentSection.style.backgroundColor = '#1e293b'; // Adds a solid background so the dark overlay doesn't bleed through
-                parentSection.style.padding = '5px 15px 15px 15px'; // Keeps it looking neat
+                parentSection.style.backgroundColor = '#1e293b';
+                parentSection.style.padding = '5px 15px 15px 15px';
             }
-            
-            // Auto-expand the accordion
+
             const contentId = step.sel.replace('header-', '') + '-content';
             const contentEl = document.getElementById(contentId);
             if (contentEl && contentEl.classList.contains('hidden')) {
-                target.click(); 
+                target.click();
             }
 
-            // 3. FIX: Summon the bouncy Ghost Pointer specifically onto the Easy button!
             if (step.sel === '#header-play') {
-                setTimeout(() => setGhostPointer('MENU_EASY'), 350); // Small delay to let the menu slide open first
+                setTimeout(() => setGhostPointer('MENU_EASY'), 350);
             }
         } else {
             target.classList.add('tutorial-spotlight');
         }
 
-        const tt = document.getElementById('tutorial-tooltip');
-        
-        document.getElementById('tt-text').innerText = step.text;
-        document.getElementById('tt-next').style.display = step.hideNext ? 'none' : 'block';
-        
-        tt.classList.add('show'); 
-        
-        // Measure coordinates based on the header so the tooltip doesn't overlap the buttons
-        const rect = target.getBoundingClientRect();
-        const ttRect = tt.getBoundingClientRect();
-        const gap = 15; 
-        
-        let topPos;
-        if (rect.bottom + gap + ttRect.height > window.innerHeight) {
-            topPos = rect.top + window.scrollY - gap - ttRect.height;
-        } else {
-            topPos = rect.bottom + window.scrollY + gap;
-        }
-        
-        tt.style.top = `${topPos}px`; 
-        
+        document.getElementById('tutorial-tooltip').classList.add('show');
+        positionTooltip(target);
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
 export function nextTourStep() {
-    currentTourStep++;
-    if (currentTourStep < tourSteps.length) showTourStep();
-    else endTour();
+    if (tourMode === 'menu') {
+        currentTourStep++;
+        if (currentTourStep < tourSteps.length) showTourStep();
+        else endTour();
+    } else if (tourMode === 'ingame') {
+        currentInGameStep++;
+        if (currentInGameStep < inGameTourSteps.length) showInGameTourStep();
+        else endInGameTour();
+    }
 }
 
 export function endTour() {
+    tourMode = 'none';
+    _onInGameTourComplete = null;
     document.getElementById('tutorial-overlay').classList.remove('show');
     document.getElementById('tutorial-tooltip').classList.remove('show');
-    document.querySelectorAll('.tutorial-spotlight').forEach(el => el.classList.remove('tutorial-spotlight'));
+    cleanupSpotlights();
+}
+
+// --- In-Game Tutorial Overlay ---
+
+function showInGameTourStep() {
+    cleanupSpotlights();
+
+    const step = inGameTourSteps[currentInGameStep];
+    const target = document.querySelector(step.sel);
+
+    document.getElementById('tt-title').innerText = step.title;
+    document.getElementById('tt-text').innerText = step.text;
+    document.getElementById('tt-next').style.display = 'block';
+
+    const tt = document.getElementById('tutorial-tooltip');
+    tt.classList.add('show');
+
+    if (target) {
+        target.classList.add('tutorial-spotlight');
+        positionTooltip(target);
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function endInGameTour() {
+    const cb = _onInGameTourComplete;
+    endTour();
+    if (cb) cb();
+}
+
+export function startInGameTour(onComplete) {
+    _onInGameTourComplete = onComplete;
+    tourMode = 'ingame';
+    currentInGameStep = 0;
+    document.getElementById('tutorial-overlay').classList.add('show');
+    document.getElementById('tutorial-tooltip').classList.add('show');
+    showInGameTourStep();
 }
 
 export function setGhostPointer(type, targetId) {

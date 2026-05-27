@@ -102,13 +102,14 @@ export function submitGuess(state, renderBoardCallback) {
 
         state.gameOver = true;
         submitBtn.classList.add('hidden');
-        wrap.classList.remove('active'); 
-        
+        wrap.classList.remove('active');
+
         fireQuantumConfetti(startX, startY);
 
-        // NEW: Complete the Tutorial
+        const wasTutorial = state.isTutorial;
         if (state.isTutorial) {
             state.isTutorial = false;
+            state.tutorialJustCompleted = true;
             setTutorialComplete();
             clearGhostPointer();
         }
@@ -146,7 +147,12 @@ export function submitGuess(state, renderBoardCallback) {
                 revealObj = { revealTitle: "A Canonical Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
         } else if (state.currentMode === 'RANDOM' || state.currentMode === 'DAILY') {
-            mainTitle = state.currentMode === 'DAILY' ? "Daily Solved!" : "Puzzle Solved!";
+            if (wasTutorial) {
+                mainTitle = "Tutorial Complete!";
+                subTitle = "Head to the Learn section to start your quantum journey!";
+            } else {
+                mainTitle = state.currentMode === 'DAILY' ? "Daily Solved!" : "Puzzle Solved!";
+            }
             
             // --- NEW: Save Daily Completion ---
             if (state.currentMode === 'DAILY') {
