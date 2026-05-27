@@ -40,6 +40,28 @@ window.showLesson = () => {
     
 };
 
+// A lightweight seeded PRNG
+function getSeededRandom(seed) {
+    return function() {
+        var t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
+
+// A local version of the angle formatter that accepts our custom RNG
+function formatAngleGateSeeded(gNext, rng) {
+    if (gNext.startsWith('RZ') || gNext.startsWith('CP')) {
+        let angles = ['PI', 'PI2', 'PI4', 'PI8', 'MINUS_PI2', 'MINUS_PI4', 'MINUS_PI8'];
+        let randAngle = angles[Math.floor(rng() * angles.length)];
+        let prefix = gNext.startsWith('RZ') ? 'RZ' : 'CP';
+        let qSuffix = gNext.startsWith('RZ') ? gNext.slice(-1) : gNext.slice(-2);
+        return `${prefix}_${randAngle}_${qSuffix}`;
+    }
+    return gNext;
+}
+
 function showMainMenu() {
     document.getElementById('game-view').style.display = 'none';
     buildMenu(); 
@@ -149,21 +171,36 @@ function initGame(mode, p1, p2) {
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
         
-    } else if (mode === 'RANDOM') {
+    } else if (mode === 'RANDOM' || mode === 'DAILY') {
         clearBtn.classList.add('hidden');
         state.currentLvl = p1;
         state.numQubits = LEVELS[p1].q;
         state.numCols = LEVELS[p1].g;
         
-        let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
-        state.activeSet = expandGateSet(selectedBaseGates, state.numQubits);
-        
-        if (state.activeSet.length === 0) {
-            state.activeSet = expandGateSet(['X', 'H'], state.numQubits);
+        let rng; // We will assign either Math.random or our daily seeded PRNG to this
+
+        if (mode === 'DAILY') {
+            const now = new Date();
+            // Seed based on Year, Month, Day, and the puzzle difficulty (1, 2, or 3)
+            const seed = now.getFullYear() * 100000 + (now.getMonth() + 1) * 1000 + now.getDate() * 10 + p1;
+            rng = getSeededRandom(seed);
+            
+            // Daily uses ALL gates, ignoring user selection
+            state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
+            instructions.innerHTML = `<b>Daily Puzzle - Level ${p1}</b><br>Equivalent circuits win! Resets at midnight.`;
+        } else {
+            rng = Math.random;
+            let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
+            state.activeSet = expandGateSet(selectedBaseGates, state.numQubits);
+            
+            if (state.activeSet.length === 0) {
+                state.activeSet = expandGateSet(['X', 'H'], state.numQubits);
+            }
+            instructions.innerHTML = `<b>Random Puzzle</b><br>Guess the circuit. Equivalent circuits win!`;
         }
         
         let generatedCircuit = [];
-        let activeLength = Math.floor(Math.random() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
+        let activeLength = Math.floor(rng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
         let singleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
         let singleGatesToPlace = 2; 
 
@@ -173,14 +210,14 @@ function initGame(mode, p1, p2) {
                 let placedThisCol = 0;
 
                 if (singleGatesToPlace > 0 && singleQSet.length > 0) {
-                    let g = singleQSet[Math.floor(Math.random() * singleQSet.length)];
-                    col.push(formatAngleGate(g));
+                    let g = singleQSet[Math.floor(rng() * singleQSet.length)];
+                    col.push(formatAngleGateSeeded(g, rng));
                     singleGatesToPlace--;
                     placedThisCol++;
 
                     if (singleGatesToPlace > 0 && state.numQubits >= 2) {
-                        let g2 = singleQSet[Math.floor(Math.random() * singleQSet.length)];
-                        g2 = formatAngleGate(g2);
+                        let g2 = singleQSet[Math.floor(rng() * singleQSet.length)];
+                        g2 = formatAngleGateSeeded(g2, rng);
                         if (canFit(col, g2)) {
                             col.push(g2);
                             singleGatesToPlace--;
@@ -188,14 +225,14 @@ function initGame(mode, p1, p2) {
                         }
                     }
                 } else {
-                    let baseGate = formatAngleGate(state.activeSet[Math.floor(Math.random() * state.activeSet.length)]);
+                    let baseGate = formatAngleGateSeeded(state.activeSet[Math.floor(rng() * state.activeSet.length)], rng);
                     col.push(baseGate);
                     placedThisCol++;
                 }
 
                 for(let a=placedThisCol; a<state.numQubits; a++) {
-                    if(Math.random() > 0.5) {
-                        let gNext = formatAngleGate(state.activeSet[Math.floor(Math.random() * state.activeSet.length)]);
+                    if(rng() > 0.5) {
+                        let gNext = formatAngleGateSeeded(state.activeSet[Math.floor(rng() * state.activeSet.length)], rng);
                         if(canFit(col, gNext)) col.push(gNext);
                     }
                 }
@@ -205,14 +242,12 @@ function initGame(mode, p1, p2) {
         state.secretCircuits = [generatedCircuit];
         
         // NEW: If the tutorial is active, hardcode the perfect Easy puzzle!
-        if (state.isTutorial) {
+        if (state.isTutorial && mode === 'RANDOM') {
             state.activeSet = ['X', 'H'];
             state.secretCircuits = [[['H0'], [], [], []]];
-            // Fire the Ghost pointer at the Palette after the UI builds
             setTimeout(() => setGhostPointer('PALETTE', 'H'), 300);
         }
 
-        instructions.innerHTML = `<b>Random Puzzle</b><br>Guess the circuit. Equivalent circuits win!`;
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
         
@@ -395,6 +430,7 @@ function renderBoard() {
 document.getElementById('header-learn').addEventListener('click', () => toggleMenu('learn-content'));
 document.getElementById('header-play').addEventListener('click', () => toggleMenu('play-content'));
 document.getElementById('header-sandbox').addEventListener('click', () => toggleMenu('sandbox-content'));
+document.getElementById('header-daily').addEventListener('click', () => toggleMenu('daily-content'));
 
 // 2. Play Menu Configurations
 document.getElementById('btn-toggle-gates').addEventListener('click', toggleAllGates);
@@ -471,11 +507,15 @@ document.getElementById('modal-next-btn').addEventListener('click', () => {
     }
 });
 
-document.getElementById('modal-again-btn').addEventListener('click', () => {
-    hideVictoryModal();
+document.getElementById('again-btn').addEventListener('click', () => {
     if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
+    else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl); // <-- Add this!
     else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
 });
+
+document.getElementById('btn-daily-1')?.addEventListener('click', () => initGame('DAILY', 1));
+document.getElementById('btn-daily-2')?.addEventListener('click', () => initGame('DAILY', 2));
+document.getElementById('btn-daily-3')?.addEventListener('click', () => initGame('DAILY', 3));
 
 document.getElementById('modal-menu-btn').addEventListener('click', () => {
     hideVictoryModal();

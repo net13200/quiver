@@ -84,13 +84,18 @@ export function parseMarkdownAndMath(text) {
 }
 
 export function toggleMenu(id) {
-    ['learn-content', 'play-content', 'sandbox-content'].forEach(menuId => {
-        const el = document.getElementById(menuId);
+    // Dynamically grab EVERY menu on the page! No more hardcoded arrays.
+    const allMenus = document.querySelectorAll('.menu-content');
+    
+    allMenus.forEach(el => {
         const header = el.previousElementSibling;
-        if (menuId === id) {
+        
+        if (el.id === id) {
+            // Toggle the one we clicked
             el.classList.toggle('hidden');
             header.classList.toggle('active');
         } else {
+            // Hide all the others
             el.classList.add('hidden');
             header.classList.remove('active');
         }
