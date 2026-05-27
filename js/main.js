@@ -98,6 +98,34 @@ function buildMenu() {
             bg.appendChild(btn);
         });
     });
+    
+    // --- NEW: Daily Puzzle Tracking ---
+    const now = new Date();
+    const today = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    
+    // Fetch saved daily data, or create a fresh slate if it doesn't exist
+    let dailyStatus = JSON.parse(localStorage.getItem('quiver_daily') || '{"date":"","completed":[]}');
+    
+    // If the saved date isn't today, wipe the completed array clean!
+    if (dailyStatus.date !== today) {
+        dailyStatus = { date: today, completed: [] };
+        localStorage.setItem('quiver_daily', JSON.stringify(dailyStatus));
+    }
+
+    // Apply the checkmarks and green color to finished daily buttons
+    [1, 2, 3].forEach(lvl => {
+        const btn = document.getElementById(`btn-daily-${lvl}`);
+        if (btn) {
+            let baseText = btn.innerText.replace('✓ ', ''); // Prevent duplicate checkmarks
+            if (dailyStatus.completed.includes(lvl)) {
+                btn.classList.add('completed');
+                btn.innerText = `✓ ${baseText}`;
+            } else {
+                btn.classList.remove('completed');
+                btn.innerText = baseText;
+            }
+        }
+    });
 }
 
 // --- Logic Helpers ---

@@ -145,9 +145,23 @@ export function submitGuess(state, renderBoardCallback) {
             if (!matchedMultiset && !matchedCircuit) {
                 revealObj = { revealTitle: "A Canonical Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
-        } else if (state.currentMode === 'RANDOM') {
-            mainTitle = "Puzzle Solved!";
+        } else if (state.currentMode === 'RANDOM' || state.currentMode === 'DAILY') {
+            mainTitle = state.currentMode === 'DAILY' ? "Daily Solved!" : "Puzzle Solved!";
             
+            // --- NEW: Save Daily Completion ---
+            if (state.currentMode === 'DAILY') {
+                const now = new Date();
+                const today = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+                let dailyStatus = JSON.parse(localStorage.getItem('quiver_daily') || '{"date":"","completed":[]}');
+                
+                // Double check the date, then save the completed level
+                if (dailyStatus.date !== today) dailyStatus = { date: today, completed: [] };
+                if (!dailyStatus.completed.includes(state.currentLvl)) {
+                    dailyStatus.completed.push(state.currentLvl);
+                    localStorage.setItem('quiver_daily', JSON.stringify(dailyStatus));
+                }
+            }
+
             let userGateCount = state.currentGuess.reduce((sum, col) => sum + col.length, 0);
             let secretGateCount = compareCircuit.reduce((sum, col) => sum + col.length, 0);
             
