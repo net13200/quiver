@@ -223,16 +223,25 @@ export function updateBlochSpheres(currentGuess, numQubits) {
 }
 
 export function updateTargetBlochSphere(targetState, numQubits) {
-    const canvas = document.getElementById('target-bloch-canvas');
-    if (!canvas) return;
+    const wrap = document.getElementById('target-canvas-wrapper');
+    if (!wrap) return;
 
-    // Only display the sphere if it's a 1-qubit game and a target exists
-    if (numQubits === 1 && targetState) {
-        canvas.style.display = 'block';
-        // We pass 0 for the qubit index, and 1 for the total qubits
-        drawBlochSphere('target-bloch-canvas', calcBlochVector(targetState, 0, 1), 'Target State');
-    } else {
-        canvas.style.display = 'none';
+    // Clear any old canvases
+    wrap.innerHTML = '';
+
+    // If there is a target state (i.e., not Freeplay mode)
+    if (targetState) {
+        const sub = ['₀', '₁', '₂'];
+        
+        // Step 1: Inject the HTML canvases dynamically
+        for (let q = 0; q < numQubits; q++) {
+            wrap.innerHTML += `<canvas id="target-bloch-${q}" width="160" height="160"></canvas>`;
+        }
+
+        // Step 2: Draw the specific target qubit vector onto each canvas
+        for (let q = 0; q < numQubits; q++) {
+            drawBlochSphere(`target-bloch-${q}`, calcBlochVector(targetState, q, numQubits), `Target q${sub[q]}`);
+        }
     }
 }
 
