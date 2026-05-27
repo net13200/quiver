@@ -78,6 +78,7 @@ function showMainMenu() {
     state.isDuelMode = false;
     buildMenu();
     document.getElementById('main-menu').style.display = 'flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (state.tutorialJustCompleted) {
         state.tutorialJustCompleted = false;
@@ -207,8 +208,9 @@ function initGame(mode, p1, p2) {
     if (!state.isTutorial) state.tutorialJustCompleted = false;
 
     document.getElementById('main-menu').style.display = 'none';
-    hideVictoryModal(); 
+    hideVictoryModal();
     document.getElementById('game-view').style.display = 'flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     state.currentMode = mode;
     let instructions = document.getElementById('instructions-text');
