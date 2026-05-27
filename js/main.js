@@ -468,10 +468,7 @@ document.getElementById('next-btn').addEventListener('click', () => {
         showMainMenu(); 
     }
 });
-document.getElementById('again-btn').addEventListener('click', () => {
-    if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
-    else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
-});
+
 document.getElementById('menu-btn').addEventListener('click', () => {
     state.currentStreak = 0; // Reset streak if you run away!
     showMainMenu();
@@ -509,7 +506,14 @@ document.getElementById('modal-next-btn').addEventListener('click', () => {
 
 document.getElementById('again-btn').addEventListener('click', () => {
     if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
-    else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl); // <-- Add this!
+    else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl); // <-- ADDED
+    else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
+});
+
+document.getElementById('modal-again-btn').addEventListener('click', () => {
+    hideVictoryModal();
+    if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
+    else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl); // <-- ADDED
     else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
 });
 
