@@ -307,9 +307,12 @@ export function submitGuess(state, renderBoardCallback) {
 
         document.getElementById('attempts-counter').innerText = `Attempts Remaining: ${6 - state.attempts}`;
 
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+
         const historyWrap = wrap.cloneNode(true);
         historyWrap.removeAttribute('id');
-        historyWrap.classList.remove('active');
+        historyWrap.classList.remove('active', 'wrong-attempt');
         const clonedSlots = historyWrap.querySelectorAll('.slot');
         clonedSlots.forEach(s => s.removeAttribute('id'));
         document.getElementById('history-board').appendChild(historyWrap);

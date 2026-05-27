@@ -399,3 +399,16 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
 }
+.wrong-attempt {
+    animation: wrong-shake 0.45s ease-out;
+    outline: 2px solid #ef4444;
+    border-radius: 8px;
+}
+@keyframes wrong-shake {
+    0%   { transform: translateX(0);    background: rgba(239,68,68,0.15); }
+    15%  { transform: translateX(-8px); background: rgba(239,68,68,0.2); }
+    35%  { transform: translateX(7px);  background: rgba(239,68,68,0.2); }
+    55%  { transform: translateX(-5px); background: rgba(239,68,68,0.1); }
+    75%  { transform: translateX(3px);  background: rgba(239,68,68,0.05); }
+    100% { transform: translateX(0);    background: transparent; }
+}
