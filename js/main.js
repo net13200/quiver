@@ -371,7 +371,7 @@ function initGame(mode, p1, p2) {
         if (isContinuingTimedSession) {
             updateTimedStatusBar(state);
         } else {
-            state.timerRemaining = 30;
+            state.timerRemaining = state.currentLvl === 3 ? 60 : 30;
             state.timedScore = 0;
             state.timedCircuitsSolved = 0;
             updateTimedStatusBar(state);

@@ -108,13 +108,14 @@ export function submitGuess(state, renderBoardCallback) {
 
         // --- TIMED MODE: skip modal, auto-advance ---
         if (state.currentMode === 'TIMED') {
-            state.timerRemaining = Math.min(state.timerRemaining + 20, 999);
+            const timeBonus = state.currentLvl === 3 ? 30 : 20;
+            state.timerRemaining = Math.min(state.timerRemaining + timeBonus, 999);
             state.timedScore += state.currentLvl;
             state.timedCircuitsSolved++;
             updateTimedStatusBar(state);
 
             const msg = document.getElementById('message');
-            msg.innerText = 'Solved! +20s';
+            msg.innerText = `Solved! +${timeBonus}s`;
             msg.style.color = '#22c55e';
             setTimeout(() => {
                 msg.innerText = '';
@@ -255,10 +256,38 @@ export function submitGuess(state, renderBoardCallback) {
             msg.innerText = `−5s penalty! ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} left.`;
             msg.style.color = '#eab308';
             setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
+
+            // Save amplitude history before the board is rebuilt
+            const prevAmps = Array.from(wrap.querySelectorAll('.amplitudes-result')).map(el => el.innerText);
+
             state.currentGuess = Array(state.numCols).fill().map(() => []);
             updateActiveRow(state, renderBoardCallback);
-            const activeAmpResult = wrap.querySelector('.amplitudes-result');
-            if (activeAmpResult) activeAmpResult.remove();
+
+            // Re-attach saved amplitudes so the player can see all previous attempts
+            const newWrap = document.getElementById('row-active');
+            prevAmps.forEach(text => {
+                const el = document.createElement('div');
+                el.className = 'amplitudes-result';
+                el.innerText = text;
+                newWrap.appendChild(el);
+            });
+
+            // After 2nd failure: reveal the first gate as a hint
+            if (state.attempts === 2) {
+                let hintGates = [];
+                for (let c = 0; c < state.numCols; c++) {
+                    const col = state.secretCircuits[0][c];
+                    if (col && col.length > 0) { hintGates = col; break; }
+                }
+                if (hintGates.length > 0) {
+                    const gateNames = hintGates.map(g => g.replace(/[\d_].*/, '')).join(' + ');
+                    const hintEl = document.createElement('div');
+                    hintEl.className = 'amplitudes-result';
+                    hintEl.style.color = '#38bdf8';
+                    hintEl.innerText = `💡 Hint: First gate — ${gateNames}`;
+                    newWrap.appendChild(hintEl);
+                }
+            }
             return;
         }
 
