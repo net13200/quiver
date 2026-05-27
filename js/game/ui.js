@@ -226,22 +226,41 @@ export function updateTargetBlochSphere(targetState, numQubits) {
     const wrap = document.getElementById('target-canvas-wrapper');
     if (!wrap) return;
 
-    // Clear any old canvases
     wrap.innerHTML = '';
 
-    // If there is a target state (i.e., not Freeplay mode)
-    if (targetState) {
-        const sub = ['₀', '₁', '₂'];
-        
-        // Step 1: Inject the HTML canvases dynamically
-        for (let q = 0; q < numQubits; q++) {
-            wrap.innerHTML += `<canvas id="target-bloch-${q}" width="160" height="160"></canvas>`;
-        }
+    if (!targetState) return;
 
-        // Step 2: Draw the specific target qubit vector onto each canvas
+    const sub = ['₀', '₁', '₂'];
+
+    if (numQubits === 1) {
+        wrap.innerHTML = `<canvas id="target-bloch-0" width="160" height="160"></canvas>`;
+        drawBlochSphere('target-bloch-0', calcBlochVector(targetState, 0, 1), `Target q${sub[0]}`);
+    } else {
+        let canvasHTML = '';
         for (let q = 0; q < numQubits; q++) {
-            drawBlochSphere(`target-bloch-${q}`, calcBlochVector(targetState, q, numQubits), `Target q${sub[q]}`);
+            canvasHTML += `<canvas id="target-bloch-${q}" width="160" height="160"></canvas>`;
         }
+        wrap.innerHTML = `
+            <div style="width:100%; display:flex; justify-content:center;">
+                <button id="target-bloch-toggle" class="btn" style="background:#475569; padding:4px 14px; font-size:0.8rem; width:auto;">Show Target Bloch Spheres</button>
+            </div>
+            <div id="target-bloch-canvases" style="display:none; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:8px;">${canvasHTML}</div>
+        `;
+
+        let drawn = false;
+        document.getElementById('target-bloch-toggle').addEventListener('click', () => {
+            const canvases = document.getElementById('target-bloch-canvases');
+            const btn = document.getElementById('target-bloch-toggle');
+            const show = canvases.style.display === 'none';
+            canvases.style.display = show ? 'flex' : 'none';
+            btn.innerText = show ? 'Hide Target Bloch Spheres' : 'Show Target Bloch Spheres';
+            if (show && !drawn) {
+                for (let q = 0; q < numQubits; q++) {
+                    drawBlochSphere(`target-bloch-${q}`, calcBlochVector(targetState, q, numQubits), `Target q${sub[q]}`);
+                }
+                drawn = true;
+            }
+        });
     }
 }
 
