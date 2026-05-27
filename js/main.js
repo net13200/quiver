@@ -223,12 +223,24 @@ function initGame(mode, p1, p2) {
     document.getElementById('restart-btn').classList.add('hidden');
     submitBtn.disabled = false;
     
+    const stageNav = document.getElementById('stage-nav');
+    if (mode === 'STAGE') {
+        stageNav.classList.remove('hidden');
+    } else {
+        stageNav.classList.add('hidden');
+    }
+
     if (mode === 'STAGE') {
         clearBtn.classList.add('hidden');
         state.currentP1 = p1;
         state.currentP2 = p2;
         let stage = STAGES[p1];
         let lvl = stage.levels[p2];
+
+        const isFirst = (p1 === 0 && p2 === 0);
+        const isLast = (p1 === STAGES.length - 1 && p2 === STAGES[p1].levels.length - 1);
+        document.getElementById('stage-prev-btn').disabled = isFirst;
+        document.getElementById('stage-next-btn').disabled = isLast;
         state.numQubits = lvl.qubits || stage.qubits;
         state.numCols = lvl.cols || stage.cols;
         state.activeSet = lvl.set || stage.set;
@@ -719,6 +731,23 @@ function doRestartCircuit() {
 }
 document.getElementById('restart-btn').addEventListener('click', doRestartCircuit);
 document.addEventListener('restart-circuit', () => { hideVictoryModal(); doRestartCircuit(); });
+
+document.getElementById('stage-prev-btn').addEventListener('click', () => {
+    if (state.currentP2 > 0) {
+        initGame('STAGE', state.currentP1, state.currentP2 - 1);
+    } else if (state.currentP1 > 0) {
+        const prevStage = state.currentP1 - 1;
+        initGame('STAGE', prevStage, STAGES[prevStage].levels.length - 1);
+    }
+});
+document.getElementById('stage-next-btn').addEventListener('click', () => {
+    if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
+        initGame('STAGE', state.currentP1, state.currentP2 + 1);
+    } else if (state.currentP1 + 1 < STAGES.length) {
+        initGame('STAGE', state.currentP1 + 1, 0);
+    }
+});
+
 document.getElementById('next-btn').addEventListener('click', () => {
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
         initGame('STAGE', state.currentP1, state.currentP2 + 1);
