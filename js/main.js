@@ -220,6 +220,7 @@ function initGame(mode, p1, p2) {
     submitBtn.classList.remove('hidden');
     document.getElementById('next-btn').classList.add('hidden');
     document.getElementById('again-btn').classList.add('hidden');
+    document.getElementById('restart-btn').classList.add('hidden');
     submitBtn.disabled = false;
     
     if (mode === 'STAGE') {
@@ -691,6 +692,29 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     }
     updateActiveRow(state, renderBoard); // Pass the callback!
 });
+function doRestartCircuit() {
+    if (state.currentMode !== 'RANDOM') return;
+    state.attempts = 0;
+    state.gameOver = false;
+    state.currentGuess = Array(state.numCols).fill().map(() => []);
+    state.placement = { active: false, col: null, controls: [] };
+    state.selectedBaseGate = null;
+
+    document.getElementById('message').innerText = '';
+    document.getElementById('again-btn').classList.add('hidden');
+    document.getElementById('restart-btn').classList.add('hidden');
+    document.getElementById('submit-btn').classList.remove('hidden');
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('board').innerHTML = '';
+    document.getElementById('history-board').innerHTML = '';
+    document.querySelectorAll('#reveal-circuit-wrap').forEach(el => el.remove());
+
+    renderPalette();
+    renderBoard();
+    updateBlochSpheres(state.currentGuess, state.numQubits);
+}
+document.getElementById('restart-btn').addEventListener('click', doRestartCircuit);
+document.addEventListener('restart-circuit', () => { hideVictoryModal(); doRestartCircuit(); });
 document.getElementById('next-btn').addEventListener('click', () => {
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
         initGame('STAGE', state.currentP1, state.currentP2 + 1);

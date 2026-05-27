@@ -222,6 +222,20 @@ export function submitGuess(state, renderBoardCallback) {
 
         setTimeout(() => {
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
+            if (state.currentMode === 'RANDOM') {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-restart-btn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'modal-restart-btn';
+                    btn.className = 'btn';
+                    btn.style.background = '#3b82f6';
+                    btn.innerText = 'Retry Same Circuit';
+                    btn.addEventListener('click', () => {
+                        document.dispatchEvent(new CustomEvent('restart-circuit'));
+                    });
+                    controls.insertBefore(btn, controls.firstChild);
+                }
+            }
         }, 500);
 
     } else {
@@ -317,6 +331,9 @@ export function submitGuess(state, renderBoardCallback) {
                 showRevealCircuit("The Target Circuit Was:", "#ef4444", state.secretCircuits[0], state.numQubits);
                 document.getElementById('again-btn').innerText = "Play Again";
                 document.getElementById('again-btn').classList.remove('hidden');
+                if (state.currentMode === 'RANDOM') {
+                    document.getElementById('restart-btn').classList.remove('hidden');
+                }
             }
         } else {
             state.currentGuess = Array(state.numCols).fill().map(() => []);
