@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -302,6 +302,12 @@ function initGame(mode, p1, p2) {
     if (mode !== 'FREEPLAY') {
         state.targetState = computeStateVector(state.secretCircuits[0], state.numQubits, GATE_MATRICES);
         document.getElementById('target-amplitudes').innerText = "|ψ⟩ = " + stateToString(state.targetState, state.numQubits);
+        
+        // --- NEW: Render the Target Bloch Sphere ---
+        updateTargetBlochSphere(state.targetState, state.numQubits);
+    } else {
+        // Ensure it hides if switching back to Freeplay
+        updateTargetBlochSphere(null, state.numQubits);
     }
     
     state.currentGuess = Array(state.numCols).fill().map(() => []);

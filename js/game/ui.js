@@ -222,6 +222,20 @@ export function updateBlochSpheres(currentGuess, numQubits) {
     }
 }
 
+export function updateTargetBlochSphere(targetState, numQubits) {
+    const canvas = document.getElementById('target-bloch-canvas');
+    if (!canvas) return;
+
+    // Only display the sphere if it's a 1-qubit game and a target exists
+    if (numQubits === 1 && targetState) {
+        canvas.style.display = 'block';
+        // We pass 0 for the qubit index, and 1 for the total qubits
+        drawBlochSphere('target-bloch-canvas', calcBlochVector(targetState, 0, 1), 'Target State');
+    } else {
+        canvas.style.display = 'none';
+    }
+}
+
 export function showRevealCircuit(title, color, targetCircuit, numQubits) {
     const finalWrap = document.createElement('div');
     finalWrap.className = 'row-wrapper';
