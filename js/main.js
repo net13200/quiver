@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar } from './game/ui.js';
+import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -32,7 +32,11 @@ export const state = {
     timedScore: 0,
     timedCircuitsSolved: 0,
     timedNextPuzzle: null,
-    timedEndSession: null
+    timedEndSession: null,
+    isDuelMode: false,
+    duelSeed: 0,
+    duelOpponentScore: 0,
+    duelOpponentName: ''
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -71,6 +75,7 @@ function formatAngleGateSeeded(gNext, rng) {
 
 function showMainMenu() {
     document.getElementById('game-view').style.display = 'none';
+    state.isDuelMode = false;
     buildMenu();
     document.getElementById('main-menu').style.display = 'flex';
 
@@ -331,7 +336,9 @@ function initGame(mode, p1, p2) {
         state.numCols = LEVELS[p1].g;
         state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
 
-        const timedRng = Math.random.bind(Math);
+        const timedRng = state.isDuelMode
+            ? getSeededRandom(state.duelSeed * 1000 + state.timedCircuitsSolved)
+            : Math.random.bind(Math);
         let timedCircuit = [];
         let timedActiveLength = Math.floor(timedRng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
         let timedSingleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
@@ -371,6 +378,7 @@ function initGame(mode, p1, p2) {
         if (isContinuingTimedSession) {
             updateTimedStatusBar(state);
         } else {
+            if (!state.isDuelMode) state.duelSeed = Math.floor(Math.random() * 900000) + 100000;
             state.timerRemaining = state.currentLvl === 3 ? 60 : 30;
             state.timedScore = 0;
             state.timedCircuitsSolved = 0;
@@ -585,22 +593,61 @@ function endTimedSession() {
     state.gameOver = true;
     document.getElementById('submit-btn').classList.add('hidden');
 
-    const isNewBest = saveTimedBest(state.currentLvl, state.timedScore);
-    const bestScore = timedBest[state.currentLvl - 1];
     const diffNames = ['Easy', 'Medium', 'Hard'];
-    const statsText = isNewBest
-        ? `Score: ${state.timedScore} 🎉 New Best!`
-        : `Score: ${state.timedScore} | Best: ${bestScore}`;
 
-    setTimeout(() => {
-        showVictoryModal(
-            "Time's Up!",
-            `${diffNames[state.currentLvl - 1]} — ${state.timedCircuitsSolved} circuit${state.timedCircuitsSolved !== 1 ? 's' : ''} solved`,
-            statsText,
-            false,
-            null
-        );
-    }, 300);
+    if (state.isDuelMode) {
+        // Player 2 result: compare against challenger's score
+        const won = state.timedScore > state.duelOpponentScore;
+        const tied = state.timedScore === state.duelOpponentScore;
+        const opName = state.duelOpponentName || 'Challenger';
+        const resultTitle = tied ? "It's a Tie!" : (won ? '⚔️ You Win!' : '⚔️ They Win!');
+        const resultSub = tied
+            ? `Both scored ${state.timedScore} — dead even!`
+            : (won
+                ? `You beat ${opName}'s score of ${state.duelOpponentScore}!`
+                : `${opName} scored ${state.duelOpponentScore} — try again!`);
+        setTimeout(() => {
+            showVictoryModal(resultTitle, resultSub,
+                `Your Score: ${state.timedScore} | ${opName}: ${state.duelOpponentScore}`,
+                false, null);
+        }, 300);
+    } else {
+        // Normal session: save best + offer challenge link
+        const isNewBest = saveTimedBest(state.currentLvl, state.timedScore);
+        const bestScore = timedBest[state.currentLvl - 1];
+        const statsText = isNewBest
+            ? `Score: ${state.timedScore} 🎉 New Best!`
+            : `Score: ${state.timedScore} | Best: ${bestScore}`;
+
+        setTimeout(() => {
+            showVictoryModal(
+                "Time's Up!",
+                `${diffNames[state.currentLvl - 1]} — ${state.timedCircuitsSolved} circuit${state.timedCircuitsSolved !== 1 ? 's' : ''} solved`,
+                statsText, false, null
+            );
+            // Inject "Challenge a Friend" button into the modal
+            const controls = document.querySelector('#victory-modal .victory-controls');
+            if (controls && !document.getElementById('modal-duel-btn')) {
+                const duelBtn = document.createElement('button');
+                duelBtn.id = 'modal-duel-btn';
+                duelBtn.className = 'btn';
+                duelBtn.style.background = '#7c3aed';
+                duelBtn.innerText = '⚔️ Challenge a Friend';
+                duelBtn.addEventListener('click', () => {
+                    const url = `${window.location.origin}${window.location.pathname}?duel=${state.currentLvl}-${state.duelSeed}-${state.timedScore}`;
+                    navigator.clipboard.writeText(url).then(() => {
+                        duelBtn.innerText = 'Link Copied! ✓';
+                        duelBtn.style.background = '#059669';
+                        setTimeout(() => {
+                            duelBtn.innerText = '⚔️ Challenge a Friend';
+                            duelBtn.style.background = '#7c3aed';
+                        }, 2500);
+                    });
+                });
+                controls.insertBefore(duelBtn, controls.firstChild);
+            }
+        }, 300);
+    }
 }
 
 // --- Attach Static Event Listeners ---
@@ -741,8 +788,28 @@ document.getElementById('btn-rand-1').addEventListener('click', () => {
 // --- Boot App ---
 buildMenu();
 
+// Handle duel challenge acceptance (fired by showDuelChallengeBanner in ui.js)
+document.addEventListener('duel-accept', (e) => {
+    initGame('TIMED', e.detail.difficulty);
+});
+
+// Check for incoming duel challenge link
+const _duelParam = new URLSearchParams(window.location.search).get('duel');
+if (_duelParam) {
+    const _parts = _duelParam.split('-');
+    if (_parts.length >= 3) {
+        const _diff = parseInt(_parts[0]);
+        state.isDuelMode = true;
+        state.duelSeed = parseInt(_parts[1]);
+        state.duelOpponentScore = parseInt(_parts[2]);
+        state.duelOpponentName = _parts[3] ? decodeURIComponent(_parts[3]) : '';
+        window.history.replaceState({}, '', window.location.pathname);
+        showDuelChallengeBanner(_diff, state.duelOpponentName, state.duelOpponentScore);
+    }
+}
+
 // NEW: Auto-start the tutorial if it's their first time
-if (!tutorialComplete) {
+if (!tutorialComplete && !_duelParam) {
     state.isTutorial = true;
     setTimeout(startTour, 500); // Slight delay ensures the DOM is painted
 }

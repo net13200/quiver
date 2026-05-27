@@ -638,6 +638,39 @@ export function clearGhostPointer() {
     });
 }
 
+export function showDuelChallengeBanner(difficulty, opponentName, opponentScore) {
+    const diffNames = ['Easy', 'Medium', 'Hard'];
+    const diffName = diffNames[difficulty - 1] || 'Easy';
+    const opName = opponentName || 'Your opponent';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'duel-banner-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
+
+    overlay.innerHTML = `
+        <div style="background:#1e293b;border:2px solid #7c3aed;border-radius:16px;padding:40px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 0 60px rgba(124,58,237,0.4);">
+            <div style="font-size:2.5rem;margin-bottom:12px;">⚔️</div>
+            <h2 style="color:#c4b5fd;margin:0 0 12px 0;font-size:1.6rem;">You've Been Challenged!</h2>
+            <p style="color:#cbd5e1;font-size:1.05rem;margin:0 0 8px 0;">
+                <b style="color:#f8fafc;">${opName}</b> scored
+                <b style="color:#eab308;font-size:1.3rem;"> ${opponentScore}</b>
+                points in <b style="color:#f8fafc;">${diffName}</b> Time Collapse.
+            </p>
+            <p style="color:#94a3b8;margin:0 0 28px 0;">Can you beat it?</p>
+            <button id="duel-accept-btn" style="background:#7c3aed;color:white;border:none;border-radius:8px;padding:14px 32px;font-size:1.1rem;font-weight:bold;cursor:pointer;width:100%;transition:background 0.2s;">
+                Accept Challenge
+            </button>
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('duel-accept-btn').addEventListener('click', () => {
+        overlay.remove();
+        // initGame is in main.js — trigger via a custom event to avoid circular import
+        document.dispatchEvent(new CustomEvent('duel-accept', { detail: { difficulty } }));
+    });
+}
+
 export function updateTimedStatusBar(state) {
     const timerEl = document.getElementById('timed-timer');
     const scoreEl = document.getElementById('timed-score');
