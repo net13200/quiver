@@ -638,10 +638,9 @@ export function clearGhostPointer() {
     });
 }
 
-export function showDuelChallengeBanner(difficulty, opponentName, opponentScore) {
+export function showDuelChallengeBanner(difficulty, opponentScore) {
     const diffNames = ['Easy', 'Medium', 'Hard'];
     const diffName = diffNames[difficulty - 1] || 'Easy';
-    const opName = opponentName || 'Your opponent';
 
     const overlay = document.createElement('div');
     overlay.id = 'duel-banner-overlay';
@@ -652,7 +651,7 @@ export function showDuelChallengeBanner(difficulty, opponentName, opponentScore)
             <div style="font-size:2.5rem;margin-bottom:12px;">⚔️</div>
             <h2 style="color:#c4b5fd;margin:0 0 12px 0;font-size:1.6rem;">You've Been Challenged!</h2>
             <p style="color:#cbd5e1;font-size:1.05rem;margin:0 0 8px 0;">
-                <b style="color:#f8fafc;">${opName}</b> scored
+                Score to beat:
                 <b style="color:#eab308;font-size:1.3rem;"> ${opponentScore}</b>
                 points in <b style="color:#f8fafc;">${diffName}</b> Time Collapse.
             </p>

@@ -36,7 +36,7 @@ export const state = {
     isDuelMode: false,
     duelSeed: 0,
     duelOpponentScore: 0,
-    duelOpponentName: ''
+    duelOpponentName: 'Challenger'
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -826,9 +826,8 @@ if (_duelParam) {
         state.isDuelMode = true;
         state.duelSeed = parseInt(_parts[1]);
         state.duelOpponentScore = parseInt(_parts[2]);
-        state.duelOpponentName = _parts[3] ? decodeURIComponent(_parts[3]) : '';
         window.history.replaceState({}, '', window.location.pathname);
-        showDuelChallengeBanner(_diff, state.duelOpponentName, state.duelOpponentScore);
+        showDuelChallengeBanner(_diff, state.duelOpponentScore);
     }
 }
 
