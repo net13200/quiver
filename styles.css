@@ -13,10 +13,21 @@
 
 /* --- iOS Centering & Mobile Fixes --- */
 html, body {
-    overflow-x: hidden; /* Prevents the entire screen from sliding left/right */
+    overflow-x: hidden;
     width: 100%;
     position: relative;
     box-sizing: border-box;
+    /* Respect iPhone notch / Dynamic Island / home-bar */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Prevent rubber-band overscroll showing white background */
+    background-color: var(--bg-color);
+    /* Disable tap flash on all interactive elements */
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent text resize on orientation change */
+    -webkit-text-size-adjust: 100%;
 }
 
 *, *:before, *:after {
