@@ -285,7 +285,7 @@ function initGame(mode, p1, p2) {
             
             // Daily uses ALL gates, ignoring user selection
             state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
-            instructions.innerHTML = `<b>Daily Puzzle - Level ${p1}</b><br>Equivalent circuits win! Resets at midnight.`;
+            instructions.innerHTML = `<div class="stage-breadcrumb">Daily Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Equivalent circuits win! Resets at midnight.</div>`;
         } else {
             rng = Math.random;
             let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
@@ -294,7 +294,7 @@ function initGame(mode, p1, p2) {
             if (state.activeSet.length === 0) {
                 state.activeSet = expandGateSet(['X', 'H'], state.numQubits);
             }
-            instructions.innerHTML = `<b>Random Puzzle</b><br>Guess the circuit. Equivalent circuits win!`;
+            instructions.innerHTML = `<div class="stage-breadcrumb">Random Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Guess the circuit. Equivalent circuits win!</div>`;
         }
         
         generateMatrices(state.numQubits);
@@ -423,7 +423,7 @@ function initGame(mode, p1, p2) {
         state.secretCircuits = [timedCircuit];
 
         const diffNames = ['Easy', 'Medium', 'Hard'];
-        instructions.innerHTML = `<b>Time Collapse — ${diffNames[p1 - 1]}</b><br>Solve as many circuits as possible! +20s per solve, −5s per wrong attempt.`;
+        instructions.innerHTML = `<div class="stage-breadcrumb">Time Collapse</div><div class="stage-level-title">${diffNames[p1 - 1]}</div><div class="stage-subtitle">Solve as many circuits as possible! +20s per solve, −5s per wrong attempt.</div>`;
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
 
@@ -454,7 +454,7 @@ function initGame(mode, p1, p2) {
         state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
         state.secretCircuits = [[]];
         
-        instructions.innerHTML = `<b>Sandbox Free Play (${state.numQubits} Qubit${state.numQubits>1?'s':''})</b><br>Experiment freely. Click evaluate to take a snapshot of the state!`;
+        instructions.innerHTML = `<div class="stage-breadcrumb">Sandbox</div><div class="stage-level-title">${state.numQubits} Qubit${state.numQubits>1?'s':''}</div><div class="stage-subtitle">Experiment freely. Click evaluate to take a snapshot of the state!</div>`;
         targetBox.style.display = 'none';
         liveBox.style.display = 'block';
     }
