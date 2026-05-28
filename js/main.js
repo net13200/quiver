@@ -824,15 +824,15 @@ if (rzSelect) {
     });
 }
 
-// 6. Logo Click
-const gameLogo = document.getElementById('game-logo');
-if (gameLogo) {
-    gameLogo.addEventListener('click', () => {
-        state.currentStreak = 0;
-        if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
-        showMainMenu();
-    });
+// 6. Logo + Menu button
+function goToMainMenu() {
+    state.currentStreak = 0;
+    if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
+    showMainMenu();
 }
+const gameLogo = document.getElementById('game-logo');
+if (gameLogo) gameLogo.addEventListener('click', goToMainMenu);
+document.getElementById('menu-btn').addEventListener('click', goToMainMenu);
 
 // 7. Modal Buttons
 document.getElementById('modal-next-btn').addEventListener('click', () => {
