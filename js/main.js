@@ -1,8 +1,9 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress } from './data/storage.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
@@ -181,6 +182,11 @@ function buildMenu() {
             bestEl.innerText = best > 0 ? `Best: ${best}` : 'Best: —';
         }
     });
+
+    // Update achievements card description
+    const _achUnlocked = unlockedAchievements.size;
+    const _achCard = document.getElementById('ach-card-desc');
+    if (_achCard) _achCard.innerText = `${_achUnlocked} / ${ACHIEVEMENTS.length} unlocked`;
 }
 
 const GATE_MASK_ORDER = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'];
@@ -696,6 +702,10 @@ function endTimedSession() {
             : (won
                 ? `You beat ${opName}'s score of ${state.duelOpponentScore}!`
                 : `${opName} scored ${state.duelOpponentScore} — try again!`);
+        if (won && unlockAchievement('win_challenge')) {
+            const _a = ACHIEVEMENT_MAP['win_challenge'];
+            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 900);
+        }
         setTimeout(() => {
             showVictoryModal(resultTitle, resultSub,
                 `Your Score: ${state.timedScore} | ${opName}: ${state.duelOpponentScore}`,
@@ -708,6 +718,18 @@ function endTimedSession() {
         const statsText = isNewBest
             ? `Score: ${state.timedScore} 🎉 New Best!`
             : `Score: ${state.timedScore} | Best: ${bestScore}`;
+
+        // Achievement checks for timed session
+        const timedAchToasts = [];
+        const timedTryUnlock = (id) => {
+            if (unlockAchievement(id)) {
+                const a = ACHIEVEMENT_MAP[id];
+                if (a) timedAchToasts.push({ name: a.name, icon: a.icon });
+            }
+        };
+        if (state.timedScore >= 5)  timedTryUnlock('time_bender');
+        if (state.timedScore >= 15) timedTryUnlock('clock_crusher');
+        timedAchToasts.forEach((t, i) => setTimeout(() => showAchievementToast(t.name, t.icon), 900 + i * 1700));
 
         setTimeout(() => {
             showVictoryModal(
@@ -724,6 +746,10 @@ function endTimedSession() {
                 duelBtn.style.background = '#7c3aed';
                 duelBtn.innerText = '⚔️ Challenge a Friend';
                 duelBtn.addEventListener('click', () => {
+                    if (unlockAchievement('challenge_friend')) {
+                        const _a = ACHIEVEMENT_MAP['challenge_friend'];
+                        if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
+                    }
                     const url = `${window.location.origin}${window.location.pathname}?duel=${state.currentLvl}-${state.duelSeed}-${state.timedScore}`;
                     navigator.clipboard.writeText(url).then(() => {
                         duelBtn.innerText = 'Link Copied! ✓';
@@ -749,6 +775,9 @@ function showModePanel(name) {
     document.getElementById(`panel-${name}`).classList.remove('hidden');
     if (name === 'play' && state.isTutorial) {
         setTimeout(() => { endTour(); setGhostPointer('MENU_EASY'); }, 350);
+    }
+    if (name === 'achievements') {
+        renderAchievementsPanel(unlockedAchievements, achievementProgress);
     }
 }
 function showModeCards() {

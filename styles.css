@@ -502,3 +502,58 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     75%  { transform: translateX(3px);  background: rgba(239,68,68,0.05); }
     100% { transform: translateX(0);    background: transparent; }
 }
+
+/* === Achievement Toast === */
+.achievement-toast {
+    position: fixed;
+    top: -90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 2px solid #eab308;
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10001;
+    transition: top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 24px rgba(234,179,8,0.35);
+    max-width: 340px;
+    width: 90%;
+    pointer-events: none;
+}
+.achievement-toast.show { top: 16px; }
+.ach-toast-icon { font-size: 1.8rem; line-height: 1; }
+.ach-toast-label { font-size: 0.7rem; color: #eab308; font-weight: bold; text-transform: uppercase; letter-spacing: 0.06em; }
+.ach-toast-name { font-size: 0.95rem; color: #f8fafc; font-weight: bold; }
+
+/* === Achievements Panel === */
+.ach-header { margin-bottom: 20px; }
+.ach-header-count { font-size: 1.05rem; color: #eab308; font-weight: bold; }
+.ach-total-bar { height: 6px; background: #1e293b; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.ach-total-fill { height: 100%; background: linear-gradient(90deg, #eab308, #f59e0b); border-radius: 3px; transition: width 0.5s ease; }
+
+.ach-category { margin-bottom: 24px; }
+.ach-category-title {
+    font-size: 0.75rem; color: #64748b; font-weight: bold;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 6px;
+}
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.ach-card {
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 12px 14px; display: flex; align-items: flex-start; gap: 12px;
+    transition: border-color 0.2s;
+}
+.ach-card.unlocked { border-color: #eab308; background: #1a1500; }
+.ach-card.locked { opacity: 0.65; }
+.ach-icon { font-size: 1.5rem; min-width: 1.8rem; text-align: center; padding-top: 2px; }
+.ach-info { flex: 1; min-width: 0; }
+.ach-name { font-weight: bold; color: #f8fafc; font-size: 0.9rem; }
+.ach-desc { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; line-height: 1.4; }
+.ach-badge { font-size: 0.72rem; color: #eab308; font-weight: bold; margin-top: 5px; }
+.ach-progress { margin-top: 6px; }
+.ach-progress-text { font-size: 0.72rem; color: #64748b; }
+.ach-progress-bar { height: 4px; background: #1e293b; border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.ach-progress-fill { height: 100%; background: #3b82f6; border-radius: 2px; transition: width 0.4s; }

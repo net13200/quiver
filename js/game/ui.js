@@ -1,6 +1,7 @@
 import { drawBlochSphere, calcBlochVector } from '../quantum/bloch.js';
 import { stateToString, computeStateVector } from '../quantum/engine.js';
 import { GATE_MATRICES } from '../quantum/gates.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES } from '../data/achievements.js';
 
 export function parseMarkdownAndMath(text) {
     if (!text) return '';
@@ -747,4 +748,71 @@ export function updateTimedStatusBar(state) {
 
     scoreEl.innerText = `Score: ${state.timedScore}`;
     attemptsEl.innerText = `Attempts: ${3 - state.attempts}`;
+}
+
+export function showAchievementToast(name, icon) {
+    document.querySelectorAll('.achievement-toast').forEach(el => el.remove());
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.innerHTML = `<span class="ach-toast-icon">${icon}</span><div class="ach-toast-body"><div class="ach-toast-label">🏆 Achievement Unlocked!</div><div class="ach-toast-name">${name}</div></div>`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+    });
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+    }, 3500);
+}
+
+export function renderAchievementsPanel(unlockedSet, progress) {
+    const container = document.getElementById('achievements-container');
+    if (!container) return;
+
+    const total = ACHIEVEMENTS.length;
+    const unlocked = ACHIEVEMENTS.filter(a => unlockedSet.has(a.id)).length;
+    const pct = total > 0 ? Math.round((unlocked / total) * 100) : 0;
+
+    let html = `<div class="ach-header"><span class="ach-header-count">${unlocked} / ${total} Achievements</span><div class="ach-total-bar"><div class="ach-total-fill" style="width:${pct}%"></div></div></div>`;
+
+    ACHIEVEMENT_CATEGORIES.forEach(cat => {
+        const catAchs = ACHIEVEMENTS.filter(a => a.category === cat);
+        html += `<div class="ach-category"><div class="ach-category-title">${cat}</div><div class="ach-grid">`;
+
+        catAchs.forEach(ach => {
+            const isUnlocked = unlockedSet.has(ach.id);
+            const cardClass = isUnlocked ? 'ach-card unlocked' : 'ach-card locked';
+
+            let progressHtml = '';
+            if (!isUnlocked && ach.type === 'count') {
+                const cur = ach.progressKey === 'daily_streak'
+                    ? parseInt(localStorage.getItem('quiver_daily_streak') || '0')
+                    : (progress[ach.progressKey] || 0);
+                const barPct = Math.min(100, Math.round((cur / ach.target) * 100));
+                progressHtml = `<div class="ach-progress"><span class="ach-progress-text">${cur} / ${ach.target}</span><div class="ach-progress-bar"><div class="ach-progress-fill" style="width:${barPct}%"></div></div></div>`;
+            } else if (!isUnlocked && ach.type === 'collection') {
+                const collected = (progress[ach.progressKey] || []).filter(g => ach.target.includes(g));
+                const cur = collected.length;
+                const barPct = Math.min(100, Math.round((cur / ach.target.length) * 100));
+                progressHtml = `<div class="ach-progress"><span class="ach-progress-text">${cur} / ${ach.target.length}</span><div class="ach-progress-bar"><div class="ach-progress-fill" style="width:${barPct}%"></div></div></div>`;
+            }
+
+            const badgeHtml = isUnlocked ? `<div class="ach-badge">✓ Unlocked</div>` : '';
+
+            html += `<div class="${cardClass}">
+  <div class="ach-icon">${isUnlocked ? ach.icon : '🔒'}</div>
+  <div class="ach-info">
+    <div class="ach-name">${ach.name}</div>
+    <div class="ach-desc">${ach.desc}</div>
+    ${badgeHtml}${progressHtml}
+  </div>
+</div>`;
+        });
+
+        html += `</div></div>`;
+    });
+
+    container.innerHTML = html;
 }

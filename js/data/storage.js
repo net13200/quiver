@@ -50,3 +50,18 @@ export function updateStats(pointsEarned, currentStreak) {
     localStorage.setItem('quiver_points', totalPoints);
     localStorage.setItem('quiver_streak', highestStreak);
 }
+
+export let unlockedAchievements = new Set(JSON.parse(localStorage.getItem('quiver_achievements') || '[]'));
+export let achievementProgress = JSON.parse(localStorage.getItem('quiver_ach_progress') || '{}');
+
+export function unlockAchievement(id) {
+    if (unlockedAchievements.has(id)) return false;
+    unlockedAchievements.add(id);
+    localStorage.setItem('quiver_achievements', JSON.stringify([...unlockedAchievements]));
+    return true;
+}
+
+export function setAchievementProgress(key, value) {
+    achievementProgress[key] = value;
+    localStorage.setItem('quiver_ach_progress', JSON.stringify(achievementProgress));
+}

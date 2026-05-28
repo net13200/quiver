@@ -58,10 +58,15 @@
                 <div class="mode-card-title">Time Collapse</div>
                 <div class="mode-card-desc">Race the clock — solve as many circuits as possible.</div>
             </div>
-            <div class="mode-card mode-card-wide" data-mode="sandbox">
+            <div class="mode-card" data-mode="sandbox">
                 <div class="mode-card-icon">🔬</div>
                 <div class="mode-card-title">Sandbox</div>
                 <div class="mode-card-desc">Experiment freely with no rules or targets.</div>
+            </div>
+            <div class="mode-card" data-mode="achievements">
+                <div class="mode-card-icon">🏆</div>
+                <div class="mode-card-title">Achievements</div>
+                <div class="mode-card-desc" id="ach-card-desc">Track your milestones</div>
             </div>
         </div>
 
@@ -123,6 +128,10 @@
                     <button class="menu-btn" style="background:#475569" id="btn-free-2">2 Qubits</button>
                     <button class="menu-btn" style="background:#475569" id="btn-free-3">3 Qubits</button>
                 </div>
+            </div>
+            <div id="panel-achievements" class="mode-panel hidden">
+                <button class="panel-back-btn">← All Modes</button>
+                <div id="achievements-container"></div>
             </div>
         </div>
     </div>

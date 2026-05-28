@@ -2,8 +2,9 @@ import { computeStateVector, stateToString, statesMatch } from '../quantum/engin
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar } from './ui.js';
-import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak } from '../data/storage.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
+import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
+import { ACHIEVEMENT_MAP } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
 
@@ -226,6 +227,75 @@ export function submitGuess(state, renderBoardCallback) {
             }
         }
 
+        // --- Achievement Checks ---
+        {
+            const achToasts = [];
+            const tryUnlock = (id) => {
+                if (unlockAchievement(id)) {
+                    const a = ACHIEVEMENT_MAP[id];
+                    if (a) achToasts.push({ name: a.name, icon: a.icon });
+                }
+            };
+
+            // Universal
+            tryUnlock('hello_quantum');
+            if (wasTutorial) tryUnlock('tutorial_graduate');
+
+            // STAGE-specific
+            if (state.currentMode === 'STAGE') {
+                tryUnlock('superposition');
+                setAchievementProgress('learn_count', completedStages.length);
+                if (completedStages.length >= 10) tryUnlock('wave_function');
+                if (completedStages.length >= 25) tryUnlock('interference');
+                let totalLvls = 0; STAGES.forEach(s => totalLvls += s.levels.length);
+                if (completedStages.length >= totalLvls) tryUnlock('quantum_literate');
+                if (state.activeSet.some(g => g.startsWith('QFT'))) tryUnlock('algorithm_architect');
+            }
+
+            // Gate-based (all modes)
+            const GATE_PREFIXES = ['IQFT','QFT','CCX','SWAP','RZ','CP','CX','SX','X','Y','Z','H'];
+            const usedBases = new Set();
+            state.currentGuess.flat().forEach(g => {
+                for (const base of GATE_PREFIXES) { if (g.startsWith(base)) { usedBases.add(base); break; } }
+            });
+            if (usedBases.has('RZ') || usedBases.has('CP')) tryUnlock('phase_wizard');
+            if (usedBases.has('CCX')) tryUnlock('toffoli_triumph');
+            const collected = new Set(achievementProgress['gates_used'] || []);
+            usedBases.forEach(g => collected.add(g));
+            setAchievementProgress('gates_used', [...collected]);
+            const COLLECTOR_GATES = ['X','Y','Z','H','SX','RZ','CX','CP','SWAP','CCX'];
+            if (COLLECTOR_GATES.every(g => collected.has(g))) tryUnlock('gate_collector');
+
+            // Skill
+            if (state.numQubits === 3) tryUnlock('three_body');
+            if (state.attempts === 0) tryUnlock('first_try');
+            if (state.attempts === 5) tryUnlock('clutch');
+
+            // RANDOM/DAILY-specific
+            if (state.currentMode === 'RANDOM' || state.currentMode === 'DAILY') {
+                const achUser = state.currentGuess.reduce((s,c) => s+c.length, 0);
+                const achSecret = compareCircuit.reduce((s,c) => s+c.length, 0);
+                if (achUser < achSecret) {
+                    tryUnlock('optimizer');
+                    const n = (achievementProgress['optimizer_count'] || 0) + 1;
+                    setAchievementProgress('optimizer_count', n);
+                    if (n >= 5) tryUnlock('compiler_genius');
+                }
+                if (state.currentStreak >= 5)  tryUnlock('on_a_roll');
+                if (state.currentStreak >= 15) tryUnlock('hot_streak');
+                if (state.currentMode === 'DAILY') {
+                    tryUnlock('daily_habit');
+                    const ds = parseInt(localStorage.getItem('quiver_daily_streak') || '0');
+                    setAchievementProgress('daily_streak', ds);
+                    if (ds >= 7)  tryUnlock('week_warrior');
+                    if (ds >= 30) tryUnlock('monthly_master');
+                }
+            }
+
+            // Staggered toasts
+            achToasts.forEach((t, i) => setTimeout(() => showAchievementToast(t.name, t.icon), 900 + i * 1700));
+        }
+
         setTimeout(() => {
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
             if (state.currentMode === 'RANDOM') {
@@ -248,6 +318,10 @@ export function submitGuess(state, renderBoardCallback) {
                     challengeBtn.style.background = '#7c3aed';
                     challengeBtn.innerText = '⚔️ Challenge a Friend';
                     challengeBtn.addEventListener('click', () => {
+                        if (unlockAchievement('challenge_friend')) {
+                            const _a = ACHIEVEMENT_MAP['challenge_friend'];
+                            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
+                        }
                         const url = `${window.location.origin}${window.location.pathname}?play-challenge=${state.currentLvl}-${state.randomSeed}-${state.randomGateMask}`;
                         navigator.clipboard.writeText(url).then(() => {
                             challengeBtn.innerText = 'Link Copied! ✓';
@@ -269,6 +343,10 @@ export function submitGuess(state, renderBoardCallback) {
                     challengeBtn.style.background = '#059669';
                     challengeBtn.innerText = '📅 Challenge a Friend';
                     challengeBtn.addEventListener('click', () => {
+                        if (unlockAchievement('challenge_friend')) {
+                            const _a = ACHIEVEMENT_MAP['challenge_friend'];
+                            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
+                        }
                         const url = `${window.location.origin}${window.location.pathname}?daily-challenge=${state.currentLvl}`;
                         navigator.clipboard.writeText(url).then(() => {
                             challengeBtn.innerText = 'Link Copied! ✓';
