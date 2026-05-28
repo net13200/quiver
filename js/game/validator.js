@@ -1,5 +1,7 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
+import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
+import { gameStartTime } from '../main.js';
 import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
@@ -100,6 +102,8 @@ export function submitGuess(state, renderBoardCallback) {
         const startX = rect.left + (rect.width / 2);
         const startY = rect.top;
 
+        trackSubmitAttempt(state.currentMode, state.currentP1, state.currentP2, state.currentLvl, state.attempts + 1, true, state.currentGuess);
+        trackLevelComplete(state.currentMode, state.currentP1, state.currentP2, state.currentLvl, state.attempts, gameStartTime, state.currentGuess);
         state.gameOver = true;
         submitBtn.classList.add('hidden');
         wrap.classList.remove('active');
@@ -240,6 +244,7 @@ export function submitGuess(state, renderBoardCallback) {
 
     } else {
         state.attempts++;
+        trackSubmitAttempt(state.currentMode, state.currentP1, state.currentP2, state.currentLvl, state.attempts, false, state.currentGuess);
 
         // --- TIMED MODE: 3-attempt limit, -5s penalty, auto-advance ---
         if (state.currentMode === 'TIMED') {
@@ -322,6 +327,7 @@ export function submitGuess(state, renderBoardCallback) {
 
         if (state.attempts === 6) {
             state.gameOver = true;
+            trackLevelFail(state.currentMode, state.currentP1, state.currentP2, state.currentLvl);
             state.currentStreak = 0; 
             
             wrap.classList.remove('active');

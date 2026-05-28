@@ -5,6 +5,9 @@ import { computeStateVector, stateToString, statesMatch } from './quantum/engine
 import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
+import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
+
+export let gameStartTime = 0;
 
 // --- Global Application State ---
 export const state = {
@@ -41,10 +44,12 @@ export const state = {
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
 window.showHint = () => {
+    trackHintViewed(state.currentMode, state.currentP1, state.currentP2, state.currentLvl);
     document.getElementById('hint-text').classList.remove('hidden');
     document.getElementById('hint-btn').classList.add('hidden');
 };
 window.showLesson = () => {
+    trackLessonViewed(state.currentMode, state.currentP1, state.currentP2, state.currentLvl);
     document.getElementById('lesson-text').classList.remove('hidden');
     document.getElementById('lesson-text').innerHTML = parseMarkdownAndMath(document.getElementById('lesson-text').innerHTML);
     document.getElementById('lesson-btn').classList.add('hidden');
@@ -472,6 +477,11 @@ function initGame(mode, p1, p2) {
     
     state.currentGuess = Array(state.numCols).fill().map(() => []);
     state.attempts = 0;
+    gameStartTime = Date.now();
+    trackGameStart(state.currentMode, state.currentP1, state.currentP2, state.currentLvl,
+        mode !== 'FREEPLAY' ? state.targetState : null,
+        state.secretCircuits[0] || null,
+        state.activeSet);
     state.gameOver = false;
     document.getElementById('message').innerText = "";
     
@@ -481,14 +491,15 @@ function initGame(mode, p1, p2) {
     if (historyBoard) historyBoard.innerHTML = ''; 
     // Use querySelectorAll to catch any and all lingering canonical circuits
     document.querySelectorAll('#reveal-circuit-wrap').forEach(el => el.remove());
-    
+
     renderDynamicCanvases(state.numQubits);
     renderPalette();
-    renderBoard(); 
+    renderBoard();
     updateBlochSpheres(state.currentGuess, state.numQubits);
 }
 
 // --- Render Core ---
+
 function renderPalette() {
     const palette = document.getElementById('palette');
     palette.innerHTML = '';
@@ -881,6 +892,7 @@ document.getElementById('btn-rand-1').addEventListener('click', () => {
 
 // --- Boot App ---
 buildMenu();
+trackSessionStart();
 
 // Handle duel challenge acceptance (fired by showDuelChallengeBanner in ui.js)
 document.addEventListener('duel-accept', (e) => {
