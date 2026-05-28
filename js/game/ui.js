@@ -206,11 +206,13 @@ export function getColumnHTML(gates, numQubits, gateStatusMap = null) {
     return html;
 }
 
+const BLOCH_TIP = 'Bloch sphere: maps a qubit\'s state in 3D.\nTop = |0⟩ · Bottom = |1⟩ · Equator = superposition';
+
 export function renderDynamicCanvases(numQubits) {
     const wrap = document.getElementById('canvas-wrapper');
     wrap.innerHTML = '';
     for(let q=0; q<numQubits; q++){
-        wrap.innerHTML += `<canvas id="bloch-${q}" width="160" height="160"></canvas>`;
+        wrap.innerHTML += `<div class="bloch-wrap tt" data-tooltip="${BLOCH_TIP}"><canvas id="bloch-${q}" width="160" height="160"></canvas></div>`;
     }
 }
 
@@ -232,13 +234,14 @@ export function updateTargetBlochSphere(targetState, numQubits) {
 
     const sub = ['₀', '₁', '₂'];
 
+    const targetTip = 'Target Bloch sphere: the state your circuit must reach.\nTop = |0⟩ · Bottom = |1⟩ · Equator = superposition';
     if (numQubits === 1) {
-        wrap.innerHTML = `<canvas id="target-bloch-0" width="160" height="160"></canvas>`;
+        wrap.innerHTML = `<div class="bloch-wrap tt" data-tooltip="${targetTip}"><canvas id="target-bloch-0" width="160" height="160"></canvas></div>`;
         drawBlochSphere('target-bloch-0', calcBlochVector(targetState, 0, 1), `Target q${sub[0]}`);
     } else {
         let canvasHTML = '';
         for (let q = 0; q < numQubits; q++) {
-            canvasHTML += `<canvas id="target-bloch-${q}" width="160" height="160"></canvas>`;
+            canvasHTML += `<div class="bloch-wrap tt" data-tooltip="${targetTip}"><canvas id="target-bloch-${q}" width="160" height="160"></canvas></div>`;
         }
         wrap.innerHTML = `
             <div style="width:100%; display:flex; justify-content:center;">

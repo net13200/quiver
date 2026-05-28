@@ -503,19 +503,34 @@ function initGame(mode, p1, p2) {
 
 // --- Render Core ---
 
+const GATE_TIPS = {
+    X:    'Pauli-X (NOT): Flips |0⟩ ↔ |1⟩. The quantum bit flip.',
+    Y:    'Pauli-Y: Combines bit flip and phase flip.',
+    Z:    'Pauli-Z: Phase flip — leaves |0⟩ unchanged, negates |1⟩.',
+    H:    'Hadamard: Creates equal superposition.\n|0⟩ → (|0⟩+|1⟩)/√2',
+    SX:   '√X: Half a bit flip. Creates partial superposition.',
+    RZ:   'RZ(θ): Rotation around Z-axis by θ. Adds relative phase between |0⟩ and |1⟩.',
+    CX:   'CNOT: Flips target qubit only when control is |1⟩. Generates entanglement.',
+    CP:   'Controlled Phase: Adds phase to the |11⟩ state. Used in QFT.',
+    SWAP: 'SWAP: Exchanges the full states of two qubits.',
+    CCX:  'Toffoli: 3-qubit gate. Flips target only when both controls are |1⟩.',
+    QFT:  'Quantum Fourier Transform: The quantum analogue of the DFT. Core of many algorithms.',
+    IQFT: 'Inverse QFT: Undoes the Quantum Fourier Transform.',
+};
+
 function renderPalette() {
     const palette = document.getElementById('palette');
     palette.innerHTML = '';
     const h = Math.max(60, state.numQubits * 30);
-    
+
     // Extract unique base gates instead of showing all permutations
     const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX', 'QFT', 'IQFT'];
     const uniqueBases = allBases.filter(base => state.activeSet.some(g => g.startsWith(base)));
 
     uniqueBases.forEach(baseType => {
         const item = document.createElement('div');
-        // Add selected glow effect if active
-        item.className = `palette-item ${state.selectedBaseGate === baseType ? 'selected' : ''}`;
+        item.className = `palette-item tt ${state.selectedBaseGate === baseType ? 'selected' : ''}`;
+        if (GATE_TIPS[baseType]) item.dataset.tooltip = GATE_TIPS[baseType];
         item.style.height = `${h}px`;
         
         // Mock a beautifully formatted gate just for the palette display

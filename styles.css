@@ -350,6 +350,34 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     border: 1px dashed #eab308;
 }
 
+/* --- Tooltip System --- */
+.tt { position: relative; }
+.tt::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    width: max-content;
+    max-width: 230px;
+    text-align: center;
+    white-space: normal;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 8000;
+    font-weight: normal;
+}
+.tt:hover::after { opacity: 1; }
+.bloch-wrap { display: inline-block; }
+
 /* --- Tutorial & Ghost Hand Animations --- */
 .tutorial-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;

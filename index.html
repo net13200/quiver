@@ -127,7 +127,7 @@
         <div class="main-layout">
             <div class="left-col">
                 <div id="target-container" class="state-container">
-                    <div class="state-label">Target Amplitudes:</div>
+                    <div class="state-label tt" data-tooltip="The quantum state your circuit must produce. Each term shows an amplitude × basis state.">Target Amplitudes:</div>
                     <div id="target-amplitudes" class="state-amplitudes">Loading...</div>
                     <div id="target-canvas-wrapper" style="display: flex; justify-content: center; gap: 15px; margin-top: 15px; flex-wrap: wrap;"></div>
                 </div>
@@ -141,7 +141,7 @@
                     <span id="timed-score" style="color:#22c55e;">Score: 0</span>
                     <span id="timed-attempts" style="color:#94a3b8;">Attempts: 3</span>
                 </div>
-                <div id="attempts-counter" style="text-align: center; color: #94a3b8; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem;">Attempts Remaining: 6</div>
+                <div id="attempts-counter" class="tt" data-tooltip="Each attempt locks in a row. Colour hints show which gates are in the right column. You have 6 attempts total." style="text-align: center; color: #94a3b8; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem;">Attempts Remaining: 6</div>
                 <div id="board"></div>
 
                 <div id="palette-container">
