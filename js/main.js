@@ -841,12 +841,6 @@ document.getElementById('next-btn').addEventListener('click', () => {
     }
 });
 
-document.getElementById('menu-btn').addEventListener('click', () => {
-    state.currentStreak = 0; // Reset streak if you run away!
-    if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
-    showMainMenu();
-});
-
 // 5. Palette Selectors
 const rzSelect = document.getElementById('rz-angle');
 if (rzSelect) {
@@ -865,6 +859,7 @@ function goToMainMenu() {
 const gameLogo = document.getElementById('game-logo');
 if (gameLogo) gameLogo.addEventListener('click', goToMainMenu);
 document.getElementById('menu-btn').addEventListener('click', goToMainMenu);
+document.getElementById('game-menu-btn').addEventListener('click', goToMainMenu);
 
 // 7. Modal Buttons
 document.getElementById('modal-next-btn').addEventListener('click', () => {
