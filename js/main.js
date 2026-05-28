@@ -83,7 +83,6 @@ function showMainMenu() {
 
     if (state.tutorialJustCompleted) {
         state.tutorialJustCompleted = false;
-        showModePanel('learn');
         setTimeout(() => {
             const learnCard = document.querySelector('.mode-card[data-mode="learn"]');
             if (learnCard) {
@@ -699,6 +698,9 @@ function showModePanel(name) {
     document.getElementById('mode-cards').classList.add('hidden');
     document.querySelectorAll('.mode-panel').forEach(p => p.classList.add('hidden'));
     document.getElementById(`panel-${name}`).classList.remove('hidden');
+    if (name === 'play' && state.isTutorial) {
+        setTimeout(() => { endTour(); setGhostPointer('MENU_EASY'); }, 350);
+    }
 }
 function showModeCards() {
     document.getElementById('mode-cards').classList.remove('hidden');

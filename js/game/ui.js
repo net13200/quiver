@@ -445,12 +445,12 @@ let currentInGameStep = 0;
 let _onInGameTourComplete = null;
 
 const tourSteps = [
-    { sel: '.intro-text',    title: 'Welcome!',       text: "Welcome to Quiver! Let's take a quick tour of the main features." },
-    { sel: '#header-learn',  title: 'Learn Mode',     text: "LEARN: A structured curriculum that takes you from zero to mastering quantum algorithms. Start here!" },
-    { sel: '#header-daily',  title: 'Daily Puzzles',  text: "DAILY: Three fresh puzzles every 24 hours — Easy, Medium, and Hard. A great daily challenge once you know the basics!" },
-    { sel: '#header-sandbox',title: 'Sandbox',        text: "SANDBOX: A free-play area to experiment with any gates and watch the quantum math update in real time." },
-    { sel: '#header-timed',  title: 'Time Collapse',  text: "TIME COLLAPSE: A timed blitz mode! Solve as many circuits as possible before the clock hits zero. Each solve adds +20s — each wrong attempt costs −5s." },
-    { sel: '#header-play',   title: 'Play Mode',      text: "PLAY: The arcade mode! Expand the Play menu and click 'Easy (1 Qubit)' to try an interactive puzzle.", hideNext: true }
+    { sel: '#menu-welcome',                    title: 'Welcome!',       text: "Welcome to Quiver! Let's take a quick tour of the main features." },
+    { sel: '.mode-card[data-mode="learn"]',    title: 'Learn Mode',     text: "LEARN: A structured curriculum that takes you from zero to mastering quantum algorithms. Start here!" },
+    { sel: '.mode-card[data-mode="daily"]',    title: 'Daily Puzzles',  text: "DAILY: Three fresh puzzles every 24 hours — Easy, Medium, and Hard. A great daily challenge once you know the basics!" },
+    { sel: '.mode-card[data-mode="sandbox"]',  title: 'Sandbox',        text: "SANDBOX: A free-play area to experiment with any gates and watch the quantum math update in real time." },
+    { sel: '.mode-card[data-mode="timed"]',    title: 'Time Collapse',  text: "TIME COLLAPSE: A timed blitz mode! Solve as many circuits as possible before the clock hits zero. Each solve adds +20s — each wrong attempt costs −5s." },
+    { sel: '.mode-card[data-mode="play"]',     title: 'Play Mode',      text: "PLAY: The arcade mode! Click this card, then hit 'Easy (1 Qubit)' to try your first puzzle.", hideNext: true }
 ];
 
 const inGameTourSteps = [
@@ -513,27 +513,7 @@ export function showTourStep() {
     document.getElementById('tt-next').style.display = step.hideNext ? 'none' : 'block';
 
     if (target) {
-        if (step.sel.includes('header-')) {
-            const parentSection = target.closest('.menu-section');
-            if (parentSection) {
-                parentSection.classList.add('tutorial-spotlight');
-                parentSection.style.backgroundColor = '#1e293b';
-                parentSection.style.padding = '5px 15px 15px 15px';
-            }
-
-            const contentId = step.sel.replace('header-', '') + '-content';
-            const contentEl = document.getElementById(contentId);
-            if (contentEl && contentEl.classList.contains('hidden')) {
-                target.click();
-            }
-
-            if (step.sel === '#header-play') {
-                setTimeout(() => setGhostPointer('MENU_EASY'), 350);
-            }
-        } else {
-            target.classList.add('tutorial-spotlight');
-        }
-
+        target.classList.add('tutorial-spotlight');
         document.getElementById('tutorial-tooltip').classList.add('show');
         positionTooltip(target);
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
