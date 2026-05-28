@@ -211,6 +211,7 @@ function initGame(mode, p1, p2) {
     }
 
     if (!state.isTutorial) state.tutorialJustCompleted = false;
+    state.selectedBaseGate = null;
 
     document.getElementById('main-menu').style.display = 'none';
     hideVictoryModal();
