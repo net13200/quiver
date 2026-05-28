@@ -243,6 +243,9 @@ export function submitGuess(state, renderBoardCallback) {
 
         // --- TIMED MODE: 3-attempt limit, -5s penalty, auto-advance ---
         if (state.currentMode === 'TIMED') {
+            wrap.classList.add('wrong-attempt');
+            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+
             state.timerRemaining = Math.max(0, state.timerRemaining - 5);
             updateTimedStatusBar(state);
 
