@@ -131,10 +131,12 @@ export function statesMatch(v1, v2, N) {
     return true;
 }
 
-export function computeStateVector(sequence, N, gateMatrices) {
+export function computeStateVector(sequence, N, gateMatrices, initialState = null) {
     let numStates = Math.pow(2, N);
-    let v = Array(numStates).fill().map(() => ({r:0, i:0}));
-    v[0] = {r:1, i:0}; 
+    let v = initialState
+        ? initialState.map(x => ({...x}))
+        : Array(numStates).fill().map(() => ({r:0, i:0}));
+    if (!initialState) v[0] = {r:1, i:0};
     
     for (let column of sequence) {
         if (column.length === 0) continue;

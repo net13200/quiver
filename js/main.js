@@ -1,7 +1,7 @@
 import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
-import { computeStateVector, stateToString } from './quantum/engine.js';
+import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
 import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
@@ -291,26 +291,29 @@ function initGame(mode, p1, p2) {
             instructions.innerHTML = `<b>Random Puzzle</b><br>Guess the circuit. Equivalent circuits win!`;
         }
         
+        generateMatrices(state.numQubits);
         let generatedCircuit = [];
         let activeLength = Math.floor(rng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
         let singleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
-        let singleGatesToPlace = 2; 
+        let singleGatesToPlace = 2;
+        let randRunningState = computeStateVector([], state.numQubits, GATE_MATRICES);
 
         for (let i = 0; i < state.numCols; i++) {
             if (i < activeLength) {
                 let col = [];
                 let placedThisCol = 0;
+                const isNonTrivial = (g) => !statesMatch(
+                    computeStateVector([[g]], state.numQubits, GATE_MATRICES, randRunningState),
+                    randRunningState, state.numQubits
+                );
 
                 if (singleGatesToPlace > 0 && singleQSet.length > 0) {
-                    let g = singleQSet[Math.floor(rng() * singleQSet.length)];
-                    col.push(formatAngleGateSeeded(g, rng));
-                    singleGatesToPlace--;
-                    placedThisCol++;
+                    let g = formatAngleGateSeeded(singleQSet[Math.floor(rng() * singleQSet.length)], rng);
+                    if (isNonTrivial(g)) { col.push(g); singleGatesToPlace--; placedThisCol++; }
 
                     if (singleGatesToPlace > 0 && state.numQubits >= 2) {
-                        let g2 = singleQSet[Math.floor(rng() * singleQSet.length)];
-                        g2 = formatAngleGateSeeded(g2, rng);
-                        if (canFit(col, g2)) {
+                        let g2 = formatAngleGateSeeded(singleQSet[Math.floor(rng() * singleQSet.length)], rng);
+                        if (canFit(col, g2) && isNonTrivial(g2)) {
                             col.push(g2);
                             singleGatesToPlace--;
                             placedThisCol++;
@@ -318,19 +321,26 @@ function initGame(mode, p1, p2) {
                     }
                 } else {
                     let baseGate = formatAngleGateSeeded(state.activeSet[Math.floor(rng() * state.activeSet.length)], rng);
-                    col.push(baseGate);
-                    placedThisCol++;
+                    if (isNonTrivial(baseGate)) { col.push(baseGate); placedThisCol++; }
                 }
 
                 for(let a=placedThisCol; a<state.numQubits; a++) {
                     if(rng() > 0.5) {
                         let gNext = formatAngleGateSeeded(state.activeSet[Math.floor(rng() * state.activeSet.length)], rng);
-                        if(canFit(col, gNext)) col.push(gNext);
+                        if(canFit(col, gNext) && isNonTrivial(gNext)) col.push(gNext);
                     }
                 }
+                randRunningState = computeStateVector([col], state.numQubits, GATE_MATRICES, randRunningState);
                 generatedCircuit.push(col);
             } else generatedCircuit.push([]);
         }
+
+        // Safety fallback: if all gates were trivial, ensure at least one non-trivial gate
+        const zeroState = computeStateVector([], state.numQubits, GATE_MATRICES);
+        if (statesMatch(computeStateVector(generatedCircuit, state.numQubits, GATE_MATRICES), zeroState, state.numQubits)) {
+            generatedCircuit[0] = ['H0'];
+        }
+
         state.secretCircuits = [generatedCircuit];
         
         // If the tutorial is active, hardcode a simple 1-gate puzzle and run the in-game tour
@@ -358,35 +368,48 @@ function initGame(mode, p1, p2) {
         const timedRng = state.isDuelMode
             ? getSeededRandom(state.duelSeed * 1000 + state.timedCircuitsSolved)
             : Math.random.bind(Math);
+        generateMatrices(state.numQubits);
         let timedCircuit = [];
         let timedActiveLength = Math.floor(timedRng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
         let timedSingleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
         let timedSingleToPlace = 2;
+        let timedRunningState = computeStateVector([], state.numQubits, GATE_MATRICES);
         for (let i = 0; i < state.numCols; i++) {
             if (i < timedActiveLength) {
                 let col = [];
                 let placed = 0;
+                const isNonTrivialTimed = (g) => !statesMatch(
+                    computeStateVector([[g]], state.numQubits, GATE_MATRICES, timedRunningState),
+                    timedRunningState, state.numQubits
+                );
                 if (timedSingleToPlace > 0 && timedSingleQSet.length > 0) {
-                    let g = timedSingleQSet[Math.floor(timedRng() * timedSingleQSet.length)];
-                    col.push(formatAngleGateSeeded(g, timedRng));
-                    timedSingleToPlace--; placed++;
+                    let g = formatAngleGateSeeded(timedSingleQSet[Math.floor(timedRng() * timedSingleQSet.length)], timedRng);
+                    if (isNonTrivialTimed(g)) { col.push(g); timedSingleToPlace--; placed++; }
                     if (timedSingleToPlace > 0 && state.numQubits >= 2) {
                         let g2 = formatAngleGateSeeded(timedSingleQSet[Math.floor(timedRng() * timedSingleQSet.length)], timedRng);
-                        if (canFit(col, g2)) { col.push(g2); timedSingleToPlace--; placed++; }
+                        if (canFit(col, g2) && isNonTrivialTimed(g2)) { col.push(g2); timedSingleToPlace--; placed++; }
                     }
                 } else {
-                    col.push(formatAngleGateSeeded(state.activeSet[Math.floor(timedRng() * state.activeSet.length)], timedRng));
-                    placed++;
+                    let g = formatAngleGateSeeded(state.activeSet[Math.floor(timedRng() * state.activeSet.length)], timedRng);
+                    if (isNonTrivialTimed(g)) { col.push(g); placed++; }
                 }
                 for (let a = placed; a < state.numQubits; a++) {
                     if (timedRng() > 0.5) {
                         let gNext = formatAngleGateSeeded(state.activeSet[Math.floor(timedRng() * state.activeSet.length)], timedRng);
-                        if (canFit(col, gNext)) col.push(gNext);
+                        if (canFit(col, gNext) && isNonTrivialTimed(gNext)) col.push(gNext);
                     }
                 }
+                timedRunningState = computeStateVector([col], state.numQubits, GATE_MATRICES, timedRunningState);
                 timedCircuit.push(col);
             } else timedCircuit.push([]);
         }
+
+        // Safety fallback: if all gates were trivial, ensure at least one non-trivial gate
+        const timedZeroState = computeStateVector([], state.numQubits, GATE_MATRICES);
+        if (statesMatch(computeStateVector(timedCircuit, state.numQubits, GATE_MATRICES), timedZeroState, state.numQubits)) {
+            timedCircuit[0] = ['H0'];
+        }
+
         state.secretCircuits = [timedCircuit];
 
         const diffNames = ['Easy', 'Medium', 'Hard'];
