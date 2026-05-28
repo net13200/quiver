@@ -109,7 +109,7 @@ export function submitGuess(state, renderBoardCallback) {
         // --- TIMED MODE: skip modal, auto-advance ---
         if (state.currentMode === 'TIMED') {
             const timeBonus = state.currentLvl === 3 ? 30 : 20;
-            state.timerRemaining = Math.min(state.timerRemaining + timeBonus, 999);
+            state.timerRemaining = Math.min(state.timerRemaining + timeBonus, 60);
             state.timedScore += state.currentLvl;
             state.timedCircuitsSolved++;
             updateTimedStatusBar(state);
