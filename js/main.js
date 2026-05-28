@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
@@ -40,7 +40,10 @@ export const state = {
     isDuelMode: false,
     duelSeed: 0,
     duelOpponentScore: 0,
-    duelOpponentName: 'Challenger'
+    duelOpponentName: 'Challenger',
+    randomSeed: 0,
+    randomGateMask: 0,
+    _usePresetSeed: false
 };
 
 // --- Expose Global Hooks for dynamically created DOM elements ---
@@ -177,6 +180,9 @@ function buildMenu() {
     });
 }
 
+const GATE_MASK_ORDER = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'];
+const GATE_CHECKBOX_IDS = { X:'chk-x', Y:'chk-y', Z:'chk-z', H:'chk-h', SX:'chk-sx', RZ:'chk-rz', CX:'chk-cx', CP:'chk-cp', SWAP:'chk-swap', CCX:'chk-ccx' };
+
 // --- Logic Helpers ---
 function expandGateSet(baseGates, numQubits) {
     let expanded = [];
@@ -287,13 +293,24 @@ function initGame(mode, p1, p2) {
             state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
             instructions.innerHTML = `<div class="stage-breadcrumb">Daily Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Equivalent circuits win! Resets at midnight.</div>`;
         } else {
-            rng = Math.random;
+            if (state._usePresetSeed) {
+                state._usePresetSeed = false;
+            } else {
+                state.randomSeed = Math.floor(Math.random() * 900000) + 100000;
+            }
+            rng = getSeededRandom(state.randomSeed);
             let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
             state.activeSet = expandGateSet(selectedBaseGates, state.numQubits);
-            
+
             if (state.activeSet.length === 0) {
                 state.activeSet = expandGateSet(['X', 'H'], state.numQubits);
+                selectedBaseGates = ['X', 'H'];
             }
+            // Encode selected gates as bitmask for challenge sharing
+            state.randomGateMask = selectedBaseGates.reduce((mask, g) => {
+                const idx = GATE_MASK_ORDER.indexOf(g);
+                return idx >= 0 ? mask | (1 << idx) : mask;
+            }, 0);
             instructions.innerHTML = `<div class="stage-breadcrumb">Random Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Guess the circuit. Equivalent circuits win!</div>`;
         }
         
@@ -917,6 +934,45 @@ document.addEventListener('duel-accept', (e) => {
     initGame('TIMED', e.detail.difficulty);
 });
 
+document.addEventListener('play-challenge-accept', (e) => {
+    const { difficulty, seed, gateMask } = e.detail;
+    state.randomSeed = seed;
+    state._usePresetSeed = true;
+    if (gateMask !== undefined) {
+        GATE_MASK_ORDER.forEach((gate, i) => {
+            const cb = document.getElementById(GATE_CHECKBOX_IDS[gate]);
+            if (cb) cb.checked = !!(gateMask & (1 << i));
+        });
+    }
+    initGame('RANDOM', difficulty);
+});
+
+document.addEventListener('daily-challenge-accept', (e) => {
+    initGame('DAILY', e.detail.difficulty);
+});
+
+// Check for incoming play challenge link
+const _playParam = new URLSearchParams(window.location.search).get('play-challenge');
+if (_playParam) {
+    const _pParts = _playParam.split('-');
+    if (_pParts.length >= 2) {
+        const _pDiff = parseInt(_pParts[0]);
+        const _pSeed = parseInt(_pParts[1]);
+        const _pMask = _pParts.length >= 3 ? parseInt(_pParts[2]) : undefined;
+        state.randomSeed = _pSeed;
+        window.history.replaceState({}, '', window.location.pathname);
+        showPlayChallengeBanner(_pDiff, _pSeed, _pMask);
+    }
+}
+
+// Check for incoming daily challenge link
+const _dailyChallengeParam = new URLSearchParams(window.location.search).get('daily-challenge');
+if (_dailyChallengeParam) {
+    const _dcDiff = parseInt(_dailyChallengeParam);
+    window.history.replaceState({}, '', window.location.pathname);
+    showDailyChallengeBanner(_dcDiff);
+}
+
 // Check for incoming duel challenge link
 const _duelParam = new URLSearchParams(window.location.search).get('duel');
 if (_duelParam) {
@@ -932,7 +988,7 @@ if (_duelParam) {
 }
 
 // NEW: Auto-start the tutorial if it's their first time
-if (!tutorialComplete && !_duelParam) {
+if (!tutorialComplete && !_duelParam && !_playParam && !_dailyChallengeParam) {
     state.isTutorial = true;
     setTimeout(startTour, 500); // Slight delay ensures the DOM is painted
 }

@@ -230,15 +230,55 @@ export function submitGuess(state, renderBoardCallback) {
             if (state.currentMode === 'RANDOM') {
                 const controls = document.querySelector('#victory-modal .victory-controls');
                 if (controls && !document.getElementById('modal-restart-btn')) {
-                    const btn = document.createElement('button');
-                    btn.id = 'modal-restart-btn';
-                    btn.className = 'btn';
-                    btn.style.background = '#3b82f6';
-                    btn.innerText = 'Retry Same Circuit';
-                    btn.addEventListener('click', () => {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.id = 'modal-restart-btn';
+                    retryBtn.className = 'btn';
+                    retryBtn.style.background = '#3b82f6';
+                    retryBtn.innerText = 'Retry Same Circuit';
+                    retryBtn.addEventListener('click', () => {
                         document.dispatchEvent(new CustomEvent('restart-circuit'));
                     });
-                    controls.insertBefore(btn, controls.firstChild);
+                    controls.insertBefore(retryBtn, controls.firstChild);
+                }
+                if (controls && !document.getElementById('modal-play-challenge-btn')) {
+                    const challengeBtn = document.createElement('button');
+                    challengeBtn.id = 'modal-play-challenge-btn';
+                    challengeBtn.className = 'btn';
+                    challengeBtn.style.background = '#7c3aed';
+                    challengeBtn.innerText = '⚔️ Challenge a Friend';
+                    challengeBtn.addEventListener('click', () => {
+                        const url = `${window.location.origin}${window.location.pathname}?play-challenge=${state.currentLvl}-${state.randomSeed}-${state.randomGateMask}`;
+                        navigator.clipboard.writeText(url).then(() => {
+                            challengeBtn.innerText = 'Link Copied! ✓';
+                            challengeBtn.style.background = '#059669';
+                            setTimeout(() => {
+                                challengeBtn.innerText = '⚔️ Challenge a Friend';
+                                challengeBtn.style.background = '#7c3aed';
+                            }, 2500);
+                        });
+                    });
+                    controls.insertBefore(challengeBtn, controls.firstChild);
+                }
+            } else if (state.currentMode === 'DAILY') {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-daily-challenge-btn')) {
+                    const challengeBtn = document.createElement('button');
+                    challengeBtn.id = 'modal-daily-challenge-btn';
+                    challengeBtn.className = 'btn';
+                    challengeBtn.style.background = '#059669';
+                    challengeBtn.innerText = '📅 Challenge a Friend';
+                    challengeBtn.addEventListener('click', () => {
+                        const url = `${window.location.origin}${window.location.pathname}?daily-challenge=${state.currentLvl}`;
+                        navigator.clipboard.writeText(url).then(() => {
+                            challengeBtn.innerText = 'Link Copied! ✓';
+                            challengeBtn.style.background = '#7c3aed';
+                            setTimeout(() => {
+                                challengeBtn.innerText = '📅 Challenge a Friend';
+                                challengeBtn.style.background = '#059669';
+                            }, 2500);
+                        });
+                    });
+                    controls.insertBefore(challengeBtn, controls.firstChild);
                 }
             }
         }, 500);

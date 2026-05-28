@@ -366,6 +366,11 @@ export function fireQuantumConfetti(startX, startY) {
 
 // --- Modals ---
 export function showVictoryModal(title, subtitle, statsText, showNext, revealObj) {
+    ['modal-restart-btn', 'modal-play-challenge-btn', 'modal-daily-challenge-btn', 'modal-duel-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+
     const overlay = document.getElementById('victory-modal');
     document.getElementById('victory-title').innerText = title;
     document.getElementById('victory-subtitle').innerText = subtitle;
@@ -663,6 +668,64 @@ export function showDuelChallengeBanner(difficulty, opponentScore) {
         overlay.remove();
         // initGame is in main.js — trigger via a custom event to avoid circular import
         document.dispatchEvent(new CustomEvent('duel-accept', { detail: { difficulty } }));
+    });
+}
+
+export function showPlayChallengeBanner(difficulty, seed, gateMask) {
+    const diffNames = ['Easy', 'Medium', 'Hard'];
+    const diffName = diffNames[difficulty - 1] || 'Easy';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'duel-banner-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
+
+    overlay.innerHTML = `
+        <div style="background:#1e293b;border:2px solid #3b82f6;border-radius:16px;padding:40px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 0 60px rgba(59,130,246,0.4);">
+            <div style="font-size:2.5rem;margin-bottom:12px;">🎲</div>
+            <h2 style="color:#93c5fd;margin:0 0 12px 0;font-size:1.6rem;">You've Been Challenged!</h2>
+            <p style="color:#cbd5e1;font-size:1.05rem;margin:0 0 8px 0;">
+                Can you solve the same <b style="color:#f8fafc;">${diffName}</b> puzzle your friend solved?
+            </p>
+            <p style="color:#94a3b8;margin:0 0 28px 0;">Try to crack it in as few attempts as possible!</p>
+            <button id="play-challenge-accept-btn" style="background:#3b82f6;color:white;border:none;border-radius:8px;padding:14px 32px;font-size:1.1rem;font-weight:bold;cursor:pointer;width:100%;transition:background 0.2s;">
+                Accept Challenge
+            </button>
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('play-challenge-accept-btn').addEventListener('click', () => {
+        overlay.remove();
+        document.dispatchEvent(new CustomEvent('play-challenge-accept', { detail: { difficulty, seed, gateMask } }));
+    });
+}
+
+export function showDailyChallengeBanner(difficulty) {
+    const diffNames = ['Easy', 'Medium', 'Hard'];
+    const diffName = diffNames[difficulty - 1] || 'Easy';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'duel-banner-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
+
+    overlay.innerHTML = `
+        <div style="background:#1e293b;border:2px solid #059669;border-radius:16px;padding:40px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 0 60px rgba(5,150,105,0.4);">
+            <div style="font-size:2.5rem;margin-bottom:12px;">📅</div>
+            <h2 style="color:#6ee7b7;margin:0 0 12px 0;font-size:1.6rem;">Daily Puzzle Challenge!</h2>
+            <p style="color:#cbd5e1;font-size:1.05rem;margin:0 0 8px 0;">
+                Your friend challenged you to today's <b style="color:#f8fafc;">${diffName}</b> daily puzzle.
+            </p>
+            <p style="color:#94a3b8;margin:0 0 28px 0;">Can you solve it too?</p>
+            <button id="daily-challenge-accept-btn" style="background:#059669;color:white;border:none;border-radius:8px;padding:14px 32px;font-size:1.1rem;font-weight:bold;cursor:pointer;width:100%;transition:background 0.2s;">
+                Accept Challenge
+            </button>
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('daily-challenge-accept-btn').addEventListener('click', () => {
+        overlay.remove();
+        document.dispatchEvent(new CustomEvent('daily-challenge-accept', { detail: { difficulty } }));
     });
 }
 
