@@ -408,6 +408,14 @@ export function showVictoryModal(title, subtitle, statsText, showNext, revealObj
 
         finalWrap.appendChild(finalRow);
         circuitContainer.appendChild(finalWrap);
+
+        const note = document.createElement('div');
+        note.style.cssText = 'margin-top:14px;padding:12px 14px;background:rgba(56,189,248,0.06);border:1px solid #334155;border-radius:8px;font-size:0.82rem;color:#94a3b8;line-height:1.55;text-align:left;width:100%;';
+        note.innerHTML = `<span style="color:#38bdf8;font-weight:600;">💡 Why do multiple circuits produce the same result?</span><br>
+Quantum gates are unitary matrices. Different sequences of gates can multiply together into the exact same overall transformation — so the <em>output state</em> is identical even though the <em>circuits look different</em>.<br><br>
+On real quantum hardware, <strong style="color:#cbd5e1;">fewer gates = less noise</strong>. Every gate takes time and introduces errors, so finding the shortest equivalent circuit is one of the core challenges in quantum computing — a field called <strong style="color:#cbd5e1;">circuit optimization</strong>.`;
+        circuitContainer.appendChild(note);
+
         circuitContainer.style.display = 'flex';
     } else {
         circuitContainer.style.display = 'none';
