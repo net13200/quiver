@@ -369,9 +369,10 @@ function initGame(mode, p1, p2) {
         state.numCols = LEVELS[p1].g;
         state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
 
-        const timedRng = state.isDuelMode
-            ? getSeededRandom(state.duelSeed * 1000 + state.timedCircuitsSolved)
-            : Math.random.bind(Math);
+        if (!isContinuingTimedSession && !state.isDuelMode) {
+            state.duelSeed = Math.floor(Math.random() * 900000) + 100000;
+        }
+        const timedRng = getSeededRandom(state.duelSeed * 1000 + state.timedCircuitsSolved);
         generateMatrices(state.numQubits);
         let timedCircuit = [];
         let timedActiveLength = Math.floor(timedRng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
@@ -424,7 +425,6 @@ function initGame(mode, p1, p2) {
         if (isContinuingTimedSession) {
             updateTimedStatusBar(state);
         } else {
-            if (!state.isDuelMode) state.duelSeed = Math.floor(Math.random() * 900000) + 100000;
             state.timerRemaining = state.currentLvl === 3 ? 60 : 30;
             state.timedScore = 0;
             state.timedCircuitsSolved = 0;
