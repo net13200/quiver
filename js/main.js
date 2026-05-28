@@ -2,7 +2,7 @@ import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest } from './data/storage.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString } from './quantum/engine.js';
-import { toggleMenu, toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 
@@ -78,24 +78,24 @@ function showMainMenu() {
     state.isDuelMode = false;
     buildMenu();
     document.getElementById('main-menu').style.display = 'flex';
+    showModeCards();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (state.tutorialJustCompleted) {
         state.tutorialJustCompleted = false;
-        toggleMenu('learn-content');
+        showModePanel('learn');
         setTimeout(() => {
-            const learnHeader = document.getElementById('header-learn');
-            if (learnHeader) {
-                learnHeader.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                learnHeader.classList.add('ghost-pulse');
-                learnHeader.style.position = 'relative';
+            const learnCard = document.querySelector('.mode-card[data-mode="learn"]');
+            if (learnCard) {
+                learnCard.classList.add('ghost-pulse');
+                learnCard.style.position = 'relative';
                 const msg = document.createElement('div');
                 msg.className = 'ghost-text';
                 msg.innerText = 'Start your quantum journey here!';
-                learnHeader.appendChild(msg);
+                learnCard.appendChild(msg);
                 setTimeout(() => {
-                    learnHeader.classList.remove('ghost-pulse');
-                    learnHeader.style.position = '';
+                    learnCard.classList.remove('ghost-pulse');
+                    learnCard.style.position = '';
                     msg.remove();
                 }, 5000);
             }
@@ -672,11 +672,21 @@ function endTimedSession() {
 // --- Attach Static Event Listeners ---
 
 // 1. Menu Accordions
-document.getElementById('header-learn').addEventListener('click', () => toggleMenu('learn-content'));
-document.getElementById('header-play').addEventListener('click', () => toggleMenu('play-content'));
-document.getElementById('header-sandbox').addEventListener('click', () => toggleMenu('sandbox-content'));
-document.getElementById('header-daily').addEventListener('click', () => toggleMenu('daily-content'));
-document.getElementById('header-timed').addEventListener('click', () => toggleMenu('timed-content'));
+function showModePanel(name) {
+    document.getElementById('mode-cards').classList.add('hidden');
+    document.querySelectorAll('.mode-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById(`panel-${name}`).classList.remove('hidden');
+}
+function showModeCards() {
+    document.getElementById('mode-cards').classList.remove('hidden');
+    document.querySelectorAll('.mode-panel').forEach(p => p.classList.add('hidden'));
+}
+document.querySelectorAll('.mode-card').forEach(card => {
+    card.addEventListener('click', () => showModePanel(card.dataset.mode));
+});
+document.querySelectorAll('.panel-back-btn').forEach(btn => {
+    btn.addEventListener('click', showModeCards);
+});
 
 // 2. Play Menu Configurations
 document.getElementById('btn-toggle-gates').addEventListener('click', toggleAllGates);
