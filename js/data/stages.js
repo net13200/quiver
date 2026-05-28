@@ -305,7 +305,7 @@ export const STAGES = [
     {
         title: "Stage 4: Build a SWAP Gate",
         desc: "Construct SWAP and Controlled-SWAP (Fredkin) gates using CNOTs. (Strict Mode)",
-        qubits: 2, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
+        qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
         levels: [
             { 
                 name: "4.1: SWAP Gate",
