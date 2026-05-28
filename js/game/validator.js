@@ -116,6 +116,7 @@ export function submitGuess(state, renderBoardCallback) {
             state.timerRemaining = Math.min(state.timerRemaining + timeBonus, 60);
             state.timedScore += state.currentLvl;
             state.timedCircuitsSolved++;
+            state.timedCircuitIndex++;
             updateTimedStatusBar(state);
 
             const msg = document.getElementById('message');
@@ -261,6 +262,7 @@ export function submitGuess(state, renderBoardCallback) {
 
             if (state.attempts >= 3) {
                 state.gameOver = true;
+                state.timedCircuitIndex++;
                 wrap.classList.remove('active');
                 document.getElementById('submit-btn').classList.add('hidden');
                 const msg = document.getElementById('message');

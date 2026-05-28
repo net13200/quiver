@@ -34,6 +34,7 @@ export const state = {
     _timerIntervalId: null,
     timedScore: 0,
     timedCircuitsSolved: 0,
+    timedCircuitIndex: 0,
     timedNextPuzzle: null,
     timedEndSession: null,
     isDuelMode: false,
@@ -372,7 +373,7 @@ function initGame(mode, p1, p2) {
         if (!isContinuingTimedSession && !state.isDuelMode) {
             state.duelSeed = Math.floor(Math.random() * 900000) + 100000;
         }
-        const timedRng = getSeededRandom(state.duelSeed * 1000 + state.timedCircuitsSolved);
+        const timedRng = getSeededRandom(state.duelSeed * 1000 + state.timedCircuitIndex);
         generateMatrices(state.numQubits);
         let timedCircuit = [];
         let timedActiveLength = Math.floor(timedRng() * (state.numCols - LEVELS[p1].minActive + 1)) + LEVELS[p1].minActive;
@@ -428,6 +429,7 @@ function initGame(mode, p1, p2) {
             state.timerRemaining = state.currentLvl === 3 ? 60 : 30;
             state.timedScore = 0;
             state.timedCircuitsSolved = 0;
+            state.timedCircuitIndex = 0;
             updateTimedStatusBar(state);
             state._timerIntervalId = setInterval(() => {
                 state.timerRemaining--;
