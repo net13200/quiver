@@ -370,8 +370,11 @@ function initGame(mode, p1, p2) {
         state.numCols = LEVELS[p1].g;
         state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
 
-        if (!isContinuingTimedSession && !state.isDuelMode) {
-            state.duelSeed = Math.floor(Math.random() * 900000) + 100000;
+        if (!isContinuingTimedSession) {
+            if (!state.isDuelMode) state.duelSeed = Math.floor(Math.random() * 900000) + 100000;
+            state.timedCircuitIndex = 0;
+            state.timedScore = 0;
+            state.timedCircuitsSolved = 0;
         }
         const timedRng = getSeededRandom(state.duelSeed * 1000 + state.timedCircuitIndex);
         generateMatrices(state.numQubits);
@@ -427,9 +430,6 @@ function initGame(mode, p1, p2) {
             updateTimedStatusBar(state);
         } else {
             state.timerRemaining = state.currentLvl === 3 ? 60 : 30;
-            state.timedScore = 0;
-            state.timedCircuitsSolved = 0;
-            state.timedCircuitIndex = 0;
             updateTimedStatusBar(state);
             state._timerIntervalId = setInterval(() => {
                 state.timerRemaining--;
