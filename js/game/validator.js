@@ -3,7 +3,7 @@ import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
 import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar } from './ui.js';
-import { markStageCompleted, completedStages, updateStats, setTutorialComplete } from '../data/storage.js';
+import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak } from '../data/storage.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
 
@@ -188,6 +188,7 @@ export function submitGuess(state, renderBoardCallback) {
                 if (!dailyStatus.completed.includes(state.currentLvl)) {
                     dailyStatus.completed.push(state.currentLvl);
                     localStorage.setItem('quiver_daily', JSON.stringify(dailyStatus));
+                    updateDailyStreak();
                 }
             }
 

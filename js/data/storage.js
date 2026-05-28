@@ -1,8 +1,10 @@
 export let completedStages = JSON.parse(localStorage.getItem('quarks_completed') || '[]');
 export let totalPoints = parseFloat(localStorage.getItem('quiver_points') || '0');
 export let highestStreak = parseInt(localStorage.getItem('quiver_streak') || '0');
-export let tutorialComplete = JSON.parse(localStorage.getItem('quiver_tutorial') || 'false'); // NEW
+export let tutorialComplete = JSON.parse(localStorage.getItem('quiver_tutorial') || 'false');
 export let timedBest = JSON.parse(localStorage.getItem('quiver_timed_best') || '[0,0,0]');
+export let dailyStreak = parseInt(localStorage.getItem('quiver_daily_streak') || '0');
+export let lastDailyDate = localStorage.getItem('quiver_last_daily_date') || '';
 
 export function setTutorialComplete() {
     tutorialComplete = true;
@@ -25,6 +27,21 @@ export function saveTimedBest(difficulty, score) {
         return true;
     }
     return false;
+}
+
+export function updateDailyStreak() {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    if (lastDailyDate === today) return; // already counted today
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+
+    dailyStreak = (lastDailyDate === yStr) ? dailyStreak + 1 : 1;
+    lastDailyDate = today;
+    localStorage.setItem('quiver_daily_streak', dailyStreak);
+    localStorage.setItem('quiver_last_daily_date', lastDailyDate);
 }
 
 export function updateStats(pointsEarned, currentStreak) {

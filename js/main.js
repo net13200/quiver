@@ -116,6 +116,9 @@ function buildMenu() {
     // 1. Update the Global Stats Bar
     document.getElementById('menu-total-points').innerText = totalPoints;
     document.getElementById('menu-highest-streak').innerText = highestStreak;
+    const _ds = parseInt(localStorage.getItem('quiver_daily_streak') || '0');
+    document.getElementById('menu-daily-streak').innerText = _ds;
+    document.getElementById('menu-daily-streak-s').innerText = _ds === 1 ? '' : 's';
 
     // 2. Build the Stages
     const container = document.getElementById('stages-container');
