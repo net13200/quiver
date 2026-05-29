@@ -462,10 +462,49 @@ export const STAGES = [
                 lesson: "Now let's add $+2$ to our initial state of $|1\\rangle$.\n\nIn the Fourier domain, adding a larger number simply multiplies the phase shift. If adding $+1$ applied a $\\pi/4$ rotation to the lowest qubit, adding $+2$ will require $2 \\times \\pi/4 = \\pi/2$.\n\nCalculate the doubled phase shifts for q1 and q2 (a $2\\pi$ shift on q0 acts like a full rotation and can be skipped). Apply the math, and hit evaluate to see $1 + 2 = 3$!",
                 circuits: [
                     [
-                        ['X2'], 
+                        ['X2'],
                         ['QFT'],
-                        ['RZ_PI2_2', 'RZ_PI_1'], 
+                        ['RZ_PI2_2', 'RZ_PI_1'],
                         ['IQFT'],
+                        []
+                    ]
+                ]
+            },
+            {
+                name: "Fourier Addition (+3)",
+                hint: "Prepare |1⟩ on q2. Apply QFT. For +3: q0 needs π, q1 needs −π/2, q2 needs π/4 then π/2 in two columns. Or: apply the full +1 phase column then the full +2 phase column. Apply IQFT.",
+                lesson: "Adding $+3$ reveals two new wrinkles in the Draper adder.\n\nThe phase shift for qubit j (0 = MSB, 2 = LSB) is π·k / 2^j. For k = 3:\n\n- **q0 (j=0):** $3\\pi$ wraps back to $\\pi$ — same as a Z gate!\n\n- **q1 (j=1):** $3\\pi/2 = 2\\pi - \\pi/2$, which equals $-\\pi/2$. A **negative** angle appears for the first time!\n\n- **q2 (j=2):** $3\\pi/4$ has no single RZ gate. Decompose it as $\\pi/4 + \\pi/2$ in two consecutive columns — rotations on the same qubit add up.\n\n**Alternative approach:** Since $1 + 2 = 3$, you can also apply the complete **+1 phase set** in one column and the complete **+2 phase set** in the next. The total rotation on each qubit is identical! Phase rotations are additive, so both strategies produce exactly |4⟩.",
+                circuits: [
+                    [
+                        ['X2'],
+                        ['QFT'],
+                        ['RZ_PI4_2', 'RZ_MINUS_PI2_1', 'RZ_PI_0'],
+                        ['RZ_PI2_2'],
+                        ['IQFT'],
+                        []
+                    ],
+                    [
+                        ['X2'],
+                        ['QFT'],
+                        ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'],
+                        ['RZ_PI2_2', 'RZ_PI_1'],
+                        ['IQFT'],
+                        []
+                    ]
+                ]
+            },
+            {
+                name: "Quantum Parallelism",
+                set: ['H', 'X', 'QFT', 'IQFT', 'RZ'],
+                hint: "Apply H to q2 to create (|0⟩+|1⟩)/√2. Then QFT, add the +2 phase kicks (π/2 on q2, π on q1), and IQFT.",
+                lesson: "Until now we have added to a single, definite number. Now comes the quantum magic.\n\nA Hadamard on q2 creates the superposition $(|0⟩ + |1⟩)/\\sqrt{2}$ — the register is **simultaneously 0 and 1**.\n\nThe QFT adder does not care which value it is. It applies the $+2$ phase pattern to the entire superposition at once. After the Inverse QFT, both values have been incremented: the output is $(|2⟩ + |3⟩)/\\sqrt{2}$ — both numbers incremented in **one circuit run**.\n\nThis is **quantum parallelism**. With n qubits in superposition, a single pass of the adder processes 2ⁿ inputs simultaneously. Shor's Algorithm exploits exactly this principle: it evaluates a modular function on an exponentially large set of inputs at once, then uses the interference pattern to extract the hidden period that breaks RSA encryption.",
+                circuits: [
+                    [
+                        ['H2'],
+                        ['QFT'],
+                        ['RZ_PI2_2', 'RZ_PI_1'],
+                        ['IQFT'],
+                        [],
                         []
                     ]
                 ]
