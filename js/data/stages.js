@@ -510,5 +510,48 @@ export const STAGES = [
                 ]
             }
         ]
+    },
+    {
+        title: "Stage 10: Quantum Phase Estimation",
+        desc: "Use the Inverse QFT to read out the eigenphase of a unitary directly from ancilla qubits. (Strict Mode)",
+        qubits: 3,
+        cols: 8,
+        set: ['X0','X1','X2', 'H0','H1','H2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20', 'SWAP01'],
+        levels: [
+            {
+                name: "10.1: Phase of Z (φ = 1/2)",
+                hint: "Prep |1⟩ on q2 and |+⟩ on both ancilla (q0, q1). q0 controls Z² = I — skip it! q1 controls Z → CP(π) from q1 to q2. Then the 2-qubit IQFT on q0,q1: SWAP q0↔q1, H on q1, CP(−π/2), H on q0.",
+                lesson: "**Quantum Phase Estimation (QPE)** solves a core problem: given a unitary U and one of its eigenstates |ψ⟩, measure the phase φ where U|ψ⟩ = e^(2πiφ)|ψ⟩.\n\nThe circuit uses two registers — ancilla qubits (q0, q1) that will encode φ in binary, and a target qubit (q2) holding the eigenstate.\n\n**Step 1 — Superpose:** H on each ancilla creates a uniform superposition, sampling all possible phases simultaneously.\n\n**Step 2 — Phase kickback:** Each ancilla qubit controls a power of U on the target. Because |ψ⟩ is an eigenstate, U leaves the target unchanged and instead its eigenvalue is kicked back into the ancilla as a phase.\n\nFor U = Z on |1⟩: Z|1⟩ = −|1⟩, so φ = 1/2.\n\n- **q0 (MSB)** controls $Z^2$ = I — no gate needed!\n\n- **q1 (LSB)** controls $Z^1$ = Z → CP($\\pi$) from q1 to q2.\n\n**Step 3 — Inverse QFT:** The 2-qubit IQFT on q0, q1 converts the phase-encoded superposition back to a readable binary number: SWAP q0↔q1, then H on q1, CP($-\\pi/2$), H on q0.\n\nThe ancilla collapses to |10⟩ — binary for 2/4 = **1/2**, confirming φ = 1/2!",
+                circuits: [
+                    [
+                        ['X2', 'H0', 'H1'],
+                        ['CP_PI_12'],
+                        ['SWAP01'],
+                        ['H1'],
+                        ['CP_MINUS_PI2_01'],
+                        ['H0'],
+                        [],
+                        []
+                    ]
+                ]
+            },
+            {
+                name: "10.2: Phase of S (φ = 1/4)",
+                hint: "Same setup. Now q0 controls S² = Z → CP(π) from q0 to q2. q1 controls S → CP(π/2) from q1 to q2. Then the identical 2-qubit IQFT.",
+                lesson: "The S gate applies a phase of $\\pi/2$ to |1⟩: S|1⟩ = e^(iπ/2)|1⟩, so φ = 1/4.\n\nWith 2 ancilla bits, 1/4 = 0.01 in binary — both bits are needed to represent it.\n\n**Phase kickback for φ = 1/4:**\n\n- **q0 (MSB)** controls $S^2$ = Z → CP($\\pi$) from q0 to q2.\n\n- **q1 (LSB)** controls $S^1$ = S → CP($\\pi/2$) from q1 to q2.\n\n**Step 3** is the identical 2-qubit IQFT from the previous level: SWAP, H on q1, CP($-\\pi/2$), H on q0.\n\nThe ancilla collapses to |01⟩ — binary for 1/4, confirming φ = 1/4. **QPE has extracted the exact phase of the S gate!**\n\nThis is the engine behind Shor's Algorithm: QPE finds the hidden period of modular exponentiation, which directly reveals the prime factors of large numbers.",
+                circuits: [
+                    [
+                        ['X2', 'H0', 'H1'],
+                        ['CP_PI_02'],
+                        ['CP_PI2_12'],
+                        ['SWAP01'],
+                        ['H1'],
+                        ['CP_MINUS_PI2_01'],
+                        ['H0'],
+                        []
+                    ]
+                ]
+            }
+        ]
     }
 ];
