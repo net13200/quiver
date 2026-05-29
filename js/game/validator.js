@@ -247,8 +247,9 @@ export function submitGuess(state, renderBoardCallback) {
                 setAchievementProgress('learn_count', completedStages.length);
                 if (completedStages.length >= 10) tryUnlock('wave_function');
                 if (completedStages.length >= 25) tryUnlock('interference');
-                let totalLvls = 0; STAGES.forEach(s => totalLvls += s.levels.length);
-                if (completedStages.length >= totalLvls) tryUnlock('quantum_literate');
+                const allStageIds = [];
+                STAGES.forEach((s, sIdx) => s.levels.forEach((_, lIdx) => allStageIds.push(`${sIdx}-${lIdx}`)));
+                if (allStageIds.every(id => completedStages.includes(id))) tryUnlock('quantum_literate');
                 if (state.activeSet.some(g => g.startsWith('QFT'))) tryUnlock('algorithm_architect');
             }
 
