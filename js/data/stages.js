@@ -513,41 +513,45 @@ export const STAGES = [
     },
     {
         title: "Stage 10: Quantum Phase Estimation",
-        desc: "Use the Inverse QFT to read out the eigenphase of a unitary directly from ancilla qubits. (Strict Mode)",
+        desc: "Run the Draper adder in reverse: encode an eigenphase with the QFT and decode it as a binary number with the IQFT. (Strict Mode)",
         qubits: 3,
-        cols: 8,
-        set: ['X0','X1','X2', 'H0','H1','H2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20', 'SWAP01'],
+        cols: 6,
+        set: ['QFT', 'IQFT', 'RZ'],
         levels: [
             {
-                name: "10.1: Phase of Z (φ = 1/2)",
-                hint: "Prep |1⟩ on q2 and |+⟩ on both ancilla (q0, q1). q0 controls Z² = I — skip it! q1 controls Z → CP(π) from q1 to q2. Then the 2-qubit IQFT on q0,q1: SWAP q0↔q1, H on q1, CP(−π/2), H on q0.",
-                lesson: "**Quantum Phase Estimation (QPE)** solves a core problem: given a unitary U and one of its eigenstates |ψ⟩, measure the phase φ where U|ψ⟩ = e^(2πiφ)|ψ⟩.\n\nThe circuit uses two registers — ancilla qubits (q0, q1) that will encode φ in binary, and a target qubit (q2) holding the eigenstate.\n\n**Step 1 — Superpose:** H on each ancilla creates a uniform superposition, sampling all possible phases simultaneously.\n\n**Step 2 — Phase kickback:** Each ancilla qubit controls a power of U on the target. Because |ψ⟩ is an eigenstate, U leaves the target unchanged and instead its eigenvalue is kicked back into the ancilla as a phase.\n\nFor U = Z on |1⟩: Z|1⟩ = −|1⟩, so φ = 1/2.\n\n- **q0 (MSB)** controls $Z^2$ = I — no gate needed!\n\n- **q1 (LSB)** controls $Z^1$ = Z → CP($\\pi$) from q1 to q2.\n\n**Step 3 — Inverse QFT:** The 2-qubit IQFT on q0, q1 converts the phase-encoded superposition back to a readable binary number: SWAP q0↔q1, then H on q1, CP($-\\pi/2$), H on q0.\n\nThe ancilla collapses to |10⟩ — binary for 2/4 = **1/2**, confirming φ = 1/2!",
+                name: "10.1: Phase of T (φ = 1/8)",
+                hint: "Apply QFT to enter the phase basis. Add the oracle phases for k=1: RZ(π) on q0, RZ(π/2) on q1, RZ(π/4) on q2 — the exact same block as the Draper +1 level! Apply IQFT.",
+                lesson: "**Quantum Phase Estimation (QPE)** is the Draper adder run in reverse.\n\nIn Stage 9 you took a known number, encoded it into the Fourier basis, and added a constant. In QPE the number is **unknown** — it is the eigenphase of a quantum oracle — and the circuit's job is to read it out.\n\n**Step 1 — Enter the phase basis:** QFT on |0⟩ prepares the uniform superposition, putting the register into the Fourier domain.\n\n**Step 2 — Oracle:** Each qubit $j$ receives a phase rotation of $\\pi k / 2^j$, exactly the Draper phase pattern for adding $k$. This encodes the eigenphase φ = k/8 into the state.\n\nFor the T gate φ = 1/8, so $k = 1$. The oracle block is identical to the Draper $+1$ column from Stage 9!\n\n**Step 3 — Decode:** IQFT converts the phase-encoded state back to a binary number.\n\nOutput: |001⟩ — decimal 1 out of 8, confirming φ = 1/8.",
                 circuits: [
                     [
-                        ['X2', 'H0', 'H1'],
-                        ['CP_PI_12'],
-                        ['SWAP01'],
-                        ['H1'],
-                        ['CP_MINUS_PI2_01'],
-                        ['H0'],
+                        ['QFT'],
+                        ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'],
+                        ['IQFT'],
+                        [],
                         [],
                         []
                     ]
                 ]
             },
             {
-                name: "10.2: Phase of S (φ = 1/4)",
-                hint: "Same setup. Now q0 controls S² = Z → CP(π) from q0 to q2. q1 controls S → CP(π/2) from q1 to q2. Then the identical 2-qubit IQFT.",
-                lesson: "The S gate applies a phase of $\\pi/2$ to |1⟩: S|1⟩ = e^(iπ/2)|1⟩, so φ = 1/4.\n\nWith 2 ancilla bits, 1/4 = 0.01 in binary — both bits are needed to represent it.\n\n**Phase kickback for φ = 1/4:**\n\n- **q0 (MSB)** controls $S^2$ = Z → CP($\\pi$) from q0 to q2.\n\n- **q1 (LSB)** controls $S^1$ = S → CP($\\pi/2$) from q1 to q2.\n\n**Step 3** is the identical 2-qubit IQFT from the previous level: SWAP, H on q1, CP($-\\pi/2$), H on q0.\n\nThe ancilla collapses to |01⟩ — binary for 1/4, confirming φ = 1/4. **QPE has extracted the exact phase of the S gate!**\n\nThis is the engine behind Shor's Algorithm: QPE finds the hidden period of modular exponentiation, which directly reveals the prime factors of large numbers.",
+                name: "10.2: Phase 3/8",
+                hint: "Apply QFT. Use the oracle phases for k=3 (same as Stage 9.3): q0 needs π, q1 needs −π/2, q2 needs π/4 then π/2 across two columns. Or apply the +1 and +2 oracle blocks separately. Apply IQFT.",
+                lesson: "Now estimate φ = 3/8, which needs all 3 bits to represent in binary (0.011).\n\nThe oracle phases for $k = 3$ are identical to the Draper $+3$ pattern from Stage 9.3:\n\n- **q0 (j=0):** $3\\pi$ wraps to $\\pi$\n\n- **q1 (j=1):** $3\\pi/2 = -\\pi/2$\n\n- **q2 (j=2):** $3\\pi/4 = \\pi/4 + \\pi/2$ across two columns\n\n**Alternative:** Apply the $+1$ and $+2$ oracle blocks in separate columns — the same decomposition accepted in Stage 9.3.\n\nThe IQFT outputs |011⟩ — decimal 3 out of 8, confirming φ = 3/8.\n\n**QPE and the Draper adder are two sides of the same coin:** the adder writes a number into the Fourier domain; QPE reads an unknown number back out.",
                 circuits: [
                     [
-                        ['X2', 'H0', 'H1'],
-                        ['CP_PI_02'],
-                        ['CP_PI2_12'],
-                        ['SWAP01'],
-                        ['H1'],
-                        ['CP_MINUS_PI2_01'],
-                        ['H0'],
+                        ['QFT'],
+                        ['RZ_PI4_2', 'RZ_MINUS_PI2_1', 'RZ_PI_0'],
+                        ['RZ_PI2_2'],
+                        ['IQFT'],
+                        [],
+                        []
+                    ],
+                    [
+                        ['QFT'],
+                        ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'],
+                        ['RZ_PI2_2', 'RZ_PI_1'],
+                        ['IQFT'],
+                        [],
                         []
                     ]
                 ]
