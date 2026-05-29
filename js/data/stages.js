@@ -316,18 +316,20 @@ export const STAGES = [
                 hint: "Set Q1 to |1⟩, then swap Q1 and Q2 using three alternating CNOT gates.",
                 lesson: "<b>The Mechanism:</b> The SWAP gate exchanges the states of two qubits. While it can be implemented as a single hardware operation, it is most often compiled into three alternating CNOT gates. This relies on the XOR logic of CNOT: applying it back-and-forth effectively swaps the amplitudes!<br><br><b>Why it matters:</b> Physical qubits on a microchip are usually only wired to their immediate neighbors. If an algorithm requires entangling two distant qubits on opposite sides of the chip, the compiler *must* route their information through the grid using SWAP networks."
             },
-            { 
+            {
                 name: "4.2: CSWAP (3 CCX)",
+                set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021'],
                 circuits: PREP_5.flatMap(p => [
                     [...p, ['CCX012'], ['CCX021'], ['CCX012']],
                     [...p, ['CCX021'], ['CCX012'], ['CCX021']]
-                ]), 
+                ]),
                 hint: "Superpose Q0 and flip Q1. Then conditionally swap Q1 & Q2 using three Toffolis.",
                 lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits *only* if the control qubit is |1⟩. We can build it directly by taking our 3-CNOT design from the last stage and upgrading all three gates into Toffoli (CCX) gates controlled by Q0.<br><br><b>Why it matters:</b> The Fredkin gate is a 'universal' reversible logic gate. In quantum algorithms, conditionally routing information allows us to compute similarities between complex states without measuring them directly, forming the backbone of Quantum Machine Learning."
             },
-            { 
+            {
                 name: "4.3: CSWAP (1 CCX, 2 CX)",
-                circuits: getStage5_3Circuits(), 
+                set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021'],
+                circuits: getStage5_3Circuits(),
                 hint: "Wrap a single Toffoli gate in CNOTs to achieve the exact same state!",
                 lesson: "<b>The Mechanism:</b> We can optimize the CSWAP gate by noticing that we only need to conditionally flip one qubit based on the other, then use standard CNOTs to cascade the swap. This reduces the cost from 3 Toffolis to just 1 Toffoli and 2 CNOTs.<br><br><b>Why it matters:</b> Every gate you execute introduces a tiny bit of noise. Toffoli gates are notoriously noisy and slow. Compiling circuits to use fewer heavy gates—while achieving the exact same mathematical result—is a massive and vital sub-field of quantum software engineering."
             }
