@@ -222,11 +222,30 @@ export function addGateToColumn(colArray, newGate) {
     return filtered;
 }
 
+// Normalize symmetric gates (SWAP and CP are order-independent) to a canonical form
+// so SWAP10 === SWAP01 and CP_PI_10 === CP_PI_01 in all comparisons.
+export function normalizeGate(gate) {
+    if (gate.startsWith('SWAP')) {
+        const q0 = parseInt(gate[4]), q1 = parseInt(gate[5]);
+        return q0 <= q1 ? gate : `SWAP${q1}${q0}`;
+    }
+    if (gate.startsWith('CP')) {
+        const parts = gate.split('_');           // ['CP', 'ANGLE', 'qq']
+        const qq = parts[parts.length - 1];      // e.g. '10', '01', '21'
+        if (qq && qq.length === 2) {
+            const q0 = parseInt(qq[0]), q1 = parseInt(qq[1]);
+            if (q0 > q1) { parts[parts.length - 1] = `${q1}${q0}`; return parts.join('_'); }
+        }
+        return gate;
+    }
+    return gate;
+}
+
 export function getGateMultiset(circuit) {
     let gates = [];
     for(let col of circuit) {
         for(let gate of col) {
-            if(gate && gate !== 'I') gates.push(gate);
+            if(gate && gate !== 'I') gates.push(normalizeGate(gate));
         }
     }
     return gates.sort().join(',');

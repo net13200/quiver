@@ -1,5 +1,5 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
-import { getGateMultiset, GATE_MATRICES } from '../quantum/gates.js';
+import { getGateMultiset, normalizeGate, GATE_MATRICES } from '../quantum/gates.js';
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
 import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
@@ -40,8 +40,8 @@ export function submitGuess(state, renderBoardCallback) {
         let score = 0;
         let allMatch = true;
         for (let c = 0; c < state.numCols; c++) {
-            let guessStr = [...state.currentGuess[c]].sort().join(',');
-            let secretStr = possibleCircuit[c] ? [...possibleCircuit[c]].sort().join(',') : "";
+            let guessStr = [...state.currentGuess[c]].map(normalizeGate).sort().join(',');
+            let secretStr = possibleCircuit[c] ? [...possibleCircuit[c]].map(normalizeGate).sort().join(',') : "";
             if (guessStr !== secretStr) {
                 allMatch = false;
             }
