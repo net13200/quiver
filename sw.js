@@ -1,4 +1,4 @@
-const CACHE = 'quiver-v1';
+const CACHE = 'quiver-v2';
 const BASE = '/quiver';
 const SHELL = [
   `${BASE}/`,
@@ -6,6 +6,7 @@ const SHELL = [
   `${BASE}/styles.css`,
   `${BASE}/manifest.json`,
   `${BASE}/js/main.js`,
+  `${BASE}/js/data/achievements.js`,
   `${BASE}/js/data/analytics.js`,
   `${BASE}/js/data/stages.js`,
   `${BASE}/js/data/storage.js`,
