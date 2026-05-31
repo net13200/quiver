@@ -38,6 +38,7 @@ export const state = {
     timedCircuitIndex: 0,
     timedNextPuzzle: null,
     timedEndSession: null,
+    _timedSessionEnded: false,
     isDuelMode: false,
     duelSeed: 0,
     duelOpponentScore: 0,
@@ -456,6 +457,7 @@ function initGame(mode, p1, p2) {
         if (isContinuingTimedSession) {
             updateTimedStatusBar(state);
         } else {
+            state._timedSessionEnded = false;
             state.timerRemaining = state.currentLvl === 3 ? 60 : 30;
             updateTimedStatusBar(state);
             state._timerIntervalId = setInterval(() => {
@@ -468,7 +470,7 @@ function initGame(mode, p1, p2) {
         }
 
         state.timedNextPuzzle = () => {
-            if (state.timerRemaining <= 0) return;
+            if (state._timedSessionEnded || state.timerRemaining <= 0) return;
             initGame('TIMED', state.currentLvl);
         };
         state.timedEndSession = endTimedSession;
@@ -681,11 +683,12 @@ function renderBoard() {
 }
 
 function endTimedSession() {
+    if (state._timedSessionEnded) return;
+    state._timedSessionEnded = true;
     if (state._timerIntervalId) {
         clearInterval(state._timerIntervalId);
         state._timerIntervalId = null;
     }
-    if (state.gameOver) return;
     state.gameOver = true;
     document.getElementById('submit-btn').classList.add('hidden');
 
