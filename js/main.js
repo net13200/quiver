@@ -122,58 +122,137 @@ function buildMenu() {
     document.getElementById('menu-daily-streak').innerText = _ds;
     document.getElementById('menu-daily-streak-s').innerText = _ds === 1 ? '' : 's';
 
-    // 2. Build the Stages — learning path
+    // 2. Build the Stages — board-game snake path (boustrophedon)
     const container = document.getElementById('stages-container');
     container.innerHTML = '';
 
     const SECTION_STYLES = {
-        'Foundations':       { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  icon: '🧩' },
-        'Multi-Qubit Gates': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)', icon: '🔗' },
-        'Quantum Protocols': { color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   border: 'rgba(6,182,212,0.3)',   icon: '🔬' },
-        'Phase & QFT':       { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)',  icon: '🌀' },
+        'Foundations':       { color: '#3b82f6', bg: 'rgba(59,130,246,0.13)',  border: 'rgba(59,130,246,0.4)',  icon: '🧩' },
+        'Multi-Qubit Gates': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.13)', border: 'rgba(139,92,246,0.4)', icon: '🔗' },
+        'Quantum Protocols': { color: '#06b6d4', bg: 'rgba(6,182,212,0.13)',   border: 'rgba(6,182,212,0.4)',   icon: '🔬' },
+        'Phase & QFT':       { color: '#f59e0b', bg: 'rgba(245,158,11,0.13)',  border: 'rgba(245,158,11,0.4)',  icon: '🌀' },
     };
 
-    const pathEl = document.createElement('div');
-    pathEl.className = 'learn-path';
-    container.appendChild(pathEl);
+    // Layout — x in SVG viewBox units 0–100 (= CSS %), y in px
+    // 3 columns so labels fit; corners arc to the container edge
+    const NODES_PER_ROW = 3;
+    const X_POS   = [15, 50, 85];   // column x positions (%)
+    const NODE_R  = 22;              // node circle radius (px)
+    const ROW_H   = 96;             // vertical spacing between rows (px)
+    const SECT_H  = 54;              // section banner height (px)
+    const SECT_PAD = 18;             // gap after section banner (px)
+    const PAD_TOP  = 20;
 
-    let currentSection = null;
-    let railEl = null;
+    let y = PAD_TOP, nodeInRow = 0, rowDir = 1;  // rowDir: +1 = L→R, -1 = R→L
+    let curSection = null, curStyle = null;
+    const items = [], pathPts = [];
+
     STAGES.forEach((stage, sIdx) => {
-        if (stage.section && stage.section !== currentSection) {
-            currentSection = stage.section;
-            const s = SECTION_STYLES[currentSection] || { color: '#64748b', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)', icon: '●' };
-
-            const secEl = document.createElement('div');
-            secEl.className = 'path-section';
-            secEl.style.cssText = `--sc:${s.color};--sc-bg:${s.bg};--sc-border:${s.border}`;
-
-            const banner = document.createElement('div');
-            banner.className = 'section-banner';
-            banner.innerHTML = `<span class="section-icon">${s.icon}</span><span>${currentSection}</span>`;
-            secEl.appendChild(banner);
-
-            railEl = document.createElement('div');
-            railEl.className = 'path-rail';
-            secEl.appendChild(railEl);
-
-            pathEl.appendChild(secEl);
+        if (stage.section !== curSection) {
+            // Pad incomplete row so each section always starts on a fresh row
+            if (nodeInRow > 0) { y += ROW_H; nodeInRow = 0; rowDir = -rowDir; }
+            curSection = stage.section;
+            curStyle   = SECTION_STYLES[curSection] || { color: '#64748b', bg: 'rgba(100,116,139,0.13)', border: 'rgba(100,116,139,0.4)', icon: '●' };
+            items.push({ type: 'section', name: curSection, style: curStyle, y, h: SECT_H });
+            y += SECT_H + SECT_PAD;
         }
 
-        const stageLabel = document.createElement('div');
-        stageLabel.className = 'path-stage-label';
-        stageLabel.textContent = stage.title.replace(/^Stage \d+:\s*/, '');
-        railEl.appendChild(stageLabel);
-
         stage.levels.forEach((lvl, lIdx) => {
-            const isDone = completedStages.includes(`${sIdx}-${lIdx}`);
-            const node = document.createElement('div');
-            node.className = 'path-node' + (isDone ? ' completed' : '');
-            node.innerHTML = `<div class="node-dot">${isDone ? '✓' : ''}</div><div class="node-text">${lvl.name}</div>`;
-            node.onclick = () => initGame('STAGE', sIdx, lIdx);
-            railEl.appendChild(node);
+            const xIdx = rowDir > 0 ? nodeInRow : (NODES_PER_ROW - 1 - nodeInRow);
+            const nx = X_POS[xIdx];
+            const ny = y + NODE_R;
+            items.push({ type: 'node', name: lvl.name, nx, ny, done: completedStages.includes(`${sIdx}-${lIdx}`), sIdx, lIdx, color: curStyle.color });
+            pathPts.push({ x: nx, y: ny, color: curStyle.color });
+            nodeInRow++;
+            if (nodeInRow >= NODES_PER_ROW) { nodeInRow = 0; rowDir = -rowDir; y += ROW_H; }
         });
     });
+    if (nodeInRow > 0) y += ROW_H;
+    const totalH = y + PAD_TOP;
+
+    // ── SVG path ─────────────────────────────────────────────────────────────
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', `0 0 100 ${totalH}`);
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', String(totalH));
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
+
+    function drawPath(pts, stroke, width, opacity) {
+        if (pts.length < 2) return;
+        let d = `M ${pts[0].x} ${pts[0].y}`;
+        for (let i = 1; i < pts.length; i++) {
+            const p = pts[i-1], q = pts[i];
+            if (p.y === q.y) {
+                // Same row — straight horizontal segment
+                d += ` L ${q.x} ${q.y}`;
+            } else if (p.x === q.x) {
+                // Corner turn (same column, different row) — arc outward to container edge
+                const b = p.x > 50 ? 20 : -20;
+                d += ` C ${p.x+b} ${p.y} ${q.x+b} ${q.y} ${q.x} ${q.y}`;
+            } else {
+                // Cross-section bridge — S-curve
+                const m = (p.y + q.y) / 2;
+                d += ` C ${p.x} ${m} ${q.x} ${m} ${q.x} ${q.y}`;
+            }
+        }
+        const el = document.createElementNS(svgNS, 'path');
+        el.setAttribute('d', d);
+        el.setAttribute('fill', 'none');
+        el.setAttribute('stroke', stroke);
+        el.setAttribute('stroke-width', String(width));
+        el.setAttribute('stroke-opacity', String(opacity));
+        el.setAttribute('stroke-linecap', 'round');
+        el.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(el);
+    }
+
+    drawPath(pathPts, '#1e3a5f', 10, 1);  // deep shadow
+    drawPath(pathPts, '#334155', 6,  1);  // base rail
+
+    // Per-section colour overlay
+    let si = 0;
+    while (si < pathPts.length) {
+        const col = pathPts[si].color;
+        let ei = si + 1;
+        while (ei < pathPts.length && pathPts[ei].color === col) ei++;
+        const seg = pathPts.slice(si, ei);
+        if (seg.length >= 2) drawPath(seg, col, 3, 0.7);
+        si = ei;
+    }
+
+    // ── HTML overlay ──────────────────────────────────────────────────────────
+    const mapEl = document.createElement('div');
+    mapEl.className = 'learn-map';
+    mapEl.style.height = `${totalH}px`;
+    mapEl.appendChild(svg);
+
+    items.forEach(item => {
+        if (item.type === 'section') {
+            const el = document.createElement('div');
+            el.className = 'map-section-banner';
+            el.style.cssText = `top:${item.y}px;height:${item.h}px;background:${item.style.bg};border-color:${item.style.border};color:${item.style.color};`;
+            el.innerHTML = `<span>${item.style.icon}</span><span>${item.name}</span>`;
+            mapEl.appendChild(el);
+        } else {
+            const dot = document.createElement('div');
+            dot.className = 'map-node-dot' + (item.done ? ' done' : '');
+            dot.style.cssText = `left:${item.nx}%;top:${item.ny}px;--nc:${item.color};`;
+            dot.textContent = item.done ? '✓' : '';
+            dot.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+            mapEl.appendChild(dot);
+
+            const lbl = document.createElement('div');
+            lbl.className = 'map-node-label' + (item.done ? ' done' : '');
+            lbl.style.cssText = `left:${item.nx}%;top:${item.ny + NODE_R + 5}px;`;
+            lbl.textContent = item.name.replace(/^[\d\.]+[\.:]?\s*/, '');
+            lbl.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+            mapEl.appendChild(lbl);
+        }
+    });
+
+    container.appendChild(mapEl);
     
     // --- NEW: Daily Puzzle Tracking ---
     const now = new Date();
