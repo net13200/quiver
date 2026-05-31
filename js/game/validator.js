@@ -2,7 +2,7 @@ import { computeStateVector, stateToString, statesMatch } from '../quantum/engin
 import { getGateMultiset, normalizeGate, GATE_MATRICES } from '../quantum/gates.js';
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, setGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, hideVictoryModal, clearGhostPointer, setGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
 import { ACHIEVEMENT_MAP } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
@@ -23,9 +23,50 @@ export function submitGuess(state, renderBoardCallback) {
         ampResult.className = 'amplitudes-result';
         ampResult.innerText = "↳ Snapshot |ψ⟩ = " + parseMarkdownAndMath(stateToString(userState, state.numQubits));
         wrap.appendChild(ampResult);
-        return; 
+        return;
     }
-    
+
+    if (state.currentMode === 'LAB') {
+        const wrap = document.getElementById('row-active');
+        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+        const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
+        const hasWon = statesMatch(userState, state.targetState, state.numQubits);
+        const ampResult = document.createElement('div');
+        ampResult.className = 'amplitudes-result';
+        ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
+        wrap.appendChild(ampResult);
+        if (hasWon) {
+            const submitBtnEl = document.getElementById('submit-btn');
+            const btnRect = submitBtnEl.getBoundingClientRect();
+            state.gameOver = true;
+            submitBtnEl.classList.add('hidden');
+            wrap.classList.remove('active');
+            fireQuantumConfetti(btnRect.left + btnRect.width / 2, btnRect.top);
+            setTimeout(() => {
+                const n = state.labTargetN;
+                showVictoryModal('Fourier Encoded!', `|0⟩ → |${n}⟩ — you encoded +${n} in the Fourier basis!`, null, false, null);
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-lab-next-btn')) {
+                    const tryBtn = document.createElement('button');
+                    tryBtn.id = 'modal-lab-next-btn';
+                    tryBtn.className = 'btn';
+                    tryBtn.style.background = '#f59e0b';
+                    tryBtn.innerText = 'Try Another Number';
+                    tryBtn.addEventListener('click', () => hideVictoryModal());
+                    controls.insertBefore(tryBtn, controls.firstChild);
+                }
+            }, 500);
+        } else {
+            wrap.classList.add('wrong-attempt');
+            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+            const msg = document.getElementById('message');
+            msg.style.color = '#eab308';
+            msg.innerText = `Not |${state.labTargetN}⟩ yet — check the state vector and adjust the phases!`;
+            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 3000);
+        }
+        return;
+    }
+
     const wrap = document.getElementById('row-active');
     
     let userMultiset = getGateMultiset(state.currentGuess);
@@ -359,6 +400,22 @@ export function submitGuess(state, renderBoardCallback) {
                         });
                     });
                     controls.insertBefore(challengeBtn, controls.firstChild);
+                }
+            }
+            if (state.currentMode === 'STAGE' && state.currentP1 === 9) {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-lab-btn')) {
+                    const labBtn = document.createElement('button');
+                    labBtn.id = 'modal-lab-btn';
+                    labBtn.className = 'btn';
+                    labBtn.style.background = '#f59e0b';
+                    labBtn.innerText = '🧪 Try the QFT Adder';
+                    labBtn.addEventListener('click', () => {
+                    state.labFromP2 = state.currentP2;
+                    hideVictoryModal();
+                    window.initLabGame(1);
+                });
+                    controls.insertBefore(labBtn, controls.firstChild);
                 }
             }
         }, 500);

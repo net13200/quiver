@@ -11,6 +11,27 @@ import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed }
 export let gameStartTime = 0;
 let tutorialPromptShown = false;
 
+// Phase rotations for the QFT Adder Lab: phaseCols[0] and [1] are the two middle columns
+// Phase for qubit j = 2π × n / 2^(j+1), where qubit 0 = top (MSB), qubit 2 = bottom (LSB)
+const LAB_CONFIGS = {
+    1: [['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'],             []],
+    2: [['RZ_PI2_2', 'RZ_PI_1'],                          []],
+    3: [['RZ_PI4_2', 'RZ_MINUS_PI2_1', 'RZ_PI_0'],        ['RZ_PI2_2']],
+    4: [['RZ_PI_2'],                                       []],
+    5: [['RZ_PI_2'],                                       ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0']],
+    6: [['RZ_MINUS_PI2_2', 'RZ_PI_1'],                    []],
+    7: [['RZ_MINUS_PI4_2', 'RZ_MINUS_PI2_1', 'RZ_PI_0'],  []],
+};
+const LAB_HINTS = {
+    1: 'RZ(π) on top · RZ(π/2) on middle · RZ(π/4) on bottom — fits in one column',
+    2: 'RZ(π) on middle · RZ(π/2) on bottom — fits in one column',
+    3: 'Col 2: RZ(π/4) on bottom, RZ(−π/2) on middle, RZ(π) on top | Col 3: RZ(π/2) on bottom',
+    4: 'RZ(π) on bottom — fits in one column',
+    5: 'Col 2: RZ(π) on bottom | Col 3: RZ(π/4) on bottom, RZ(π/2) on middle, RZ(π) on top',
+    6: 'RZ(−π/2) on bottom · RZ(π) on middle — fits in one column',
+    7: 'RZ(−π/4) on bottom · RZ(−π/2) on middle · RZ(π) on top — fits in one column',
+};
+
 // --- Global Application State ---
 export const state = {
     currentMode: '',
@@ -40,6 +61,8 @@ export const state = {
     timedNextPuzzle: null,
     timedEndSession: null,
     _timedSessionEnded: false,
+    labTargetN: 0,
+    labFromP2: 0,
     isDuelMode: false,
     duelSeed: 0,
     duelOpponentScore: 0,
@@ -582,8 +605,39 @@ function initGame(mode, p1, p2) {
         instructions.innerHTML = `<div class="stage-breadcrumb">Sandbox</div><div class="stage-level-title">${state.numQubits} Qubit${state.numQubits>1?'s':''}</div><div class="stage-subtitle">Experiment freely. Click evaluate to take a snapshot of the state!</div>`;
         targetBox.style.display = 'none';
         liveBox.style.display = 'block';
+
+    } else if (mode === 'LAB') {
+        clearBtn.classList.add('hidden');
+        stageNav.classList.add('hidden');
+        const phaseCols = LAB_CONFIGS[p1];
+        state.labTargetN = p1;
+        state.currentP1 = 9;
+        state.currentP2 = 0;
+        state.numQubits = 3;
+        state.numCols = 5;
+        state.activeSet = ['RZ', 'QFT', 'IQFT'];
+        state.secretCircuits = [[[], ['QFT'], phaseCols[0], phaseCols[1], ['IQFT']]];
+
+        const numBtns = [1,2,3,4,5,6,7].map(i => {
+            const sel = i === p1;
+            return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.selectLabNumber(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
+        }).join('');
+        instructions.innerHTML = `
+            <div class="stage-breadcrumb">QFT Adder Lab</div>
+            <div class="stage-level-title">Add n to |0⟩</div>
+            <div class="stage-subtitle">Click a number — the circuit fills with the Fourier encoding:</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;">${numBtns}</div>
+            <div>
+                <button class="hint-btn" onclick="document.getElementById('lab-formula-text').classList.toggle('hidden')">Phase Formula</button>
+                <button class="hint-btn" style="background:#3b82f6;margin-left:5px;" onclick="document.getElementById('lab-gates-text').classList.toggle('hidden')">Reveal Gates</button>
+                <button class="hint-btn" style="background:#475569;margin-left:5px;" onclick="window.labGoBack()">← Back</button>
+            </div>
+            <div id="lab-formula-text" class="hint-text hidden">Phase for qubit j = 2π × n / 2^(j+1), where j=0 is top qubit (mod 2π).</div>
+            <div id="lab-gates-text" class="hint-text hidden">${LAB_HINTS[p1]}</div>`;
+        targetBox.style.display = 'block';
+        liveBox.style.display = 'none';
     }
-    
+
     generateMatrices(state.numQubits);
     if (state.numQubits === 3) document.getElementById('board').classList.add('hard-mode');
     else document.getElementById('board').classList.remove('hard-mode');
@@ -604,6 +658,10 @@ function initGame(mode, p1, p2) {
     }
     
     state.currentGuess = Array(state.numCols).fill().map(() => []);
+    if (mode === 'LAB') {
+        state.currentGuess[1] = ['QFT'];
+        state.currentGuess[4] = ['IQFT'];
+    }
     state.attempts = 0;
     gameStartTime = Date.now();
     trackGameStart(state.currentMode, state.currentP1, state.currentP2, state.currentLvl,
@@ -625,7 +683,7 @@ function initGame(mode, p1, p2) {
     renderBoard();
     updateBlochSpheres(state.currentGuess, state.numQubits);
 
-    if (!tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY') {
+    if (!tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB') {
         tutorialPromptShown = true;
         setTimeout(() => {
             if (state.gameOver) return;
@@ -640,6 +698,43 @@ function initGame(mode, p1, p2) {
         }, 400);
     }
 }
+
+window.initLabGame = n => initGame('LAB', n);
+
+window.selectLabNumber = function(n) {
+    if (state.currentMode !== 'LAB') return;
+    const phaseCols = LAB_CONFIGS[n];
+    state.labTargetN = n;
+    state.currentGuess[2] = [...phaseCols[0]];
+    state.currentGuess[3] = [...phaseCols[1]];
+
+    const correctCircuit = [[], ['QFT'], phaseCols[0], phaseCols[1], ['IQFT']];
+    state.targetState = computeStateVector(correctCircuit, 3, GATE_MATRICES);
+    document.getElementById('target-amplitudes').innerText = '|ψ⟩ = ' + stateToString(state.targetState, 3);
+    updateTargetBlochSphere(state.targetState, 3);
+
+    state.gameOver = false;
+    document.getElementById('submit-btn').classList.remove('hidden');
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('message').innerText = '';
+    document.getElementById('row-active')?.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+
+    renderBoard();
+    updateBlochSpheres(state.currentGuess, 3);
+
+    const gatesHint = document.getElementById('lab-gates-text');
+    if (gatesHint) gatesHint.innerText = LAB_HINTS[n];
+
+    document.querySelectorAll('.lab-num-btn').forEach(btn => {
+        const active = parseInt(btn.dataset.n) === n;
+        btn.style.background = active ? '#d97706' : '#f59e0b';
+        btn.style.outline = active ? '2px solid #fbbf24' : 'none';
+    });
+};
+
+window.labGoBack = function() {
+    initGame('STAGE', 9, state.labFromP2);
+};
 
 // --- Render Core ---
 
@@ -733,7 +828,7 @@ function renderBoard() {
 
     const attemptsCounter = document.getElementById('attempts-counter');
     const timedBar = document.getElementById('timed-status-bar');
-    if (state.currentMode === 'FREEPLAY') {
+    if (state.currentMode === 'FREEPLAY' || state.currentMode === 'LAB') {
         attemptsCounter.style.display = 'none';
         timedBar.classList.add('hidden');
     } else if (state.currentMode === 'TIMED') {
