@@ -369,7 +369,7 @@ export function fireQuantumConfetti(startX, startY) {
 
 // --- Modals ---
 export function showVictoryModal(title, subtitle, statsText, showNext, revealObj) {
-    ['modal-restart-btn', 'modal-play-challenge-btn', 'modal-daily-challenge-btn', 'modal-duel-btn', 'modal-lab-btn', 'modal-qft-lab-btn', 'modal-lab-next-btn'].forEach(id => {
+    ['modal-restart-btn', 'modal-play-challenge-btn', 'modal-daily-challenge-btn', 'modal-duel-btn', 'modal-lab-next-btn'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });

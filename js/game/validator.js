@@ -413,38 +413,6 @@ export function submitGuess(state, renderBoardCallback) {
                     controls.insertBefore(challengeBtn, controls.firstChild);
                 }
             }
-            if (state.currentMode === 'STAGE' && state.currentP1 === 9) {
-                const controls = document.querySelector('#victory-modal .victory-controls');
-                if (controls && !document.getElementById('modal-lab-btn')) {
-                    const labBtn = document.createElement('button');
-                    labBtn.id = 'modal-lab-btn';
-                    labBtn.className = 'btn';
-                    labBtn.style.background = '#f59e0b';
-                    labBtn.innerText = '🧪 Try the QFT Adder';
-                    labBtn.addEventListener('click', () => {
-                        state.labFromP2 = state.currentP2;
-                        hideVictoryModal();
-                        window.initLabGame(1);
-                    });
-                    controls.insertBefore(labBtn, controls.firstChild);
-                }
-            }
-            if (state.currentMode === 'STAGE' && state.currentP1 === 8) {
-                const controls = document.querySelector('#victory-modal .victory-controls');
-                if (controls && !document.getElementById('modal-qft-lab-btn')) {
-                    const labBtn = document.createElement('button');
-                    labBtn.id = 'modal-qft-lab-btn';
-                    labBtn.className = 'btn';
-                    labBtn.style.background = '#f59e0b';
-                    labBtn.innerText = '🔬 Try the QFT';
-                    labBtn.addEventListener('click', () => {
-                        state.qftLabFromP2 = state.currentP2;
-                        hideVictoryModal();
-                        window.initQftLab(0);
-                    });
-                    controls.insertBefore(labBtn, controls.firstChild);
-                }
-            }
         }, 500);
 
     } else {

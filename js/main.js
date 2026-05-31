@@ -96,8 +96,9 @@ window.showLesson = () => {
     document.getElementById('lesson-text').classList.remove('hidden');
     document.getElementById('lesson-text').innerHTML = parseMarkdownAndMath(document.getElementById('lesson-text').innerHTML);
     document.getElementById('lesson-btn').classList.add('hidden');
-    
 };
+window.tryQftLab = () => { state.qftLabFromP2 = state.currentP2; window.initQftLab(0); };
+window.tryAdderLab = () => { state.labFromP2 = state.currentP2; window.initLabGame(1); };
 
 // A lightweight seeded PRNG
 function getSeededRandom(seed) {
@@ -414,9 +415,12 @@ function initGame(mode, p1, p2) {
         state.activeSet = lvl.set || stage.set;
         state.secretCircuits = lvl.circuits;
         
-        let isStrict = (p1 >= 4); 
+        let isStrict = (p1 >= 4);
         let rulesText = isStrict ? "<br><span style='color:#ef4444; font-size:0.85rem; font-weight:bold;'>Strict Mode: A canonical implementation is required!</span>" : "";
         let lessonHTML = lvl.lesson ? `<button id="lesson-btn" class="hint-btn" style="background:#059669;" onclick="showLesson()">Read Lesson</button><div id="lesson-text" class="lesson-text hidden">${lvl.lesson}</div>` : "";
+        let labBtnHTML = p1 === 8 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryQftLab()">Try the QFT</button>`
+                       : p1 === 9 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryAdderLab()">Try the QFT Adder</button>`
+                       : "";
 
         instructions.innerHTML = `<div class="stage-breadcrumb">${stage.title}</div>
                                   <div class="stage-level-title">${lvl.name}</div>
@@ -424,6 +428,7 @@ function initGame(mode, p1, p2) {
                                   <div style="margin-top:8px;">
                                     <button id="hint-btn" class="hint-btn" onclick="showHint()">Show Hint</button>
                                     ${lessonHTML}
+                                    ${labBtnHTML}
                                   </div>
                                   <div id="hint-text" class="hint-text hidden">Hint: ${lvl.hint}</div>`;
         targetBox.style.display = 'block';
