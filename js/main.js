@@ -99,6 +99,12 @@ window.showLesson = () => {
 };
 window.tryQftLab = () => { state.qftLabFromP2 = state.currentP2; window.initQftLab(0); };
 window.tryAdderLab = () => { state.labFromP2 = state.currentP2; window.initLabGame(1); };
+window.showQftExplanation = () => {
+    const el = document.getElementById('qft-lab-explanation');
+    el.innerHTML = parseMarkdownAndMath(el.innerHTML);
+    el.classList.remove('hidden');
+    document.getElementById('qft-explain-btn').classList.add('hidden');
+};
 
 // A lightweight seeded PRNG
 function getSeededRandom(seed) {
@@ -670,14 +676,17 @@ function initGame(mode, p1, p2) {
             const sel = i === p1;
             return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.selectQftInput(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
         }).join('');
+        const qftExplanation = "**The Clock Analogy**\n\nAfter QFT, each qubit sits on the equator of the Bloch sphere in the state (|0⟩ + e^(iφ)|1⟩)/√2. Every qubit is a clock hand pointing at a specific phase angle φ. As n increases by 1, each qubit's hand rotates by a different amount:\n\n* **q₀ (top)** — rotates 45° per step. The slowest clock: 8 different angles across n = 0 → 7.\n* **q₁ (middle)** — rotates 90° per step, for a total of 4 angles per round.\n* **q₂ (bottom)** — rotates 180° per step. The fastest clock, with only 2 cycles.\n\nStep through n = 0 → 7 and watch the Bloch spheres. Each n produces a unique combination of three phase angles — a frequency fingerprint. No two inputs share the same set of clock positions.\n\nThis is why QFT is powerful: it encodes a number into the phase dimension. The IQFT reads the fingerprint back as a binary count — which is exactly what QPE does to measure an eigenphase.";
         instructions.innerHTML = `
             <div class="stage-breadcrumb">QFT Lab</div>
             <div class="stage-level-title">QFT Visualization</div>
             <div class="stage-subtitle">Pick a basis state — see how QFT maps it to the Fourier space:</div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;">${numBtns}</div>
-            <div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                <button id="qft-explain-btn" class="hint-btn" style="background:#059669;" onclick="showQftExplanation()">Read Explanation</button>
                 <button class="hint-btn" style="background:#475569;" onclick="window.qftLabGoBack()">← Back</button>
-            </div>`;
+            </div>
+            <div id="qft-lab-explanation" class="lesson-text hidden">${qftExplanation}</div>`;
         targetBox.style.display = 'none';
         liveBox.style.display = 'none';
     }
