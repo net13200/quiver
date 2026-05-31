@@ -1,6 +1,6 @@
 import { drawBlochSphere, calcBlochVector } from '../quantum/bloch.js';
 import { stateToString, computeStateVector } from '../quantum/engine.js';
-import { GATE_MATRICES } from '../quantum/gates.js';
+import { GATE_MATRICES, getOccupiedQubits } from '../quantum/gates.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES } from '../data/achievements.js';
 
 export function parseMarkdownAndMath(text) {
@@ -270,6 +270,29 @@ export function updateTargetBlochSphere(targetState, numQubits) {
     }
 }
 
+// Schedules each gate into the earliest column where none of its qubits are in use.
+// Preserves qubit-level ordering from the original circuit.
+export function compressCircuit(circuit) {
+    const result = [];
+    const lastColForQubit = {};
+    for (const column of circuit) {
+        for (const gate of column) {
+            const qubits = getOccupiedQubits(gate);
+            if (qubits.length === 0) continue;
+            let earliest = 0;
+            for (const q of qubits) {
+                if (lastColForQubit[q] !== undefined) {
+                    earliest = Math.max(earliest, lastColForQubit[q] + 1);
+                }
+            }
+            while (result.length <= earliest) result.push([]);
+            result[earliest].push(gate);
+            for (const q of qubits) lastColForQubit[q] = earliest;
+        }
+    }
+    return result;
+}
+
 export function showRevealCircuit(title, color, targetCircuit, numQubits) {
     const finalWrap = document.createElement('div');
     finalWrap.className = 'row-wrapper';
@@ -288,15 +311,15 @@ export function showRevealCircuit(title, color, targetCircuit, numQubits) {
     finalRow.className = 'circuit-row';
     finalRow.style.height = `${Math.max(60, numQubits * 30)}px`;
     
-    targetCircuit.forEach(gates => {
+    compressCircuit(targetCircuit).forEach(gates => {
         const s = document.createElement('div');
         s.className = 'slot';
         s.innerHTML = getColumnHTML(gates, numQubits);
         finalRow.appendChild(s);
     });
-    
+
     finalWrap.appendChild(finalRow);
-    
+
     // Insert it right below the message div (below the controls)
     const msgDiv = document.getElementById('message');
     msgDiv.parentNode.insertBefore(finalWrap, msgDiv.nextSibling);
@@ -407,7 +430,7 @@ export function showVictoryModal(title, subtitle, statsText, showNext, revealObj
         finalRow.className = 'circuit-row';
         finalRow.style.height = `${Math.max(60, numQubits * 30)}px`;
 
-        targetCircuit.forEach(gates => {
+        compressCircuit(targetCircuit).forEach(gates => {
             const s = document.createElement('div');
             s.className = 'slot';
             s.innerHTML = getColumnHTML(gates, numQubits);
