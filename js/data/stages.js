@@ -14,9 +14,9 @@ const CSWAP_VARIANTS = [
 
 // Valid state preps for Stage 5
 const PREP_5 = [
-    [['H0', 'X1']],
-    [['H0'], ['X1']],
-    [['X1'], ['H0']]
+    [['H0', 'H1']],
+    [['H0'], ['H1']],
+    [['H1'], ['H0']]
 ];
 
 // Stage 5.3 dynamically handles symmetries
@@ -32,26 +32,45 @@ function getStage5_3Circuits() {
         });
         let mergedSeq = JSON.parse(JSON.stringify(seq));
         mergedSeq[0].push('H0');
-        circuits.push([['X1'], ...mergedSeq]);
+        circuits.push([['H1'], ...mergedSeq]);
     });
     return circuits;
 }
 
 // Stage 6 dynamically handles all logical permutations for the Swap Test
-function getStage6Circuits(prepGateOnQ1) {
+function getStage6Circuits(prepGateOnQ1, prepGateOnQ2 = null) {
     let circuits = [];
     CSWAP_VARIANTS.forEach(seq => {
         let canMergeOuter = seq[0][0].startsWith('CX');
-        
+
         let prepOptions = [];
-        if (prepGateOnQ1) {
+        if (prepGateOnQ1 && prepGateOnQ2) {
+            // Three independent gates (H0, Q1-prep, Q2-prep) — all column groupings
+            const g = ['H0', prepGateOnQ1, prepGateOnQ2];
+            // 1-column
+            prepOptions.push([[...g]]);
+            // 2-column partitions
+            prepOptions.push([[g[0], g[1]], [g[2]]]);
+            prepOptions.push([[g[0], g[2]], [g[1]]]);
+            prepOptions.push([[g[1], g[2]], [g[0]]]);
+            prepOptions.push([[g[0]], [g[1], g[2]]]);
+            prepOptions.push([[g[1]], [g[0], g[2]]]);
+            prepOptions.push([[g[2]], [g[0], g[1]]]);
+            // 3-column orderings
+            prepOptions.push([[g[0]], [g[1]], [g[2]]]);
+            prepOptions.push([[g[0]], [g[2]], [g[1]]]);
+            prepOptions.push([[g[1]], [g[0]], [g[2]]]);
+            prepOptions.push([[g[1]], [g[2]], [g[0]]]);
+            prepOptions.push([[g[2]], [g[0]], [g[1]]]);
+            prepOptions.push([[g[2]], [g[1]], [g[0]]]);
+        } else if (prepGateOnQ1) {
             prepOptions.push([['H0'], [prepGateOnQ1]]);
             prepOptions.push([[prepGateOnQ1], ['H0']]);
             prepOptions.push([['H0', prepGateOnQ1]]);
         } else {
             prepOptions.push([['H0']]);
         }
-        
+
         prepOptions.forEach(prep => {
             circuits.push([...prep, ...seq, ['H0']]);
             if (canMergeOuter) {
@@ -60,13 +79,15 @@ function getStage6Circuits(prepGateOnQ1) {
                 circuits.push([...prep, ...seqEndMerged]);
             }
         });
-        
+
         if (canMergeOuter) {
-            let startMergedPrep = prepGateOnQ1 ? [[prepGateOnQ1]] : [];
+            let startMergedPrep = prepGateOnQ1
+                ? (prepGateOnQ2 ? [[prepGateOnQ1, prepGateOnQ2]] : [[prepGateOnQ1]])
+                : [];
             let seqStartMerged = JSON.parse(JSON.stringify(seq));
             seqStartMerged[0].push('H0');
             circuits.push([...startMergedPrep, ...seqStartMerged, ['H0']]);
-            
+
             let seqBothMerged = JSON.parse(JSON.stringify(seq));
             seqBothMerged[0].push('H0');
             seqBothMerged[seqBothMerged.length - 1].push('H0');
@@ -312,14 +333,18 @@ export const STAGES = [
         desc: "Construct SWAP and Controlled-SWAP (Fredkin) gates using CNOTs. (Strict Mode)",
         qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
         levels: [
-            { 
+            {
                 name: "4.1: SWAP Gate",
                 circuits: [
-                    [['X1'], ['CX12'], ['CX21'], ['CX12']],
-                    [['X1'], ['CX21'], ['CX12'], ['CX21']]
-                ], 
-                hint: "Set Q1 to |1⟩, then swap Q1 and Q2 using three alternating CNOT gates.",
-                lesson: "<b>The Mechanism:</b> The SWAP gate exchanges the states of two qubits. While it can be implemented as a single hardware operation, it is most often compiled into three alternating CNOT gates. This relies on the XOR logic of CNOT: applying it back-and-forth effectively swaps the amplitudes!<br><br><b>Why it matters:</b> Physical qubits on a microchip are usually only wired to their immediate neighbors. If an algorithm requires entangling two distant qubits on opposite sides of the chip, the compiler *must* route their information through the grid using SWAP networks."
+                    [['H1', 'X2'], ['CX12'], ['CX21'], ['CX12']],
+                    [['H1', 'X2'], ['CX21'], ['CX12'], ['CX21']],
+                    [['H1'], ['X2'], ['CX12'], ['CX21'], ['CX12']],
+                    [['H1'], ['X2'], ['CX21'], ['CX12'], ['CX21']],
+                    [['X2'], ['H1'], ['CX12'], ['CX21'], ['CX12']],
+                    [['X2'], ['H1'], ['CX21'], ['CX12'], ['CX21']]
+                ],
+                hint: "Prepare Q1 = |+⟩ (H) and Q2 = |1⟩ (X). Swap them with three alternating CNOT gates — watch the Bloch spheres exchange positions.",
+                lesson: "<b>The Mechanism:</b> The SWAP gate exchanges the full quantum states of two qubits — including superpositions and phases. Here Q1 starts in |+⟩ = (|0⟩+|1⟩)/√2 and Q2 in |1⟩. After the three-CNOT sequence, Q1 holds |1⟩ and Q2 holds |+⟩. The XOR logic of back-and-forth CNOTs performs the swap without needing a third 'scratch' qubit.<br><br><b>Why it matters:</b> Physical qubits on a microchip are usually only wired to their immediate neighbors. If an algorithm requires entangling two distant qubits on opposite sides of the chip, the compiler <em>must</em> route their information through the grid using SWAP networks."
             },
             {
                 name: "4.2: CSWAP (3 CCX)",
@@ -328,15 +353,15 @@ export const STAGES = [
                     [...p, ['CCX012'], ['CCX021'], ['CCX012']],
                     [...p, ['CCX021'], ['CCX012'], ['CCX021']]
                 ]),
-                hint: "Superpose Q0 and flip Q1. Then conditionally swap Q1 & Q2 using three Toffolis.",
-                lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits *only* if the control qubit is |1⟩. We can build it directly by taking our 3-CNOT design from the last stage and upgrading all three gates into Toffoli (CCX) gates controlled by Q0.<br><br><b>Why it matters:</b> The Fredkin gate is a 'universal' reversible logic gate. In quantum algorithms, conditionally routing information allows us to compute similarities between complex states without measuring them directly, forming the backbone of Quantum Machine Learning."
+                hint: "Superpose Q0 (H) and Q1 (H). Then conditionally swap Q1 and Q2 using three Toffoli gates.",
+                lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits <em>only</em> if the control qubit is |1⟩. Here Q1 starts in |+⟩ and Q2 in |0⟩. When Q0 = |+⟩ (superposition), the gate conditionally swaps: the |1⟩ branch of Q0 exchanges Q1 and Q2, while the |0⟩ branch leaves them unchanged. We build it by upgrading all three CNOTs from the previous circuit into Toffoli (CCX) gates controlled by Q0.<br><br><b>Why it matters:</b> The Fredkin gate is a universal reversible logic gate. With a superposition control, CSWAP creates entanglement between the control and the swapped registers — the foundation of the Swap Test algorithm."
             },
             {
                 name: "4.3: CSWAP (Mixed)",
                 set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021'],
                 circuits: getStage5_3Circuits(),
-                hint: "Wrap a single Toffoli gate in CNOTs to achieve the exact same state!",
-                lesson: "<b>The Mechanism:</b> We can optimize the CSWAP gate by noticing that we only need to conditionally flip one qubit based on the other, then use standard CNOTs to cascade the swap. This reduces the cost from 3 Toffolis to just 1 Toffoli and 2 CNOTs.<br><br><b>Why it matters:</b> Every gate you execute introduces a tiny bit of noise. Toffoli gates are notoriously noisy and slow. Compiling circuits to use fewer heavy gates—while achieving the exact same mathematical result—is a massive and vital sub-field of quantum software engineering."
+                hint: "Same setup as 4.2 — Q0 and Q1 in |+⟩. This time, wrap a single Toffoli in two CNOTs to achieve the identical conditional swap.",
+                lesson: "<b>The Mechanism:</b> The same CSWAP — same input states, same output — but compiled down to 1 Toffoli and 2 CNOTs instead of 3 Toffolis. The key insight is that only one of the three back-and-forth flips needs to be conditional; the flanking CNOTs handle the cascade, reducing the heavy-gate count by two-thirds.<br><br><b>Why it matters:</b> Every gate introduces noise, and Toffoli gates are notoriously expensive on real hardware. Compiling circuits to use fewer heavy gates while achieving the exact same mathematical result — quantum compilation — is a major area of quantum software engineering."
             }
         ]
     },
@@ -348,9 +373,9 @@ export const STAGES = [
         levels: [
             {
                 name: "5.1: Swap Test: Same",
-                circuits: getStage6Circuits(null),
-                hint: "Superpose the ancilla (Q0), apply a CSWAP across Q1 and Q2, and apply another Hadamard to Q0.",
-                lesson: "<b>The Mechanism:</b> The Swap Test algorithm checks how identical two target quantum states are. We superpose an ancilla (Q0), use it to CSWAP the target states (Q1, Q2), and interfere the ancilla again with a final Hadamard. The probability of measuring Q0 as |0⟩ is mathematically exactly P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Since |0⟩ and |0⟩ are totally identical, the math perfectly returns Q0 to |0⟩!<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test lets us compare massive quantum states using just *one* ancilla measurement, offering a potential exponential speedup for Quantum AI."
+                circuits: getStage6Circuits('H1', 'H2'),
+                hint: "Prepare Q1 = |+⟩ and Q2 = |+⟩ with two Hadamards. Superpose the ancilla (Q0) with H, apply the CSWAP, then close with another H on Q0.",
+                lesson: "<b>The Mechanism:</b> The Swap Test measures how similar two quantum states are. Superpose an ancilla (Q0), use it to CSWAP the two target states (Q1, Q2), then interfere Q0 with a final Hadamard. The probability of measuring Q0 as |0⟩ is P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Here Q1 = Q2 = |+⟩, so |⟨ψ|φ⟩|² = 1 and Q0 deterministically returns to |0⟩.<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test computes the inner product of two quantum states with a single ancilla measurement, offering a potential exponential speedup for Quantum AI."
             },
             {
                 name: "5.2: Swap Test: Orthogonal",
