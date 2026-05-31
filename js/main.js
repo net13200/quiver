@@ -3,12 +3,13 @@ import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutor
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, startTour, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, startInGameTour, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
 
 export let gameStartTime = 0;
+let tutorialPromptShown = false;
 
 // --- Global Application State ---
 export const state = {
@@ -482,17 +483,6 @@ function initGame(mode, p1, p2) {
         }
 
         state.secretCircuits = [generatedCircuit];
-        
-        // If the tutorial is active, hardcode a simple 1-gate puzzle and run the in-game tour
-        if (state.isTutorial && mode === 'RANDOM') {
-            state.activeSet = ['X', 'H'];
-            state.secretCircuits = [[['H0'], [], [], []]];
-            setTimeout(() => startInGameTour(() => {
-                state.tutorialPhase = 'SELECT_GATE';
-                setGhostPointer('PALETTE', 'H');
-            }), 300);
-        }
-
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
 
@@ -634,6 +624,21 @@ function initGame(mode, p1, p2) {
     renderPalette();
     renderBoard();
     updateBlochSpheres(state.currentGuess, state.numQubits);
+
+    if (!tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY') {
+        tutorialPromptShown = true;
+        setTimeout(() => {
+            if (state.gameOver) return;
+            showTutorialPrompt(
+                () => {
+                    state.isTutorial = true;
+                    state.tutorialPhase = 'SELECT_GATE';
+                    setGhostPointer('PALETTE_ANY');
+                },
+                () => { setTutorialComplete(); }
+            );
+        }, 400);
+    }
 }
 
 // --- Render Core ---
@@ -883,9 +888,6 @@ function showModePanel(name) {
     document.getElementById('mode-cards').classList.add('hidden');
     document.querySelectorAll('.mode-panel').forEach(p => p.classList.add('hidden'));
     document.getElementById(`panel-${name}`).classList.remove('hidden');
-    if (name === 'play' && state.isTutorial) {
-        setTimeout(() => { endTour(); setGhostPointer('MENU_EASY'); }, 350);
-    }
     if (name === 'achievements') {
         renderAchievementsPanel(unlockedAchievements, achievementProgress);
     }
@@ -1047,19 +1049,17 @@ document.getElementById('tt-skip').addEventListener('click', () => {
     state.tutorialPhase = 'NONE';
 });
 document.getElementById('btn-replay-tutorial').addEventListener('click', () => {
-    showMainMenu();
-    state.isTutorial = true;
-    state.tutorialPhase = 'NONE';
-    state.tutorialJustCompleted = false;
-    startTour();
-});
-
-document.getElementById('btn-rand-1').addEventListener('click', () => {
-    if (state.isTutorial) {
-        endTour();
-        state.tutorialPhase = 'INTRO'; // In-game overlay tour will set SELECT_GATE when done
-    }
-    initGame('RANDOM', 1);
+    showTutorialPrompt(
+        () => {
+            initGame('RANDOM', 1);
+            setTimeout(() => {
+                state.isTutorial = true;
+                state.tutorialPhase = 'SELECT_GATE';
+                setGhostPointer('PALETTE_ANY');
+            }, 400);
+        },
+        () => {}
+    );
 });
 
 // --- Boot App ---
@@ -1124,8 +1124,3 @@ if (_duelParam) {
     }
 }
 
-// NEW: Auto-start the tutorial if it's their first time
-if (!tutorialComplete && !_duelParam && !_playParam && !_dailyChallengeParam) {
-    state.isTutorial = true;
-    setTimeout(startTour, 500); // Slight delay ensures the DOM is painted
-}

@@ -2,7 +2,7 @@ import { computeStateVector, stateToString, statesMatch } from '../quantum/engin
 import { getGateMultiset, normalizeGate, GATE_MATRICES } from '../quantum/gates.js';
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
+import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, clearGhostPointer, setGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
 import { ACHIEVEMENT_MAP } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
@@ -432,6 +432,20 @@ export function submitGuess(state, renderBoardCallback) {
                     newWrap.appendChild(hintEl);
                 }
             }
+            return;
+        }
+
+        if (state.isTutorial) {
+            wrap.classList.add('wrong-attempt');
+            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+            state.currentGuess = Array(state.numCols).fill(null).map((_, c) => [...(state.secretCircuits[0][c] || [])]);
+            updateActiveRow(state, renderBoardCallback);
+            clearGhostPointer();
+            state.tutorialPhase = 'EVALUATE';
+            setGhostPointer('EVALUATE');
+            const msg = document.getElementById('message');
+            msg.style.color = '#38bdf8';
+            msg.innerText = "Here's the correct circuit — hit Evaluate to complete the tutorial!";
             return;
         }
 

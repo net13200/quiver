@@ -469,32 +469,8 @@ let currentTourStep = 0;
 let currentInGameStep = 0;
 let _onInGameTourComplete = null;
 
-const tourSteps = [
-    { sel: '#menu-welcome',                    title: 'Welcome!',       text: "Welcome to Quiver! Let's take a quick tour of the main features." },
-    { sel: '.mode-card[data-mode="learn"]',    title: 'Learn Mode',     text: "LEARN: A structured curriculum that takes you from zero to mastering quantum algorithms. Start here!" },
-    { sel: '.mode-card[data-mode="daily"]',    title: 'Daily Puzzles',  text: "DAILY: Three fresh puzzles every 24 hours — Easy, Medium, and Hard. A great daily challenge once you know the basics!" },
-    { sel: '.mode-card[data-mode="sandbox"]',  title: 'Sandbox',        text: "SANDBOX: A free-play area to experiment with any gates and watch the quantum math update in real time." },
-    { sel: '.mode-card[data-mode="timed"]',    title: 'Time Collapse',  text: "TIME COLLAPSE: A timed blitz mode! Solve as many circuits as possible before the clock hits zero. Each solve adds +20s — each wrong attempt costs −5s." },
-    { sel: '.mode-card[data-mode="play"]',     title: 'Play Mode',      text: "PLAY: The arcade mode! Click this card, then hit 'Easy (1 Qubit)' to try your first puzzle.", hideNext: true }
-];
-
-const inGameTourSteps = [
-    {
-        sel: '#target-container',
-        title: 'Your Target',
-        text: "This is the Target State — the quantum output your circuit must produce. Win by building a circuit that generates these exact amplitudes!"
-    },
-    {
-        sel: '.right-col',
-        title: 'Live Bloch Spheres',
-        text: "The Bloch Spheres show your qubits' states as a 3D map, updated live as you place gates. North Pole = |0⟩, South Pole = |1⟩, Equator = superposition!"
-    },
-    {
-        sel: '#palette-container',
-        title: 'Gate Palette',
-        text: "Select a gate from the palette, then tap a circuit cell to place it. To delete a placed gate, tap it with nothing selected. Now select the H gate to begin!"
-    }
-];
+const tourSteps = [];
+const inGameTourSteps = [];
 
 function cleanupSpotlights() {
     document.querySelectorAll('.tutorial-spotlight').forEach(el => {
@@ -616,23 +592,48 @@ export function setGhostPointer(type, targetId) {
         text = "Tap the grid to place the gate!";
     } else if (type === 'EVALUATE') {
         targetEl = document.getElementById('submit-btn');
-        text = "Hit Evaluate to test it!";
-    } else if (type === 'MENU_EASY') { // NEW TARGET ADDED!
+        text = ''; // pulse only — no floating label that floats above the button
+    } else if (type === 'MENU_EASY') {
         targetEl = document.getElementById('btn-rand-1');
         text = "Tap 'Easy' to start!";
+    } else if (type === 'PALETTE_ANY') {
+        targetEl = document.getElementById('palette-container');
+        text = "Pick any gate from the palette!";
     }
 
     if (targetEl) {
         targetEl.classList.add('ghost-pulse');
-        // Ensure the element supports absolute positioning for the ghost text
-        if (window.getComputedStyle(targetEl).position === 'static') {
-            targetEl.style.position = 'relative';
+        if (text) {
+            if (window.getComputedStyle(targetEl).position === 'static') {
+                targetEl.style.position = 'relative';
+            }
+            const msg = document.createElement('div');
+            msg.className = 'ghost-text';
+            msg.innerText = text;
+            targetEl.appendChild(msg);
         }
-        const msg = document.createElement('div');
-        msg.className = 'ghost-text';
-        msg.innerText = text;
-        targetEl.appendChild(msg);
     }
+}
+
+export function showTutorialPrompt(onYes, onNo) {
+    const existing = document.getElementById('tutorial-prompt-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorial-prompt-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:28px 32px;max-width:300px;width:88%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+            <div style="font-weight:700;color:#e2e8f0;font-size:1.05rem;margin-bottom:8px;">Want a quick walkthrough?</div>
+            <div style="color:#94a3b8;font-size:0.88rem;margin-bottom:22px;line-height:1.5;">We'll guide you through placing your first gate and evaluating a circuit.</div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button id="tut-prompt-yes" style="background:#7c3aed;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:0.9rem;font-weight:600;cursor:pointer;flex:1;">Yes, show me!</button>
+                <button id="tut-prompt-no" style="background:transparent;color:#64748b;border:1px solid #334155;border-radius:8px;padding:10px 20px;font-size:0.9rem;cursor:pointer;flex:1;">Skip</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('tut-prompt-yes').addEventListener('click', () => { overlay.remove(); onYes(); });
+    document.getElementById('tut-prompt-no').addEventListener('click', () => { overlay.remove(); onNo(); });
 }
 
 export function clearGhostPointer() {
