@@ -157,21 +157,24 @@ export function getColumnHTML(gates, numQubits, gateStatusMap = null) {
             html += `<div class="tgt-cross ${statusClass}" style="top: ${tTop}">×</div>`;
             html += `<div class="ctrl-line ${statusClass}" style="top: ${lineTop}; height: ${lineHeight}"></div>`;
         } else if (type.startsWith('RZ_')) {
-            let parts = type.split('_'); 
+            let parts = type.split('_');
             let angleStr = parts.slice(1, -1).join('_');
             let q = parseInt(parts[parts.length - 1]);
             let top = ((q + 0.5) / numQubits * 100) + '%';
-            
+
             let displayAngle = angleStr === 'PI' ? 'π' :
                                angleStr === 'PI2' ? 'π/2' :
-                               angleStr === 'PI4' ? 'π/4' : 
+                               angleStr === 'PI4' ? 'π/4' :
                                angleStr === 'PI8' ? 'π/8' :
                                angleStr === 'MINUS_PI2' ? '-π/2' :
                                angleStr === 'MINUS_PI4' ? '-π/4' : '-π/8';
-                               
+            const RZ_ALIAS = { PI: 'Z', PI2: 'S', PI4: 'T', MINUS_PI2: 'S†', MINUS_PI4: 'T†' };
+            let alias = RZ_ALIAS[angleStr] ? `<span style="font-size: 7px; opacity: 0.75;">${RZ_ALIAS[angleStr]}</span>` : '';
+
             html += `<div class="gate-box rz-gate ${statusClass}" style="top: ${top};">
                         <span style="font-size: 11px;">Rz</span>
                         <span style="font-size: 8px;">${displayAngle}</span>
+                        ${alias}
                      </div>`;
         } else if (type.startsWith('CP_')) {
             let parts = type.split('_'); 
