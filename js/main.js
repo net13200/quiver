@@ -11,6 +11,18 @@ import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed }
 export let gameStartTime = 0;
 let tutorialPromptShown = false;
 
+// X gates needed to encode |n⟩ for 3 qubits: qubit 0 = MSB (weight 4), qubit 2 = LSB (weight 1)
+const QFT_LAB_CONFIGS = {
+    0: [],
+    1: ['X2'],
+    2: ['X1'],
+    3: ['X1', 'X2'],
+    4: ['X0'],
+    5: ['X0', 'X2'],
+    6: ['X0', 'X1'],
+    7: ['X0', 'X1', 'X2'],
+};
+
 // Phase rotations for the QFT Adder Lab: phaseCols[0] and [1] are the two middle columns
 // Phase for qubit j = 2π × n / 2^(j+1), where qubit 0 = top (MSB), qubit 2 = bottom (LSB)
 const LAB_CONFIGS = {
@@ -63,6 +75,7 @@ export const state = {
     _timedSessionEnded: false,
     labTargetN: 0,
     labFromP2: 0,
+    qftLabFromP2: 0,
     isDuelMode: false,
     duelSeed: 0,
     duelOpponentScore: 0,
@@ -636,6 +649,32 @@ function initGame(mode, p1, p2) {
             <div id="lab-gates-text" class="hint-text hidden">${LAB_HINTS[p1]}</div>`;
         targetBox.style.display = 'block';
         liveBox.style.display = 'none';
+
+    } else if (mode === 'QFT_LAB') {
+        clearBtn.classList.add('hidden');
+        stageNav.classList.add('hidden');
+        state.labTargetN = p1;
+        state.currentP1 = 8;
+        state.currentP2 = 0;
+        state.numQubits = 3;
+        state.numCols = 4;
+        state.activeSet = ['X', 'QFT'];
+        state.secretCircuits = [[QFT_LAB_CONFIGS[p1], ['QFT'], [], []]];
+
+        const numBtns = [0,1,2,3,4,5,6,7].map(i => {
+            const sel = i === p1;
+            return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.selectQftInput(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
+        }).join('');
+        instructions.innerHTML = `
+            <div class="stage-breadcrumb">QFT Lab</div>
+            <div class="stage-level-title">QFT Visualization</div>
+            <div class="stage-subtitle">Pick a basis state — see how QFT maps it to the Fourier space:</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;">${numBtns}</div>
+            <div>
+                <button class="hint-btn" style="background:#475569;" onclick="window.qftLabGoBack()">← Back</button>
+            </div>`;
+        targetBox.style.display = 'none';
+        liveBox.style.display = 'none';
     }
 
     generateMatrices(state.numQubits);
@@ -646,14 +685,13 @@ function initGame(mode, p1, p2) {
     let angleContainer = document.getElementById('rz-angle-container');
     if(angleContainer) angleContainer.style.display = hasAngleGate ? 'inline-block' : 'none';
     
-    if (mode !== 'FREEPLAY') {
+    if (mode !== 'FREEPLAY' && mode !== 'QFT_LAB') {
         state.targetState = computeStateVector(state.secretCircuits[0], state.numQubits, GATE_MATRICES);
         document.getElementById('target-amplitudes').innerText = "|ψ⟩ = " + stateToString(state.targetState, state.numQubits);
-        
+
         // --- NEW: Render the Target Bloch Sphere ---
         updateTargetBlochSphere(state.targetState, state.numQubits);
     } else {
-        // Ensure it hides if switching back to Freeplay
         updateTargetBlochSphere(null, state.numQubits);
     }
     
@@ -661,11 +699,14 @@ function initGame(mode, p1, p2) {
     if (mode === 'LAB') {
         state.currentGuess[1] = ['QFT'];
         state.currentGuess[4] = ['IQFT'];
+    } else if (mode === 'QFT_LAB') {
+        state.currentGuess[0] = [...QFT_LAB_CONFIGS[p1]];
+        state.currentGuess[1] = ['QFT'];
     }
     state.attempts = 0;
     gameStartTime = Date.now();
     trackGameStart(state.currentMode, state.currentP1, state.currentP2, state.currentLvl,
-        mode !== 'FREEPLAY' ? state.targetState : null,
+        (mode !== 'FREEPLAY' && mode !== 'QFT_LAB') ? state.targetState : null,
         state.secretCircuits[0] || null,
         state.activeSet);
     state.gameOver = false;
@@ -683,7 +724,7 @@ function initGame(mode, p1, p2) {
     renderBoard();
     updateBlochSpheres(state.currentGuess, state.numQubits);
 
-    if (!tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB') {
+    if (!tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB' && mode !== 'QFT_LAB') {
         tutorialPromptShown = true;
         setTimeout(() => {
             if (state.gameOver) return;
@@ -734,6 +775,34 @@ window.selectLabNumber = function(n) {
 
 window.labGoBack = function() {
     initGame('STAGE', 9, state.labFromP2);
+};
+
+window.initQftLab = n => initGame('QFT_LAB', n);
+
+window.selectQftInput = function(n) {
+    if (state.currentMode !== 'QFT_LAB') return;
+    state.labTargetN = n;
+    state.currentGuess[0] = [...QFT_LAB_CONFIGS[n]];
+    state.currentGuess[1] = ['QFT'];
+
+    state.gameOver = false;
+    document.getElementById('submit-btn').classList.remove('hidden');
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('message').innerText = '';
+    document.getElementById('row-active')?.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+
+    renderBoard();
+    updateBlochSpheres(state.currentGuess, 3);
+
+    document.querySelectorAll('.lab-num-btn').forEach(btn => {
+        const active = parseInt(btn.dataset.n) === n;
+        btn.style.background = active ? '#d97706' : '#f59e0b';
+        btn.style.outline = active ? '2px solid #fbbf24' : 'none';
+    });
+};
+
+window.qftLabGoBack = function() {
+    initGame('STAGE', 8, state.qftLabFromP2);
 };
 
 // --- Render Core ---
@@ -828,7 +897,7 @@ function renderBoard() {
 
     const attemptsCounter = document.getElementById('attempts-counter');
     const timedBar = document.getElementById('timed-status-bar');
-    if (state.currentMode === 'FREEPLAY' || state.currentMode === 'LAB') {
+    if (state.currentMode === 'FREEPLAY' || state.currentMode === 'LAB' || state.currentMode === 'QFT_LAB') {
         attemptsCounter.style.display = 'none';
         timedBar.classList.add('hidden');
     } else if (state.currentMode === 'TIMED') {

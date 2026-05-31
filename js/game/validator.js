@@ -67,8 +67,19 @@ export function submitGuess(state, renderBoardCallback) {
         return;
     }
 
+    if (state.currentMode === 'QFT_LAB') {
+        const wrap = document.getElementById('row-active');
+        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+        const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
+        const ampResult = document.createElement('div');
+        ampResult.className = 'amplitudes-result';
+        ampResult.innerText = "↳ QFT|" + state.labTargetN + "⟩ = " + stateToString(userState, state.numQubits);
+        wrap.appendChild(ampResult);
+        return;
+    }
+
     const wrap = document.getElementById('row-active');
-    
+
     let userMultiset = getGateMultiset(state.currentGuess);
     let validMultisets = state.secretCircuits.map(c => getGateMultiset(c));
     let matchedMultiset = validMultisets.includes(userMultiset);
@@ -411,10 +422,26 @@ export function submitGuess(state, renderBoardCallback) {
                     labBtn.style.background = '#f59e0b';
                     labBtn.innerText = '🧪 Try the QFT Adder';
                     labBtn.addEventListener('click', () => {
-                    state.labFromP2 = state.currentP2;
-                    hideVictoryModal();
-                    window.initLabGame(1);
-                });
+                        state.labFromP2 = state.currentP2;
+                        hideVictoryModal();
+                        window.initLabGame(1);
+                    });
+                    controls.insertBefore(labBtn, controls.firstChild);
+                }
+            }
+            if (state.currentMode === 'STAGE' && state.currentP1 === 8) {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-qft-lab-btn')) {
+                    const labBtn = document.createElement('button');
+                    labBtn.id = 'modal-qft-lab-btn';
+                    labBtn.className = 'btn';
+                    labBtn.style.background = '#f59e0b';
+                    labBtn.innerText = '🔬 Try the QFT';
+                    labBtn.addEventListener('click', () => {
+                        state.qftLabFromP2 = state.currentP2;
+                        hideVictoryModal();
+                        window.initQftLab(0);
+                    });
                     controls.insertBefore(labBtn, controls.firstChild);
                 }
             }
