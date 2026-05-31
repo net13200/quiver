@@ -99,6 +99,64 @@ window.showLesson = () => {
 };
 window.tryQftLab = () => { state.qftLabFromP2 = state.currentP2; window.initQftLab(0); };
 window.tryAdderLab = () => { state.labFromP2 = state.currentP2; window.initLabGame(1); };
+window.showGroverLab = () => {
+    const θ = Math.asin(1 / Math.sqrt(8));
+    let k = 1;
+
+    function renderGroverLab() {
+        const pTarget = Math.sin((2 * k + 1) * θ) ** 2;
+        const pOther = (1 - pTarget) / 7;
+        const probs = Array.from({length: 8}, (_, i) => i === 7 ? pTarget : pOther);
+        const maxP = Math.max(...probs);
+        const chartH = 100;
+        const labels = ['000','001','010','011','100','101','110','111'];
+
+        const barsHTML = probs.map((p, i) => {
+            const isTarget = i === 7;
+            const barH = Math.max(3, Math.round((p / maxP) * chartH));
+            const pct = (p * 100).toFixed(1);
+            return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0;">
+                <span style="font-size:0.6rem;color:${isTarget ? '#22c55e' : '#94a3b8'};white-space:nowrap;">${pct}%</span>
+                <div style="width:70%;height:${barH}px;background:${isTarget ? '#22c55e' : '#6366f1'};border-radius:3px 3px 0 0;transition:height 0.3s ease;"></div>
+                <span style="font-size:0.55rem;color:${isTarget ? '#22c55e' : '#64748b'};display:inline-block;transform:rotate(-45deg);transform-origin:top center;margin-top:4px;white-space:nowrap;">${labels[i]}</span>
+            </div>`;
+        }).join('');
+
+        const panel = document.getElementById('grover-lab-panel');
+        if (!panel) return;
+        panel.innerHTML = `
+            <div style="font-size:0.9rem;font-weight:700;color:#22c55e;margin-bottom:10px;">Grover Iterations Lab</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <button onclick="window._groverSetK(${Math.max(0, k - 1)})" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;" ${k === 0 ? 'disabled' : ''}>−</button>
+                <span style="font-size:1rem;font-weight:700;min-width:130px;text-align:center;">k = ${k} iteration${k !== 1 ? 's' : ''}</span>
+                <button onclick="window._groverSetK(${Math.min(8, k + 1)})" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;" ${k === 8 ? 'disabled' : ''}>+</button>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:2px;height:${chartH + 6}px;padding:0 2px;border-bottom:1px solid #334155;">
+                ${barsHTML}
+            </div>
+            <div style="height:28px;"></div>
+            <div style="margin-top:4px;font-size:0.8rem;color:#94a3b8;">
+                P(|111⟩) = sin²((2·${k}+1)·θ) ≈ <span style="color:#22c55e;font-weight:700;">${(pTarget * 100).toFixed(1)}%</span>
+                &nbsp;·&nbsp; θ = arcsin(1/√8) ≈ ${(θ * 180 / Math.PI).toFixed(1)}°
+            </div>
+            <div style="margin-top:3px;font-size:0.75rem;color:#64748b;">Search target: |111⟩ &nbsp;·&nbsp; Optimal k = 2 → P(|111⟩) ≈ ${(Math.sin(5 * θ) ** 2 * 100).toFixed(1)}%</div>
+        `;
+    }
+
+    window._groverSetK = newK => { k = newK; renderGroverLab(); };
+
+    let panel = document.getElementById('grover-lab-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'grover-lab-panel';
+        panel.style.cssText = 'margin-top:10px;padding:12px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);border-radius:8px;';
+        const hintText = document.getElementById('hint-text');
+        if (hintText) hintText.parentNode.insertBefore(panel, hintText.nextSibling);
+        else document.getElementById('instructions').appendChild(panel);
+    }
+    panel.style.display = 'block';
+    renderGroverLab();
+};
 window.showQftExplanation = () => {
     const el = document.getElementById('qft-lab-explanation');
     el.innerHTML = parseMarkdownAndMath(el.innerHTML);
@@ -427,6 +485,7 @@ function initGame(mode, p1, p2) {
         let lessonHTML = lvl.lesson ? `<button id="lesson-btn" class="hint-btn" style="background:#059669;" onclick="showLesson()">Read Lesson</button><div id="lesson-text" class="lesson-text hidden">${lvl.lesson}</div>` : "";
         let labBtnHTML = p1 === 8 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryQftLab()">Try the QFT</button>`
                        : p1 === 9 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryAdderLab()">Try the QFT Adder</button>`
+                       : (p1 === 11 && state.currentP2 === 2) ? `<button class="hint-btn" style="background:#22c55e;color:#0f172a;" onclick="showGroverLab()">Try Grover Iterations</button>`
                        : "";
 
         instructions.innerHTML = `<div class="stage-breadcrumb">${stage.title}</div>
