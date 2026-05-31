@@ -201,6 +201,7 @@ function getStage9_3Circuits() {
 
 export const STAGES = [
     {
+        section: "Foundations",
         title: "Stage 0: Quantum Foundations",
         desc: "Master the language of quantum: states, amplitudes, interference, and the six poles of the Bloch Sphere.",
         qubits: 1,
@@ -252,6 +253,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Foundations",
         title: "Stage 1: Bell Pairs",
         desc: "Create the four maximally entangled 2-qubit states.",
         qubits: 2, cols: 4, set: ['X0', 'X1', 'Z0', 'Z1', 'H0', 'H1', 'CX01', 'CX10'],
@@ -281,6 +283,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Multi-Qubit Gates",
         title: "Stage 2: Controlled-Z (CZ)",
         desc: "Implement a CZ gate using CNOTs and Hadamards.",
         qubits: 2, cols: 5, set: ['X0', 'X1', 'H0', 'H1', 'CX01', 'CX10'],
@@ -292,6 +295,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Multi-Qubit Gates",
         title: "Stage 3: GHZ State",
         desc: "Entangle three qubits symmetrically.",
         qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
@@ -303,6 +307,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Multi-Qubit Gates",
         title: "Stage 4: Build a SWAP Gate",
         desc: "Construct SWAP and Controlled-SWAP (Fredkin) gates using CNOTs. (Strict Mode)",
         qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
@@ -336,6 +341,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Quantum Protocols",
         title: "Stage 5: The Swap Test",
         desc: "Measure how similar two states are without directly measuring them. (Strict Mode)",
         qubits: 3, cols: 8, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021', 'CCX120'],
@@ -361,6 +367,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Quantum Protocols",
         title: "Stage 6: The Hadamard Test",
         desc: "Differentiate between Bell states by measuring their eigenvalues. (Strict Mode)",
         qubits: 3, cols: 8, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
@@ -380,6 +387,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Phase & QFT",
         title: "Stage 7: Phase Rotations",
         desc: "Rotate states around the Z-axis using parameterized RZ gates. (Strict Mode)",
         qubits: 2, cols: 6, set: ['X0', 'X1', 'H0', 'H1', 'CX01', 'CX10', 'RZ0', 'RZ1'],
@@ -411,6 +419,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Phase & QFT",
         title: "Stage 8: Quantum Fourier Transform",
         desc: "Shift into the phase basis (XY plane) to encode data as angles. (Strict Mode)",
         qubits: 3, cols: 9, set: ['X0','X1','X2', 'H0','H1','H2', 'CP01', 'CP10', 'CP12', 'CP21', 'CP02', 'CP20', 'SWAP01', 'SWAP12', 'SWAP02'],
@@ -436,6 +445,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Phase & QFT",
         title: "Stage 9: The QFT Adder",
         desc: "Master Draper's addition algorithm in the Fourier domain.",
         qubits: 3,
@@ -512,6 +522,7 @@ export const STAGES = [
         ]
     },
     {
+        section: "Phase & QFT",
         title: "Stage 10: Quantum Phase Estimation",
         desc: "Run the Draper adder in reverse: encode an eigenphase with the QFT and decode it as a binary number with the IQFT. (Strict Mode)",
         qubits: 3,

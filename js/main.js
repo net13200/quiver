@@ -122,28 +122,56 @@ function buildMenu() {
     document.getElementById('menu-daily-streak').innerText = _ds;
     document.getElementById('menu-daily-streak-s').innerText = _ds === 1 ? '' : 's';
 
-    // 2. Build the Stages
+    // 2. Build the Stages — learning path
     const container = document.getElementById('stages-container');
     container.innerHTML = '';
-    
+
+    const SECTION_STYLES = {
+        'Foundations':       { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  icon: '🧩' },
+        'Multi-Qubit Gates': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)', icon: '🔗' },
+        'Quantum Protocols': { color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   border: 'rgba(6,182,212,0.3)',   icon: '🔬' },
+        'Phase & QFT':       { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)',  icon: '🌀' },
+    };
+
+    const pathEl = document.createElement('div');
+    pathEl.className = 'learn-path';
+    container.appendChild(pathEl);
+
+    let currentSection = null;
+    let railEl = null;
     STAGES.forEach((stage, sIdx) => {
-        let box = document.createElement('div');
-        box.className = 'stage-box';
-        box.innerHTML = `<h3>${stage.title}</h3><p>${stage.desc}</p><div class="menu-row" id="sbg-${sIdx}"></div>`;
-        container.appendChild(box);
-        
-        let bg = document.getElementById(`sbg-${sIdx}`);
+        if (stage.section && stage.section !== currentSection) {
+            currentSection = stage.section;
+            const s = SECTION_STYLES[currentSection] || { color: '#64748b', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)', icon: '●' };
+
+            const secEl = document.createElement('div');
+            secEl.className = 'path-section';
+            secEl.style.cssText = `--sc:${s.color};--sc-bg:${s.bg};--sc-border:${s.border}`;
+
+            const banner = document.createElement('div');
+            banner.className = 'section-banner';
+            banner.innerHTML = `<span class="section-icon">${s.icon}</span><span>${currentSection}</span>`;
+            secEl.appendChild(banner);
+
+            railEl = document.createElement('div');
+            railEl.className = 'path-rail';
+            secEl.appendChild(railEl);
+
+            pathEl.appendChild(secEl);
+        }
+
+        const stageLabel = document.createElement('div');
+        stageLabel.className = 'path-stage-label';
+        stageLabel.textContent = stage.title.replace(/^Stage \d+:\s*/, '');
+        railEl.appendChild(stageLabel);
+
         stage.levels.forEach((lvl, lIdx) => {
-            let btn = document.createElement('button');
-            btn.className = 'menu-btn';
-            if (completedStages.includes(`${sIdx}-${lIdx}`)) {
-                btn.classList.add('completed');
-                btn.innerText = `✓ ${lvl.name.split(':')[0]}`;
-            } else {
-                btn.innerText = lvl.name.split(':')[0];
-            }
-            btn.onclick = () => initGame('STAGE', sIdx, lIdx);
-            bg.appendChild(btn);
+            const isDone = completedStages.includes(`${sIdx}-${lIdx}`);
+            const node = document.createElement('div');
+            node.className = 'path-node' + (isDone ? ' completed' : '');
+            node.innerHTML = `<div class="node-dot">${isDone ? '✓' : ''}</div><div class="node-text">${lvl.name}</div>`;
+            node.onclick = () => initGame('STAGE', sIdx, lIdx);
+            railEl.appendChild(node);
         });
     });
     
