@@ -136,7 +136,7 @@ function buildMenu() {
     // Layout — x in SVG viewBox units 0–100 (= CSS %), y in px
     // 3 columns so labels fit; corners arc to the container edge
     const NODES_PER_ROW = 3;
-    const X_POS   = [15, 50, 85];   // column x positions (%)
+    const X_POS   = [20, 50, 80];   // column x positions (%)
     const NODE_R  = 22;              // node circle radius (px)
     const ROW_H   = 96;             // vertical spacing between rows (px)
     const SECT_H  = 54;              // section banner height (px)
