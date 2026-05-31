@@ -820,6 +820,7 @@ const GATE_TIPS = {
     CCX:  'Toffoli: 3-qubit gate. Flips target only when both controls are |1⟩.',
     QFT:  'Quantum Fourier Transform: The quantum analogue of the DFT. Core of many algorithms.',
     IQFT: 'Inverse QFT: Undoes the Quantum Fourier Transform.',
+    IQFT2: 'IQFT₂: 2-qubit Inverse QFT on the top two qubits. Used in QPE to decode the eigenphase.',
 };
 
 function renderPalette() {
@@ -828,8 +829,13 @@ function renderPalette() {
     const h = Math.max(60, state.numQubits * 30);
 
     // Extract unique base gates instead of showing all permutations
-    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX', 'QFT', 'IQFT'];
-    const uniqueBases = allBases.filter(base => state.activeSet.some(g => g.startsWith(base)));
+    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX', 'QFT', 'IQFT', 'IQFT2'];
+    const exactMatchBases = new Set(['QFT', 'IQFT', 'IQFT2']);
+    const uniqueBases = allBases.filter(base =>
+        exactMatchBases.has(base)
+            ? state.activeSet.includes(base)
+            : state.activeSet.some(g => g.startsWith(base))
+    );
 
     uniqueBases.forEach(baseType => {
         const item = document.createElement('div');
@@ -843,11 +849,11 @@ function renderPalette() {
         else if (baseType.startsWith('CP')) renderGate = `CP_${state.currentRzAngle}_01`;
         else if (baseType === 'CX' || baseType === 'SWAP') renderGate = `${baseType}01`;
         else if (baseType === 'CCX') renderGate = `CCX012`;
-        else if (baseType === 'QFT' || baseType === 'IQFT') renderGate = baseType; 
+        else if (baseType === 'QFT' || baseType === 'IQFT' || baseType === 'IQFT2') renderGate = baseType;
         else renderGate = `${baseType}0`;
 
         // NEW: Force QFT to have mockQubits = 1 so it fits neatly in the menu
-        let mockQubits = (baseType === 'QFT' || baseType === 'IQFT') ? 1 :
+        let mockQubits = (baseType === 'QFT' || baseType === 'IQFT' || baseType === 'IQFT2') ? 1 :
                          (baseType === 'CCX' && state.numQubits > 2) ? 3 : 
                          (['CX', 'CP', 'SWAP'].includes(baseType) && state.numQubits > 1) ? 2 : 1;
         

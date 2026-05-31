@@ -524,47 +524,31 @@ export const STAGES = [
     {
         section: "Phase & QFT",
         title: "Stage 10: Quantum Phase Estimation",
-        desc: "Run the Draper adder in reverse: encode an eigenphase with the QFT and decode it as a binary number with the IQFT. (Strict Mode)",
+        desc: "Prepare an eigenstate, apply controlled-U gates to kick the phase into the counting register, then decode with IQFT₂.",
         qubits: 3,
-        cols: 6,
-        set: ['QFT', 'IQFT', 'RZ'],
+        cols: 5,
+        set: ['X2', 'H0', 'H1', 'CP02', 'CP20', 'CP12', 'CP21', 'IQFT2'],
         levels: [
             {
-                name: "10.1: QPE: T Gate (1/8)",
-                hint: "Apply QFT to enter the phase basis. Add the oracle phases for k=1: RZ(π) on q0, RZ(π/2) on q1, RZ(π/4) on q2 — the exact same block as the Draper +1 level! Apply IQFT.",
-                lesson: "**Quantum Phase Estimation (QPE)** is the Draper adder run in reverse.\n\nIn Stage 9 you took a known number, encoded it into the Fourier basis, and added a constant. In QPE the number is **unknown** — it is the eigenphase of a quantum oracle — and the circuit's job is to read it out.\n\n**Step 1 — Enter the phase basis:** QFT on |0⟩ prepares the uniform superposition, putting the register into the Fourier domain.\n\n**Step 2 — Oracle:** Each qubit $j$ receives a phase rotation of $\\pi k / 2^j$, exactly the Draper phase pattern for adding $k$. This encodes the eigenphase φ = k/8 into the state.\n\nFor the T gate φ = 1/8, so $k = 1$. The oracle block is identical to the Draper $+1$ column from Stage 9!\n\n**Step 3 — Decode:** IQFT converts the phase-encoded state back to a binary number.\n\nOutput: |001⟩ — decimal 1 out of 8, confirming φ = 1/8.",
+                name: "10.1: QPE — S gate (φ = ¼)",
+                hint: "Prepare |ψ⟩=|1⟩ on q2 with X. Add H to q0 and q1. Apply CP(π) from q0→q2 (C-U² = C-Z) and CP(π/2) from q1→q2 (C-U = C-S). Finish with IQFT₂. Output: |01 1⟩.",
+                lesson: "**Quantum Phase Estimation (QPE)** finds the eigenphase φ of a unitary U. Given an eigenstate |ψ⟩ where U|ψ⟩ = e^(2πiφ)|ψ⟩, the circuit reads out φ as a binary number.\n\n**Circuit layout:** q₀ and q₁ are the **phase register** (counting qubits); q₂ holds the eigenstate.\n\n**Step 1 — Prepare:** X on q₂ creates |ψ⟩ = |1⟩. H on q₀ and q₁ puts the phase register into $|+⟩|+⟩$.\n\n**Step 2 — Phase kickback:** Each counting qubit controls a different power of U applied to |ψ⟩:\n* q₀ controls $U^2 = S^2 = Z$ → place $CP(\\pi)$ from q₀ to q₂\n* q₁ controls $U = S$ → place $CP(\\pi/2)$ from q₁ to q₂\n\nThe eigenvalue e^(2πiφ) kicks back as a relative phase on each counting qubit, Fourier-encoding φ across the register.\n\n**Step 3 — Decode:** IQFT₂ on q₀, q₁ converts the phase-encoded register to a binary count.\n\nFor U = S, φ = 1/4, so the output is $|01⟩|1⟩$ — decimal 1 out of 4, confirming φ = 1/4.",
                 circuits: [
-                    [
-                        ['QFT'],
-                        ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'],
-                        ['IQFT'],
-                        [],
-                        [],
-                        []
-                    ]
+                    [['X2'], ['H0', 'H1'], ['CP_PI_02'], ['CP_PI2_12'], ['IQFT2']],
+                    [['X2'], ['H0', 'H1'], ['CP_PI2_12'], ['CP_PI_02'], ['IQFT2']],
+                    [['X2', 'H0', 'H1'], ['CP_PI_02'], ['CP_PI2_12'], ['IQFT2'], []],
+                    [['X2', 'H0', 'H1'], ['CP_PI2_12'], ['CP_PI_02'], ['IQFT2'], []]
                 ]
             },
             {
-                name: "10.2: QPE: Phase 3/8",
-                hint: "Apply QFT. Use the oracle phases for k=3 (same as Stage 9.3): q0 needs π, q1 needs −π/2, q2 needs π/4 then π/2 across two columns. Or apply the +1 and +2 oracle blocks separately. Apply IQFT.",
-                lesson: "Now estimate φ = 3/8, which needs all 3 bits to represent in binary (0.011).\n\nThe oracle phases for $k = 3$ are identical to the Draper $+3$ pattern from Stage 9.3:\n\n- **q0 (j=0):** $3\\pi$ wraps to $\\pi$\n\n- **q1 (j=1):** $3\\pi/2 = -\\pi/2$\n\n- **q2 (j=2):** $3\\pi/4 = \\pi/4 + \\pi/2$ across two columns\n\n**Alternative:** Apply the $+1$ and $+2$ oracle blocks in separate columns — the same decomposition accepted in Stage 9.3.\n\nThe IQFT outputs |011⟩ — decimal 3 out of 8, confirming φ = 3/8.\n\n**QPE and the Draper adder are two sides of the same coin:** the adder writes a number into the Fourier domain; QPE reads an unknown number back out.",
+                name: "10.2: QPE — S† gate (φ = ¾)",
+                hint: "Same structure as 10.1 — only q1's rotation changes. (S†)²=Z, so q0 still uses CP(π). q1 now controls U=S†: use CP(−π/2) from q1→q2. Output: |11 1⟩.",
+                lesson: "Now estimate the eigenphase of the S† gate.\n\nS†|1⟩ = e^(−iπ/2)|1⟩ = e^(2πi·3/4)|1⟩, so φ = 3/4.\n\nThe circuit is nearly identical to 10.1 — only the controlled rotation on q₁ changes:\n* q₀ still controls $(S†)^2 = Z$ → same $CP(\\pi)$ as before\n* q₁ now controls $U = S†$ → place $CP(-\\pi/2)$ from q₁ to q₂\n\nAfter IQFT₂ the output is $|11⟩|1⟩$ — decimal 3 out of 4, confirming φ = 3/4.\n\n**Key insight:** S and S† share the same C-Z block. Their circuits differ only in the sign of the C-U rotation, yet QPE cleanly distinguishes φ = 1/4 from φ = 3/4.",
                 circuits: [
-                    [
-                        ['QFT'],
-                        ['RZ_PI4_2', 'RZ_MINUS_PI2_1', 'RZ_PI_0'],
-                        ['RZ_PI2_2'],
-                        ['IQFT'],
-                        [],
-                        []
-                    ],
-                    [
-                        ['QFT'],
-                        ['RZ_PI4_2', 'RZ_PI2_1', 'RZ_PI_0'],
-                        ['RZ_PI2_2', 'RZ_PI_1'],
-                        ['IQFT'],
-                        [],
-                        []
-                    ]
+                    [['X2'], ['H0', 'H1'], ['CP_PI_02'], ['CP_MINUS_PI2_12'], ['IQFT2']],
+                    [['X2'], ['H0', 'H1'], ['CP_MINUS_PI2_12'], ['CP_PI_02'], ['IQFT2']],
+                    [['X2', 'H0', 'H1'], ['CP_PI_02'], ['CP_MINUS_PI2_12'], ['IQFT2'], []],
+                    [['X2', 'H0', 'H1'], ['CP_MINUS_PI2_12'], ['CP_PI_02'], ['IQFT2'], []]
                 ]
             }
         ]

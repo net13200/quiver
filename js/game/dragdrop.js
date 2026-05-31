@@ -34,8 +34,8 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
     if (reqClicks === 1) {
         let fullGate;
         
-        if (base === 'QFT' || base === 'IQFT') {
-            fullGate = base; 
+        if (base === 'QFT' || base === 'IQFT' || base === 'IQFT2') {
+            fullGate = base;
         } else {
             fullGate = isAngle ? `RZ${angleStr}${q}` : `${base}${q}`;
         }
@@ -43,14 +43,14 @@ export function handleCellTap(c, q, state, renderBoardCallback) {
         // Check if the exact gate we are trying to place already exists on this wire
         let gateAlreadyExists = false;
         
-        if (fullGate === 'QFT' || fullGate === 'IQFT') {
+        if (fullGate === 'QFT' || fullGate === 'IQFT' || fullGate === 'IQFT2') {
             // For column commands, just check if it's already in the column
             gateAlreadyExists = state.currentGuess[c].includes(fullGate);
             state.currentGuess[c] = []; // Clear the column either way to make room or remove it
         } else {
             // For standard gates, check if it exists AND clear any overlapping gates
             state.currentGuess[c] = state.currentGuess[c].filter(g => {
-                if (g === 'QFT' || g === 'IQFT') return false; 
+                if (g === 'QFT' || g === 'IQFT' || g === 'IQFT2') return false;
                 
                 // If we found the exact gate we are holding, mark it!
                 if (g === fullGate) {

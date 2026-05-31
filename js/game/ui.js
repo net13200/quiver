@@ -119,9 +119,12 @@ export function getColumnHTML(gates, numQubits, gateStatusMap = null) {
         let statusClass = (gateStatusMap && gateStatusMap[type]) ? (gateStatusMap[type] === 'correct' ? 'eval-correct' : 'eval-absent') : '';
         const rowHeight = Math.max(60, numQubits * 30) / numQubits;
         if (type.startsWith('QFT') || type.startsWith('IQFT')) {
-            let cssClass = type === 'IQFT' ? 'iqft-gate' : 'qft-gate';
-            let heightPx = (numQubits * rowHeight);
-            html += `<div class="gate-box ${cssClass}${statusClass}" style="position: absolute; top: 45px; bottom: 5px; left: 50%; width: calc(100% - 4px); height: ${heightPx}px; display: flex; align-items: center; justify-content: center; z-index: 50; border-radius: 6px; box-sizing: border-box; pointer-events: none;">${type}</div>`;
+            let cssClass = (type === 'IQFT' || type === 'IQFT2') ? 'iqft-gate' : 'qft-gate';
+            let spanQubits = type === 'IQFT2' ? Math.min(2, numQubits) : numQubits;
+            let heightPx = spanQubits * rowHeight;
+            let label = type === 'IQFT2' ? 'IQFT₂' : type;
+            let top = type == 'IQFT2' ? 35: 45;
+            html += `<div class="gate-box ${cssClass}${statusClass}" style="position: absolute; top: ${top}px; bottom: 5px; left: 50%; width: calc(100% - 4px); height: ${heightPx}px; display: flex; align-items: center; justify-content: center; z-index: 50; border-radius: 6px; box-sizing: border-box; pointer-events: none;">${label}</div>`;
         } else if (type.startsWith('CCX')) {
             let c1 = parseInt(type[3]), c2 = parseInt(type[4]), t = parseInt(type[5]);
             let c1Top = ((c1 + 0.5) / numQubits * 100) + '%';

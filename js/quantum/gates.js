@@ -60,6 +60,9 @@ export function generateMatrices(N) {
         GATE_MATRICES['QFT'] = buildQFTMatrix(N, false);
         GATE_MATRICES['IQFT'] = buildQFTMatrix(N, true);
     }
+    if (N === 3) {
+        GATE_MATRICES['IQFT2'] = kron(buildQFTMatrix(2, true), I2);
+    }
     
     let singleGates = { 'X': X2, 'Y': Y2, 'H': H2, 'Z': Z2, 'SX': SX2 };
     for (let q = 0; q < N; q++) {
@@ -168,6 +171,7 @@ export function getOccupiedQubits(gate) {
     if (gate === 'QFT' || gate === 'IQFT') {
         return [0, 1, 2, 3, 4, 5, 6, 7];
     }
+    if (gate === 'IQFT2') return [0, 1];
     if (gate.startsWith('CCX')) {
         let c1 = parseInt(gate[3]), c2 = parseInt(gate[4]), t = parseInt(gate[5]);
         let occ = [];
