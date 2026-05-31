@@ -6,11 +6,20 @@ export const ACHIEVEMENTS = [
     { id: 'tutorial_graduate',  name: 'Tutorial Graduate',    icon: '🎓', desc: 'Finish the interactive tutorial',                                          category: 'Getting Started' },
     { id: 'superposition',      name: 'Superposition',        icon: '🌊', desc: 'Complete your first Learn stage',                                          category: 'Getting Started' },
 
-    // Learning
-    { id: 'wave_function',      name: 'Wave Function',        icon: '〰️', desc: 'Complete 10 Learn stages',          type: 'count',      target: 10,  progressKey: 'learn_count', category: 'Learning' },
-    { id: 'interference',       name: 'Interference',         icon: '🔀', desc: 'Complete 25 Learn stages',          type: 'count',      target: 25,  progressKey: 'learn_count', category: 'Learning' },
-    { id: 'quantum_literate',   name: 'Quantum Literate',     icon: '📖', desc: 'Complete all Learn stages',                                                category: 'Learning' },
-    { id: 'algorithm_architect',name: 'Algorithm Architect',  icon: '🏗️', desc: 'Complete a stage involving the Quantum Fourier Transform',                 category: 'Learning' },
+    // Learning — per-stage
+    { id: 'stage_0_complete',   name: 'Quantum Foundations',  icon: '🌱', desc: 'Complete Stage 0: Quantum Foundations',   category: 'Learning' },
+    { id: 'stage_1_complete',   name: 'Entangler',            icon: '🔔', desc: 'Complete Stage 1: Bell Pairs',             category: 'Learning' },
+    { id: 'stage_2_complete',   name: 'Phase Flip',           icon: '🎯', desc: 'Complete Stage 2: Controlled-Z',           category: 'Learning' },
+    { id: 'stage_3_complete',   name: 'Multipartite',         icon: '🔗', desc: 'Complete Stage 3: GHZ State',              category: 'Learning' },
+    { id: 'stage_4_complete',   name: 'Swap Artist',          icon: '🔄', desc: 'Complete Stage 4: Build a SWAP Gate',      category: 'Learning' },
+    { id: 'stage_5_complete',   name: 'Test Pilot',           icon: '🧪', desc: 'Complete Stage 5: The Swap Test',          category: 'Learning' },
+    { id: 'stage_6_complete',   name: 'Interference Lab',     icon: '⚗️', desc: 'Complete Stage 6: The Hadamard Test',      category: 'Learning' },
+    { id: 'stage_7_complete',   name: 'Phase Rotations',      icon: '🌀', desc: 'Complete Stage 7: Phase Rotations',        category: 'Learning' },
+    { id: 'stage_8_complete',   name: 'Fourier Transform',    icon: '🎵', desc: 'Complete Stage 8: Quantum Fourier Transform', category: 'Learning' },
+    { id: 'stage_9_complete',   name: 'Draper Adder',         icon: '➕', desc: 'Complete Stage 9: The QFT Adder',          category: 'Learning' },
+    { id: 'stage_10_complete',  name: 'Phase Estimator',      icon: '📐', desc: 'Complete Stage 10: Quantum Phase Estimation', category: 'Learning' },
+    { id: 'quantum_literate',   name: 'Quantum Literate',     icon: '📖', desc: 'Complete all Learn stages',                category: 'Learning' },
+    { id: 'algorithm_architect',name: 'Algorithm Architect',  icon: '🏗️', desc: 'Complete a stage involving the Quantum Fourier Transform', category: 'Learning' },
 
     // Gates
     { id: 'phase_wizard',       name: 'Phase Wizard',         icon: '🌀', desc: 'Solve a puzzle using an RZ or CP gate',                                    category: 'Gates' },

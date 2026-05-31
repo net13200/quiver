@@ -296,9 +296,12 @@ export function submitGuess(state, renderBoardCallback) {
             // STAGE-specific
             if (state.currentMode === 'STAGE') {
                 tryUnlock('superposition');
-                setAchievementProgress('learn_count', completedStages.length);
-                if (completedStages.length >= 10) tryUnlock('wave_function');
-                if (completedStages.length >= 25) tryUnlock('interference');
+                const stageIdx = state.currentP1;
+                const stageData = STAGES[stageIdx];
+                if (stageData) {
+                    const stageComplete = stageData.levels.every((_, lIdx) => completedStages.includes(`${stageIdx}-${lIdx}`));
+                    if (stageComplete) tryUnlock(`stage_${stageIdx}_complete`);
+                }
                 const allStageIds = [];
                 STAGES.forEach((s, sIdx) => s.levels.forEach((_, lIdx) => allStageIds.push(`${sIdx}-${lIdx}`)));
                 if (allStageIds.every(id => completedStages.includes(id))) tryUnlock('quantum_literate');
