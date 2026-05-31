@@ -175,6 +175,7 @@ function buildMenu() {
         'Multi-Qubit Gates': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.13)', border: 'rgba(139,92,246,0.4)', icon: '🔗' },
         'Quantum Protocols': { color: '#06b6d4', bg: 'rgba(6,182,212,0.13)',   border: 'rgba(6,182,212,0.4)',   icon: '🔬' },
         'Phase & QFT':       { color: '#f59e0b', bg: 'rgba(245,158,11,0.13)',  border: 'rgba(245,158,11,0.4)',  icon: '🌀' },
+        'Quantum Algorithms':{ color: '#22c55e', bg: 'rgba(34,197,94,0.13)',   border: 'rgba(34,197,94,0.4)',   icon: '🔍' },
     };
 
     // Layout — x in SVG viewBox units 0–100 (= CSS %), y in px

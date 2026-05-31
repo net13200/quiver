@@ -17,7 +17,8 @@ export const ACHIEVEMENTS = [
     { id: 'stage_7_complete',   name: 'Phase Rotations',      icon: '🌀', desc: 'Complete Stage 7: Phase Rotations',        category: 'Learning' },
     { id: 'stage_8_complete',   name: 'Fourier Transform',    icon: '🎵', desc: 'Complete Stage 8: Quantum Fourier Transform', category: 'Learning' },
     { id: 'stage_9_complete',   name: 'Draper Adder',         icon: '➕', desc: 'Complete Stage 9: The QFT Adder',          category: 'Learning' },
-    { id: 'stage_10_complete',  name: 'Phase Estimator',      icon: '📐', desc: 'Complete Stage 10: Quantum Phase Estimation', category: 'Learning' },
+    { id: 'stage_10_complete',  name: 'Phase Estimator',      icon: '📐', desc: "Complete Stage 10: Quantum Phase Estimation", category: 'Learning' },
+    { id: 'stage_11_complete',  name: "Grover's Searcher",    icon: '🔍', desc: "Complete Stage 11: Grover's Algorithm",     category: 'Learning' },
     { id: 'quantum_literate',   name: 'Quantum Literate',     icon: '📖', desc: 'Complete all Learn stages',                category: 'Learning' },
     { id: 'algorithm_architect',name: 'Algorithm Architect',  icon: '🏗️', desc: 'Complete a stage involving the Quantum Fourier Transform', category: 'Learning' },
 

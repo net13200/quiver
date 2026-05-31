@@ -577,5 +577,53 @@ export const STAGES = [
                 ]
             }
         ]
+    },
+    {
+        section: "Quantum Algorithms",
+        title: "Stage 11: Grover's Algorithm",
+        desc: "Harness phase kickback, the CCZ oracle, and amplitude amplification to search a quantum database.",
+        qubits: 3, cols: 11,
+        set: ['H0', 'H1', 'H2', 'X0', 'X1', 'X2', 'CX02', 'CCX012'],
+        levels: [
+            {
+                name: "11.1: Phase Kickback",
+                set: ['H0', 'H2', 'X2', 'CX02'],
+                hint: "Put q0 in |+⟩ with H. Create |−⟩ on q2 with X then H. Apply CX (control q0 → target q2). The −1 eigenvalue of |−⟩ kicks back onto q0, flipping it to |−⟩. Finish with H on q0 to convert the phase to a visible |1⟩.",
+                lesson: "**Phase kickback** is the engine behind every quantum oracle. When a controlled gate has its target in the |−⟩ = (|0⟩−|1⟩)/√2 state, applying it leaves the target unchanged and instead kicks the eigenvalue −1 back as a phase onto the control qubit.\n\n**Step by step:**\n* H on q0: q0 = |+⟩ = (|0⟩+|1⟩)/√2\n* X then H on q2: q2 = |−⟩ = (|0⟩−|1⟩)/√2\n* CX (q0→q2):\n  * |0⟩|−⟩ → |0⟩|−⟩ (control is 0, nothing happens)\n  * |1⟩|−⟩ → |1⟩X|−⟩ = |1⟩(−|−⟩) = −|1⟩|−⟩ (−1 phase kicked to control)\n  * Combined: (|0⟩+|1⟩)/√2 ⊗ |−⟩ → (|0⟩−|1⟩)/√2 ⊗ |−⟩ = |−⟩ ⊗ |−⟩\n* H on q0: H|−⟩ = |1⟩\n\nResult: q0 flipped to |1⟩, q2 undisturbed in |−⟩. A phase difference became a measurable bit — this is how Grover's oracle marks states without leaving any trace in the ancilla.",
+                cols: 5,
+                circuits: [
+                    [['H0', 'X2'], ['H2'], ['CX02'], ['H0']],
+                    [['X2'], ['H0', 'H2'], ['CX02'], ['H0']],
+                    [['H0'], ['X2'], ['H2'], ['CX02'], ['H0']],
+                    [['X2'], ['H0'], ['H2'], ['CX02'], ['H0']],
+                    [['X2'], ['H2'], ['H0'], ['CX02'], ['H0']]
+                ]
+            },
+            {
+                name: "11.2: CCZ Oracle",
+                set: ['H0', 'H1', 'H2', 'CCX012'],
+                hint: "Apply H to all three qubits. Then build CCZ on q2: H on q2, CCX, H on q2. The identity HXH = Z turns the Toffoli's bit-flip into a phase-flip, marking |111⟩ with −1.",
+                lesson: "The Grover **oracle** marks the target state |111⟩ with a phase of −1 while leaving every other state unchanged. It is built from a **CCZ gate** — a doubly-controlled Z — assembled from gates you already know.\n\n**Key identity:** H · X · H = Z. Sandwiching the target qubit of CCX between two H gates converts the bit-flip (X) into a phase-flip (Z), now doubly-controlled:\n\nCCZ = H₂ · CCX₀₁₂ · H₂\n\n**Circuit:**\n1. H on all: uniform superposition, all 8 states with equal amplitude\n2. CCZ = H₂ · CCX · H₂: marks |111⟩ with −1\n\n**After the oracle:**\n(|000⟩+|001⟩+|010⟩+|011⟩+|100⟩+|101⟩+|110⟩−|111⟩) / 2√2\n\nAll probabilities are still equal — the phase tag is invisible to measurement. The diffusion step in the next stage converts this tiny phase difference into a large amplitude difference.",
+                cols: 5,
+                circuits: [
+                    [['H0', 'H1', 'H2'], ['H2'], ['CCX012'], ['H2']],
+                    [['H0', 'H1'], ['H2'], ['H2'], ['CCX012'], ['H2']],
+                    [['H2'], ['H0', 'H1', 'H2'], ['CCX012'], ['H2']],
+                    [['H2'], ['H0', 'H1'], ['H2'], ['CCX012'], ['H2']]
+                ]
+            },
+            {
+                name: "11.3: Grover's Algorithm",
+                set: ['H0', 'H1', 'H2', 'X0', 'X1', 'X2', 'CCX012'],
+                hint: "Init: H on all. Oracle: H₂ · CCX · H₂. Diffusion: H×3, X×3, H₂·CCX·H₂, X×3, H×3. The oracle marks |111⟩; the diffusion amplifies it. After one full iteration P(|111⟩) ≈ 78%.",
+                lesson: "**Grover's Algorithm** finds a marked item among N unsorted items in only √N oracle queries — a quadratic speedup over any classical search.\n\nOur 3-qubit circuit searches all 8 basis states for the marked state |111⟩.\n\n**Two building blocks:**\n\n1. **Oracle (CCZ):** flips the phase of |111⟩ from +1 to −1. Amplitudes and probabilities are unchanged — only the phase tag is set.\n\n2. **Diffusion operator** (2|ψ₀⟩⟨ψ₀| − I): reflects all amplitudes about their mean. Because the oracle pushed |111⟩ below the mean (negative amplitude), the diffusion boosts it far above the mean and suppresses everything else.\n\n**Full circuit:**\n* **Init:** H₀ H₁ H₂ — uniform superposition\n* **Oracle:** H₂ · CCX₀₁₂ · H₂ — phase-mark |111⟩\n* **Diffusion:**\n  * H on all\n  * X on all\n  * CCZ = H₂ · CCX₀₁₂ · H₂\n  * X on all\n  * H on all\n\nAfter one iteration P(|111⟩) = 25/32 ≈ 78%. The optimal number of iterations for n=3 qubits is ⌊(π/4)√8⌋ = 2, which pushes P(|111⟩) to ~97%.",
+                circuits: [
+                    // Canonical uncompressed form
+                    [['H0','H1','H2'], ['H2'], ['CCX012'], ['H2'], ['H0','H1','H2'], ['X0','X1','X2'], ['H2'], ['CCX012'], ['H2'], ['X0','X1','X2'], ['H0','H1','H2']],
+                    // Compressed: independent gates merged into shared columns
+                    [['H0','H1','H2'], ['H2'], ['CCX012'], ['H0','H1','H2'], ['H2','X0','X1'], ['X2'], ['H2'], ['CCX012'], ['H2','X0','X1'], ['X2','H0','H1'], ['H2']]
+                ]
+            }
+        ]
     }
 ];
