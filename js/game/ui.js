@@ -168,13 +168,9 @@ export function getColumnHTML(gates, numQubits, gateStatusMap = null) {
                                angleStr === 'PI8' ? 'π/8' :
                                angleStr === 'MINUS_PI2' ? '-π/2' :
                                angleStr === 'MINUS_PI4' ? '-π/4' : '-π/8';
-            const RZ_ALIAS = { PI: 'Z', PI2: 'S', PI4: 'T', MINUS_PI2: 'S†', MINUS_PI4: 'T†' };
-            let alias = RZ_ALIAS[angleStr] ? `<span style="font-size: 7px; opacity: 0.75;">${RZ_ALIAS[angleStr]}</span>` : '';
-
             html += `<div class="gate-box rz-gate ${statusClass}" style="top: ${top};">
                         <span style="font-size: 11px;">Rz</span>
                         <span style="font-size: 8px;">${displayAngle}</span>
-                        ${alias}
                      </div>`;
         } else if (type.startsWith('CP_')) {
             let parts = type.split('_'); 
