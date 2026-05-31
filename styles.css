@@ -80,7 +80,7 @@ body {
 .menu-back-btn:hover { border-color: #7c3aed; color: #c4b5fd; }
 
 .instructions { font-size: 0.95rem; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 800px; line-height: 1.4;}
-.stage-breadcrumb { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.stage-breadcrumb { font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; font-weight: 600; }
 .stage-level-title { font-size: 1.55rem; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
 .stage-subtitle { font-size: 0.88rem; color: #94a3b8; margin-top: 2px; }
 #stage-nav { display: flex; justify-content: center; gap: 12px; margin-bottom: 16px; }
