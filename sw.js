@@ -24,7 +24,11 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+  e.waitUntil(
+    caches.open(CACHE).then(c =>
+      Promise.allSettled(SHELL.map(url => c.add(url)))
+    )
+  );
   self.skipWaiting();
 });
 
@@ -41,7 +45,8 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(e.request)
       .then(response => {
-        caches.open(CACHE).then(c => c.put(e.request, response.clone()));
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
         return response;
       })
       .catch(() => caches.match(e.request))

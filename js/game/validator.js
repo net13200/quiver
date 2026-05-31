@@ -392,6 +392,19 @@ export function submitGuess(state, renderBoardCallback) {
                 }
             } else if (state.currentMode === 'DAILY') {
                 const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-daily-next-btn') && state.currentLvl < 3) {
+                    const nextLvlName = state.currentLvl === 1 ? 'Medium' : 'Hard';
+                    const nextBtn = document.createElement('button');
+                    nextBtn.id = 'modal-daily-next-btn';
+                    nextBtn.className = 'btn';
+                    nextBtn.style.background = '#0ea5e9';
+                    nextBtn.innerText = `Next: ${nextLvlName} →`;
+                    nextBtn.addEventListener('click', () => {
+                        hideVictoryModal();
+                        window.initDailyGame(state.currentLvl + 1);
+                    });
+                    controls.insertBefore(nextBtn, controls.firstChild);
+                }
                 if (controls && !document.getElementById('modal-daily-challenge-btn')) {
                     const challengeBtn = document.createElement('button');
                     challengeBtn.id = 'modal-daily-challenge-btn';

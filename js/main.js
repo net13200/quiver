@@ -755,6 +755,7 @@ function initGame(mode, p1, p2) {
 }
 
 window.initLabGame = n => initGame('LAB', n);
+window.initDailyGame = n => initGame('DAILY', n);
 
 window.selectLabNumber = function(n) {
     if (state.currentMode !== 'LAB') return;
