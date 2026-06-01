@@ -254,19 +254,13 @@ export const STAGES = [
                 circuits: [[['X0']]]
             },
             {
-                name: "5. Interference",
-                hint: "Start at |1⟩, then apply a Hadamard to reach the negative equator.",
-                lesson: "<b>The Mechanism:</b> By starting at |1⟩ and applying a Hadamard, we land on the opposite side of the equator. The amplitude of |1⟩ is now negative (-1/√2).<br><br><b>Why it matters:</b> Negative amplitudes are what make quantum mechanics truly different from classical probability. They allow for *Quantum Interference*. Algorithms are designed so that wrong answers interfere destructively (cancel out) and the right answer interferes constructively (amplifies).",
-                circuits: [[['X0'], ['H0']]]
-            },
-            {
-                name: "6. Complex Amplitudes",
+                name: "5. Complex Amplitudes",
                 hint: "Combine a full X flip and a half-X (SX) rotation.",
                 lesson: "<b>The Mechanism:</b> The SX (Square-root of X) gate rotates the qubit 90 degrees around the X-axis. By combining gates, we can navigate to the Y-axis, bringing *imaginary numbers* (i) into our amplitudes.<br><br><b>Why it matters:</b> Complex numbers are essential to the Schrödinger equation. Manipulating the imaginary phase of a qubit is required for advanced routines like the Quantum Fourier Transform, a core component of Shor's algorithm for breaking RSA encryption.",
                 circuits: [[['X0'], ['SX0']]]
             },
             {
-                name: "7. SX Gate",
+                name: "6. SX Gate",
                 hint: "A single half-X rotation from the ground state.",
                 lesson: "<b>The Mechanism:</b> A single SX gate on |0⟩ pushes the qubit to the negative Y-axis. Notice how different combinations of rotations can reach different points on the equator.<br><br><b>Why it matters:</b> The X, Y, and Z axes represent non-commuting observables. Navigating precisely between them is exactly how quantum states are calibrated, tested, and manipulated inside physical hardware like superconducting transmon qubits.",
                 circuits: [[['SX0']]]
