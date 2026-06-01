@@ -85,6 +85,42 @@ export const state = {
     _usePresetSeed: false
 };
 
+// ── URL Router ───────────────────────────────────────────────────────────────
+let _routerNavigating = false;
+
+function pushRoute(hash) {
+    if (_routerNavigating) return;
+    history.pushState(null, '', location.pathname + location.search + hash);
+}
+
+function handleRoute(hash) {
+    _routerNavigating = true;
+    window.stopLabPlay?.();
+    const parts = (hash || '#/').replace(/^#\//, '').split('/');
+    const seg = parts[0] || '';
+    const p1  = parseInt(parts[1] ?? '0');
+    const p2  = Math.max(0, parseInt(parts[2] ?? '1') - 1);  // URL is 1-based
+    if (!seg) {
+        showMainMenu();
+    } else if (seg === 'learn') {
+        initGame('STAGE', p1, p2);
+    } else if (seg === 'random') {
+        initGame('RANDOM', p1);
+    } else if (seg === 'daily') {
+        initGame('DAILY', p1);
+    } else if (seg === 'timed') {
+        initGame('TIMED', p1);
+    } else if (seg === 'sandbox') {
+        initGame('FREEPLAY', p1);
+    } else {
+        showMainMenu();
+    }
+    _routerNavigating = false;
+}
+
+window.addEventListener('hashchange', () => handleRoute(location.hash));
+// ─────────────────────────────────────────────────────────────────────────────
+
 // --- Expose Global Hooks for dynamically created DOM elements ---
 window.showHint = () => {
     trackHintViewed(state.currentMode, state.currentP1, state.currentP2, state.currentLvl);
@@ -220,6 +256,7 @@ function formatAngleGateSeeded(gNext, rng) {
 }
 
 function showMainMenu() {
+    pushRoute('#/');
     document.getElementById('game-view').style.display = 'none';
     state.isDuelMode = false;
     buildMenu();
@@ -469,6 +506,12 @@ function initGame(mode, p1, p2) {
             return;
         }
     }
+
+    if (mode === 'STAGE')         pushRoute(`#/learn/${p1}/${p2 + 1}`);  // 1-based level
+    else if (mode === 'RANDOM')   pushRoute(`#/random/${p1}`);
+    else if (mode === 'DAILY')    pushRoute(`#/daily/${p1}`);
+    else if (mode === 'TIMED')    pushRoute(`#/timed/${p1}`);
+    else if (mode === 'FREEPLAY') pushRoute(`#/sandbox/${p1}`);
 
     if (!state.isTutorial) state.tutorialJustCompleted = false;
     state.selectedBaseGate = null;
@@ -1382,7 +1425,7 @@ if (_playParam) {
         const _pSeed = parseInt(_pParts[1]);
         const _pMask = _pParts.length >= 3 ? parseInt(_pParts[2]) : undefined;
         state.randomSeed = _pSeed;
-        window.history.replaceState({}, '', window.location.pathname);
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
         showPlayChallengeBanner(_pDiff, _pSeed, _pMask);
     }
 }
@@ -1391,7 +1434,7 @@ if (_playParam) {
 const _dailyChallengeParam = new URLSearchParams(window.location.search).get('daily-challenge');
 if (_dailyChallengeParam) {
     const _dcDiff = parseInt(_dailyChallengeParam);
-    window.history.replaceState({}, '', window.location.pathname);
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
     showDailyChallengeBanner(_dcDiff);
 }
 
@@ -1404,8 +1447,14 @@ if (_duelParam) {
         state.isDuelMode = true;
         state.duelSeed = parseInt(_parts[1]);
         state.duelOpponentScore = parseInt(_parts[2]);
-        window.history.replaceState({}, '', window.location.pathname);
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
         showDuelChallengeBanner(_diff, state.duelOpponentScore);
     }
+}
+
+// Boot: if a route hash is present, navigate directly to it
+const _bootHash = window.location.hash;
+if (_bootHash && _bootHash !== '#/' && _bootHash.startsWith('#/')) {
+    handleRoute(_bootHash);
 }
 
