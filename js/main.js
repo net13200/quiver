@@ -99,6 +99,36 @@ window.showLesson = () => {
 };
 window.tryQftLab = () => { state.qftLabFromP2 = state.currentP2; window.initQftLab(0); };
 window.tryAdderLab = () => { state.labFromP2 = state.currentP2; window.initLabGame(1); };
+
+window._labPlayInterval = null;
+window.stopLabPlay = () => {
+    clearInterval(window._labPlayInterval);
+    window._labPlayInterval = null;
+    const btn = document.getElementById('lab-play-btn');
+    if (btn) btn.textContent = '▶';
+};
+window.toggleQftLabPlay = () => {
+    if (window._labPlayInterval) { window.stopLabPlay(); return; }
+    document.getElementById('lab-play-btn').textContent = '⏸';
+    window._labPlayInterval = setInterval(() => {
+        window.selectQftInput(((state.labTargetN ?? 0) + 1) % 8);
+    }, 1500);
+};
+window.toggleAdderLabPlay = () => {
+    if (window._labPlayInterval) { window.stopLabPlay(); return; }
+    document.getElementById('lab-play-btn').textContent = '⏸';
+    window._labPlayInterval = setInterval(() => {
+        window.selectLabNumber(state.labTargetN >= 7 ? 1 : state.labTargetN + 1);
+    }, 1500);
+};
+window.toggleGroverLabPlay = () => {
+    if (window._labPlayInterval) { window.stopLabPlay(); return; }
+    document.getElementById('lab-play-btn').textContent = '⏸';
+    window._labPlayInterval = setInterval(() => {
+        window._groverSetK((window._groverCurrentK ?? 0) >= 8 ? 0 : (window._groverCurrentK ?? 0) + 1);
+    }, 1500);
+};
+
 window.showGroverLab = () => {
     const θ = Math.asin(1 / Math.sqrt(8));
     let k = 1;
@@ -122,14 +152,16 @@ window.showGroverLab = () => {
             </div>`;
         }).join('');
 
+        const isPlaying = !!window._labPlayInterval;
         const panel = document.getElementById('grover-lab-panel');
         if (!panel) return;
         panel.innerHTML = `
             <div style="font-size:0.9rem;font-weight:700;color:#22c55e;margin-bottom:10px;">Grover Iterations Lab</div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-                <button onclick="window._groverSetK(${Math.max(0, k - 1)})" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;" ${k === 0 ? 'disabled' : ''}>−</button>
+                <button onclick="window.stopLabPlay(); window._groverSetK(${Math.max(0, k - 1)})" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;" ${k === 0 ? 'disabled' : ''}>−</button>
                 <span style="font-size:1rem;font-weight:700;min-width:130px;text-align:center;">k = ${k} iteration${k !== 1 ? 's' : ''}</span>
-                <button onclick="window._groverSetK(${Math.min(8, k + 1)})" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;" ${k === 8 ? 'disabled' : ''}>+</button>
+                <button onclick="window.stopLabPlay(); window._groverSetK(${Math.min(8, k + 1)})" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;" ${k === 8 ? 'disabled' : ''}>+</button>
+                <button id="lab-play-btn" class="hint-btn" style="padding:2px 10px;font-size:1.1rem;line-height:1.3;background:#22c55e;color:#0f172a;font-weight:700;" onclick="window.toggleGroverLabPlay()">${isPlaying ? '⏸' : '▶'}</button>
             </div>
             <div style="display:flex;align-items:flex-end;gap:2px;height:${chartH + 6}px;padding:0 2px;border-bottom:1px solid #334155;">
                 ${barsHTML}
@@ -143,7 +175,8 @@ window.showGroverLab = () => {
         `;
     }
 
-    window._groverSetK = newK => { k = newK; renderGroverLab(); };
+    window._groverSetK = newK => { k = newK; window._groverCurrentK = newK; renderGroverLab(); };
+    window._groverCurrentK = k;
 
     let panel = document.getElementById('grover-lab-panel');
     if (!panel) {
@@ -428,6 +461,7 @@ function expandGateSet(baseGates, numQubits) {
 
 // --- Game Initialization ---
 function initGame(mode, p1, p2) {
+    window.stopLabPlay?.();
     if (mode === 'RANDOM') {
         let selectedBaseGates = Array.from(document.querySelectorAll('#play-gate-selection input:checked')).map(cb => cb.value);
         if (selectedBaseGates.length === 0) {
@@ -704,13 +738,16 @@ function initGame(mode, p1, p2) {
 
         const numBtns = [1,2,3,4,5,6,7].map(i => {
             const sel = i === p1;
-            return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.selectLabNumber(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
+            return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.stopLabPlay(); window.selectLabNumber(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
         }).join('');
         instructions.innerHTML = `
             <div class="stage-breadcrumb">QFT Adder Lab</div>
             <div class="stage-level-title">Add n to |0⟩</div>
             <div class="stage-subtitle">Click a number — the circuit fills with the Fourier encoding:</div>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;">${numBtns}</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;align-items:center;">
+                ${numBtns}
+                <button id="lab-play-btn" class="hint-btn" style="background:#d97706;color:#0f172a;font-weight:700;" onclick="window.toggleAdderLabPlay()">▶</button>
+            </div>
             <div>
                 <button class="hint-btn" onclick="document.getElementById('lab-formula-text').classList.toggle('hidden')">Phase Formula</button>
                 <button class="hint-btn" style="background:#3b82f6;margin-left:5px;" onclick="document.getElementById('lab-gates-text').classList.toggle('hidden')">Reveal Gates</button>
@@ -734,14 +771,17 @@ function initGame(mode, p1, p2) {
 
         const numBtns = [0,1,2,3,4,5,6,7].map(i => {
             const sel = i === p1;
-            return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.selectQftInput(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
+            return `<button class="hint-btn lab-num-btn" data-n="${i}" onclick="window.stopLabPlay(); window.selectQftInput(${i})" style="background:${sel?'#d97706':'#f59e0b'};color:#0f172a;font-weight:700;${sel?'outline:2px solid #fbbf24;outline-offset:1px;':''}">${i}</button>`;
         }).join('');
         const qftExplanation = "**The Clock Analogy**\n\nAfter QFT, each qubit sits on the equator of the Bloch sphere in the state (|0⟩ + e^(iφ)|1⟩)/√2. Every qubit is a clock hand pointing at a specific phase angle φ. As n increases by 1, each qubit's hand rotates by a different amount:\n\n* **q₀ (top)** — rotates 45° per step. The slowest clock: 8 different angles across n = 0 → 7.\n* **q₁ (middle)** — rotates 90° per step, for a total of 4 angles per round.\n* **q₂ (bottom)** — rotates 180° per step. The fastest clock, with only 2 cycles.\n\nStep through n = 0 → 7 and watch the Bloch spheres. Each n produces a unique combination of three phase angles — a frequency fingerprint. No two inputs share the same set of clock positions.\n\nThis is why QFT is powerful: it encodes a number into the phase dimension. The IQFT reads the fingerprint back as a binary count — which is exactly what QPE does to measure an eigenphase.";
         instructions.innerHTML = `
             <div class="stage-breadcrumb">QFT Lab</div>
             <div class="stage-level-title">QFT Visualization</div>
             <div class="stage-subtitle">Pick a basis state — see how QFT maps it to the Fourier space:</div>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;">${numBtns}</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px;align-items:center;">
+                ${numBtns}
+                <button id="lab-play-btn" class="hint-btn" style="background:#d97706;color:#0f172a;font-weight:700;" onclick="window.toggleQftLabPlay()">▶</button>
+            </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
                 <button id="qft-explain-btn" class="hint-btn" style="background:#059669;" onclick="showQftExplanation()">Read Explanation</button>
                 <button class="hint-btn" style="background:#475569;" onclick="window.qftLabGoBack()">← Back</button>
