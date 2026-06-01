@@ -254,16 +254,16 @@ export const STAGES = [
                 circuits: [[['X0']]]
             },
             {
-                name: "5. Complex Amplitudes",
-                hint: "Combine a full X flip and a half-X (SX) rotation.",
-                lesson: "<b>The Mechanism:</b> The SX (Square-root of X) gate rotates the qubit 90 degrees around the X-axis. By combining gates, we can navigate to the Y-axis, bringing *imaginary numbers* (i) into our amplitudes.<br><br><b>Why it matters:</b> Complex numbers are essential to the Schrödinger equation. Manipulating the imaginary phase of a qubit is required for advanced routines like the Quantum Fourier Transform, a core component of Shor's algorithm for breaking RSA encryption.",
-                circuits: [[['X0'], ['SX0']]]
-            },
-            {
-                name: "6. SX Gate",
+                name: "5. SX Gate",
                 hint: "A single half-X rotation from the ground state.",
                 lesson: "<b>The Mechanism:</b> A single SX gate on |0⟩ pushes the qubit to the negative Y-axis. Notice how different combinations of rotations can reach different points on the equator.<br><br><b>Why it matters:</b> The X, Y, and Z axes represent non-commuting observables. Navigating precisely between them is exactly how quantum states are calibrated, tested, and manipulated inside physical hardware like superconducting transmon qubits.",
                 circuits: [[['SX0']]]
+            },
+            {
+                name: "6. Complex Amplitudes",
+                hint: "Combine a full X flip and a half-X (SX) rotation.",
+                lesson: "<b>The Mechanism:</b> In the previous level, SX on |0⟩ landed at the -Y pole: (|0⟩ − i|1⟩)/√2. Now flip to |1⟩ first with X, then apply the same SX rotation — and you land on the <em>opposite</em> Y pole: (|0⟩ + i|1⟩)/√2. That 'i' in front of |1⟩ is a purely imaginary amplitude.<br><br><b>Why it matters:</b> Complex amplitudes are fundamental to quantum mechanics. Controlling imaginary phases is a key building block for advanced algorithms like the Quantum Fourier Transform, a core component of Shor's algorithm for breaking RSA encryption.",
+                circuits: [[['X0'], ['SX0']]]
             }
         ]
     },
