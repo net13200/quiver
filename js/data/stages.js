@@ -445,9 +445,9 @@ export const STAGES = [
         levels: [
             {
                 name: "8.1: QFT (1 Qubit)",
-                circuits: [[['X0'], ['H0']]],
-                hint: "Start with |1⟩ (using an X gate), then apply a 1-qubit QFT, which is literally just a single Hadamard gate.",
-                lesson: "<b>The Mechanism:</b> The Quantum Fourier Transform converts data from the computational (Z) basis into the phase (XY) basis. For a single qubit, this is exactly what the Hadamard gate does! It maps |0⟩ to |+⟩ (phase 0) and |1⟩ to |-⟩ (phase π).<br><br><b>Intuition:</b> In the normal Z-basis, information is stored as pure probabilities (0 or 1). In the XY-plane (Fourier regime), information is encoded as <i>angles of rotation</i> around the equator. This allows us to use phase-shifts to do powerful math!"
+                circuits: [[['H0']]],
+                hint: "A 1-qubit QFT is just a Hadamard gate. Apply it to transform |0⟩ into the phase basis.",
+                lesson: "<b>The Mechanism:</b> The Quantum Fourier Transform converts data from the computational (Z) basis into the phase (XY) basis. For a single qubit, this is exactly what the Hadamard gate does — it maps |0⟩ to |+⟩, placing the qubit on the equator at phase angle 0.<br><br><b>Intuition:</b> In the Z-basis, information is stored as 0 or 1. In the XY (Fourier) basis, information is encoded as <i>rotation angles</i> around the equator. |0⟩ becomes angle 0, |1⟩ would become angle π, and superpositions land at intermediate angles. This phase encoding is what lets the multi-qubit QFT do powerful arithmetic!"
             },
             {
                 name: "8.2: QFT (2 Qubits)",
