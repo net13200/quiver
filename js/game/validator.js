@@ -354,6 +354,8 @@ export function submitGuess(state, renderBoardCallback) {
 
         setTimeout(() => {
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
+            const _menuBtn = document.getElementById('modal-menu-btn');
+            if (_menuBtn) _menuBtn.textContent = state.currentMode === 'STAGE' ? 'All Stages' : 'Main Menu';
             if (state.currentMode === 'RANDOM') {
                 const controls = document.querySelector('#victory-modal .victory-controls');
                 if (controls && !document.getElementById('modal-restart-btn')) {

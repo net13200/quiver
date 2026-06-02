@@ -335,7 +335,7 @@ function buildMenu() {
     const _dss = document.getElementById('menu-daily-streak-s');
     if (_dss) _dss.innerText = _ds === 1 ? '' : 's';
 
-    // 2. Build the Stages — board-game snake path (boustrophedon)
+    // 2. Build the Stages — accordion sections, each with its own snake-path map
     const container = document.getElementById('stages-container');
     container.innerHTML = '';
 
@@ -347,126 +347,203 @@ function buildMenu() {
         'Quantum Algorithms':{ color: '#22c55e', bg: 'rgba(34,197,94,0.13)',   border: 'rgba(34,197,94,0.4)',   icon: '🔍' },
     };
 
-    // Layout — x in SVG viewBox units 0–100 (= CSS %), y in px
-    // 3 columns so labels fit; corners arc to the container edge
     const NODES_PER_ROW = 3;
-    const X_POS   = [20, 50, 80];   // column x positions (%)
-    const NODE_R  = 22;              // node circle radius (px)
-    const ROW_H   = 96;             // vertical spacing between rows (px)
-    const SECT_H  = 54;              // section banner height (px)
-    const SECT_PAD = 18;             // gap after section banner (px)
-    const PAD_TOP  = 20;
+    const X_POS  = [20, 50, 80];
+    const NODE_R = 22;
+    const ROW_H  = 96;
+    const PAD_TOP = 20;
+    const svgNS  = 'http://www.w3.org/2000/svg';
 
-    let y = PAD_TOP, nodeInRow = 0, rowDir = 1;  // rowDir: +1 = L→R, -1 = R→L
-    let curSection = null, curStyle = null;
-    const items = [], pathPts = [];
+    // Flat ordered list of all (sIdx, lIdx) — used for linear unlock chain
+    const allNodes = [];
+    STAGES.forEach((stage, sIdx) => stage.levels.forEach((_, lIdx) => allNodes.push({ sIdx, lIdx })));
+    const nodeOrderMap = new Map(allNodes.map(({ sIdx, lIdx }, i) => [`${sIdx}-${lIdx}`, i]));
 
+    function isNodeUnlocked(sIdx, lIdx) {
+        const i = nodeOrderMap.get(`${sIdx}-${lIdx}`);
+        if (i === 0) return true;
+        const prev = allNodes[i - 1];
+        return completedStages.includes(`${prev.sIdx}-${prev.lIdx}`);
+    }
+
+    // Group stages by section (preserving order)
+    const sections = [];
     STAGES.forEach((stage, sIdx) => {
-        if (stage.section !== curSection) {
-            // Pad incomplete row so each section always starts on a fresh row
-            if (nodeInRow > 0) { y += ROW_H; nodeInRow = 0; rowDir = -rowDir; }
-            curSection = stage.section;
-            curStyle   = SECTION_STYLES[curSection] || { color: '#64748b', bg: 'rgba(100,116,139,0.13)', border: 'rgba(100,116,139,0.4)', icon: '●' };
-            items.push({ type: 'section', name: curSection, style: curStyle, y, h: SECT_H });
-            y += SECT_H + SECT_PAD;
+        const last = sections[sections.length - 1];
+        if (!last || last.name !== stage.section) {
+            const style = SECTION_STYLES[stage.section] || { color: '#64748b', bg: 'rgba(100,116,139,0.13)', border: 'rgba(100,116,139,0.4)', icon: '●' };
+            sections.push({ name: stage.section, style, stages: [] });
         }
-
-        stage.levels.forEach((lvl, lIdx) => {
-            const xIdx = rowDir > 0 ? nodeInRow : (NODES_PER_ROW - 1 - nodeInRow);
-            const nx = X_POS[xIdx];
-            const ny = y + NODE_R;
-            items.push({ type: 'node', name: lvl.name, nx, ny, done: completedStages.includes(`${sIdx}-${lIdx}`), sIdx, lIdx, color: curStyle.color });
-            pathPts.push({ x: nx, y: ny, color: curStyle.color });
-            nodeInRow++;
-            if (nodeInRow >= NODES_PER_ROW) { nodeInRow = 0; rowDir = -rowDir; y += ROW_H; }
-        });
+        sections[sections.length - 1].stages.push({ stage, sIdx });
     });
-    if (nodeInRow > 0) y += ROW_H;
-    const totalH = y + PAD_TOP;
 
-    // ── SVG path ─────────────────────────────────────────────────────────────
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('viewBox', `0 0 100 ${totalH}`);
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', String(totalH));
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
+    function buildSectionMap(sec) {
+        let y = PAD_TOP, nodeInRow = 0, rowDir = 1;
+        const nodes = [], pathPts = [];
 
-    function drawPath(pts, stroke, width, opacity) {
-        if (pts.length < 2) return;
-        let d = `M ${pts[0].x} ${pts[0].y}`;
-        for (let i = 1; i < pts.length; i++) {
-            const p = pts[i-1], q = pts[i];
-            if (p.y === q.y) {
-                // Same row — straight horizontal segment
-                d += ` L ${q.x} ${q.y}`;
-            } else if (p.x === q.x) {
-                // Corner turn (same column, different row) — arc outward to container edge
-                const b = p.x > 50 ? 20 : -20;
-                d += ` C ${p.x+b} ${p.y} ${q.x+b} ${q.y} ${q.x} ${q.y}`;
-            } else {
-                // Cross-section bridge — S-curve
-                const m = (p.y + q.y) / 2;
-                d += ` C ${p.x} ${m} ${q.x} ${m} ${q.x} ${q.y}`;
+        sec.stages.forEach(({ stage, sIdx }) => {
+            stage.levels.forEach((lvl, lIdx) => {
+                const xIdx = rowDir > 0 ? nodeInRow : (NODES_PER_ROW - 1 - nodeInRow);
+                const nx = X_POS[xIdx];
+                const ny = y + NODE_R;
+                const done = completedStages.includes(`${sIdx}-${lIdx}`);
+                const unlocked = done || isNodeUnlocked(sIdx, lIdx);
+                nodes.push({ nx, ny, done, unlocked, sIdx, lIdx, name: lvl.name });
+                if (unlocked) pathPts.push({ x: nx, y: ny });
+                nodeInRow++;
+                if (nodeInRow >= NODES_PER_ROW) { nodeInRow = 0; rowDir = -rowDir; y += ROW_H; }
+            });
+        });
+        if (nodeInRow > 0) y += ROW_H;
+        const totalH = y + PAD_TOP;
+
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', `0 0 100 ${totalH}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', String(totalH));
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
+
+        function drawPath(pts, stroke, width, opacity) {
+            if (pts.length < 2) return;
+            let d = `M ${pts[0].x} ${pts[0].y}`;
+            for (let i = 1; i < pts.length; i++) {
+                const p = pts[i - 1], q = pts[i];
+                if (p.y === q.y) {
+                    d += ` L ${q.x} ${q.y}`;
+                } else if (p.x === q.x) {
+                    const b = p.x > 50 ? 20 : -20;
+                    d += ` C ${p.x+b} ${p.y} ${q.x+b} ${q.y} ${q.x} ${q.y}`;
+                } else {
+                    const m = (p.y + q.y) / 2;
+                    d += ` C ${p.x} ${m} ${q.x} ${m} ${q.x} ${q.y}`;
+                }
             }
+            const el = document.createElementNS(svgNS, 'path');
+            el.setAttribute('d', d);
+            el.setAttribute('fill', 'none');
+            el.setAttribute('stroke', stroke);
+            el.setAttribute('stroke-width', String(width));
+            el.setAttribute('stroke-opacity', String(opacity));
+            el.setAttribute('stroke-linecap', 'round');
+            el.setAttribute('stroke-linejoin', 'round');
+            svg.appendChild(el);
         }
-        const el = document.createElementNS(svgNS, 'path');
-        el.setAttribute('d', d);
-        el.setAttribute('fill', 'none');
-        el.setAttribute('stroke', stroke);
-        el.setAttribute('stroke-width', String(width));
-        el.setAttribute('stroke-opacity', String(opacity));
-        el.setAttribute('stroke-linecap', 'round');
-        el.setAttribute('stroke-linejoin', 'round');
-        svg.appendChild(el);
-    }
 
-    drawPath(pathPts, '#1e3a5f', 10, 1);  // deep shadow
-    drawPath(pathPts, '#334155', 6,  1);  // base rail
+        if (pathPts.length >= 2) {
+            drawPath(pathPts, '#1e3a5f', 10, 1);
+            drawPath(pathPts, '#334155', 6,  1);
+            drawPath(pathPts, sec.style.color, 3, 0.7);
+        }
 
-    // Per-section colour overlay
-    let si = 0;
-    while (si < pathPts.length) {
-        const col = pathPts[si].color;
-        let ei = si + 1;
-        while (ei < pathPts.length && pathPts[ei].color === col) ei++;
-        const seg = pathPts.slice(si, ei);
-        if (seg.length >= 2) drawPath(seg, col, 3, 0.7);
-        si = ei;
-    }
+        const mapEl = document.createElement('div');
+        mapEl.className = 'learn-map';
+        mapEl.style.height = `${totalH}px`;
+        mapEl.appendChild(svg);
 
-    // ── HTML overlay ──────────────────────────────────────────────────────────
-    const mapEl = document.createElement('div');
-    mapEl.className = 'learn-map';
-    mapEl.style.height = `${totalH}px`;
-    mapEl.appendChild(svg);
-
-    items.forEach(item => {
-        if (item.type === 'section') {
-            const el = document.createElement('div');
-            el.className = 'map-section-banner';
-            el.style.cssText = `top:${item.y}px;height:${item.h}px;background:${item.style.bg};border-color:${item.style.border};color:${item.style.color};`;
-            el.innerHTML = `<span>${item.style.icon}</span><span>${item.name}</span>`;
-            mapEl.appendChild(el);
-        } else {
+        nodes.forEach(item => {
             const dot = document.createElement('div');
-            dot.className = 'map-node-dot' + (item.done ? ' done' : '');
-            dot.style.cssText = `left:${item.nx}%;top:${item.ny}px;--nc:${item.color};`;
-            dot.textContent = item.done ? '✓' : '';
-            dot.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+            dot.className = 'map-node-dot' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '');
+            dot.style.cssText = `left:${item.nx}%;top:${item.ny}px;--nc:${item.unlocked ? sec.style.color : '#1e293b'};`;
+            if (item.done) dot.textContent = '✓';
+            else if (!item.unlocked) dot.textContent = '🔒';
+            if (item.unlocked) dot.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
             mapEl.appendChild(dot);
 
             const lbl = document.createElement('div');
-            lbl.className = 'map-node-label' + (item.done ? ' done' : '');
+            lbl.className = 'map-node-label' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '');
             lbl.style.cssText = `left:${item.nx}%;top:${item.ny + NODE_R + 5}px;`;
             lbl.textContent = item.name.replace(/^[\d\.]+[\.:]?\s*/, '');
-            lbl.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+            if (item.unlocked) lbl.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
             mapEl.appendChild(lbl);
+        });
+
+        return mapEl;
+    }
+
+    let openSecIdx = -1;
+
+    function toggleSection(secIdx) {
+        const allBodies   = container.querySelectorAll('.section-body');
+        const allChevrons = container.querySelectorAll('.section-chevron');
+
+        // Close the currently open section
+        if (openSecIdx >= 0 && openSecIdx !== secIdx) {
+            allBodies[openSecIdx].style.height = '0';
+            allChevrons[openSecIdx].textContent = '▼';
         }
+
+        if (openSecIdx === secIdx) {
+            // Toggle closed
+            allBodies[secIdx].style.height = '0';
+            allChevrons[secIdx].textContent = '▼';
+            openSecIdx = -1;
+            return;
+        }
+
+        openSecIdx = secIdx;
+        const body  = allBodies[secIdx];
+        const inner = body.querySelector('.section-body-inner');
+
+        // Lazy-render the snake map on first open
+        if (!inner.dataset.built) {
+            inner.appendChild(buildSectionMap(sections[secIdx]));
+            inner.dataset.built = '1';
+        }
+
+        allChevrons[secIdx].textContent = '▲';
+        requestAnimationFrame(() => { body.style.height = inner.scrollHeight + 'px'; });
+    }
+
+    sections.forEach((sec, secIdx) => {
+        const { sIdx: firstSIdx } = sec.stages[0];
+        const sectionUnlocked = completedStages.some(cs => cs.startsWith(`${firstSIdx}-`))
+                             || isNodeUnlocked(firstSIdx, 0);
+
+        const totalLevels = sec.stages.reduce((s, { stage }) => s + stage.levels.length, 0);
+        const doneLevels  = sec.stages.reduce((s, { stage, sIdx }) =>
+            s + stage.levels.filter((_, lIdx) => completedStages.includes(`${sIdx}-${lIdx}`)).length, 0);
+        const pct = totalLevels ? Math.round((doneLevels / totalLevels) * 100) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'section-accordion' + (sectionUnlocked ? '' : ' locked');
+        card.innerHTML = `
+            <button class="section-header" style="--sc:${sec.style.color};" ${sectionUnlocked ? '' : 'disabled'}>
+                <div class="section-header-left">
+                    <span class="section-icon">${sectionUnlocked ? sec.style.icon : '🔒'}</span>
+                    <div class="section-header-info">
+                        <span class="section-name">${sec.name}</span>
+                        <div class="section-progress-bar">
+                            <div class="section-progress-fill" style="width:${pct}%;background:${sec.style.color};"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-header-right">
+                    <span class="section-progress-text">${doneLevels}/${totalLevels}</span>
+                    <span class="section-chevron">▼</span>
+                </div>
+            </button>
+            <div class="section-body">
+                <div class="section-body-inner"></div>
+            </div>`;
+
+        if (sectionUnlocked) {
+            card.querySelector('.section-header').addEventListener('click', () => toggleSection(secIdx));
+        }
+        container.appendChild(card);
     });
 
-    container.appendChild(mapEl);
+    // Auto-open the first unlocked section that isn't fully complete
+    const autoIdx = sections.findIndex((sec, secIdx) => {
+        const { sIdx: firstSIdx } = sec.stages[0];
+        const unlocked = completedStages.some(cs => cs.startsWith(`${firstSIdx}-`)) || isNodeUnlocked(firstSIdx, 0);
+        if (!unlocked) return false;
+        const total = sec.stages.reduce((s, { stage }) => s + stage.levels.length, 0);
+        const done  = sec.stages.reduce((s, { stage, sIdx }) =>
+            s + stage.levels.filter((_, lIdx) => completedStages.includes(`${sIdx}-${lIdx}`)).length, 0);
+        return done < total;
+    });
+    toggleSection(autoIdx >= 0 ? autoIdx : 0);
     
     // --- NEW: Daily Puzzle Tracking ---
     const now = new Date();
@@ -591,8 +668,9 @@ function initGame(mode, p1, p2) {
 
         const isFirst = (p1 === 0 && p2 === 0);
         const isLast = (p1 === STAGES.length - 1 && p2 === STAGES[p1].levels.length - 1);
+        const currentDone = completedStages.includes(`${p1}-${p2}`);
         document.getElementById('stage-prev-btn').disabled = isFirst;
-        document.getElementById('stage-next-btn').disabled = isLast;
+        document.getElementById('stage-next-btn').disabled = isLast || !currentDone;
         state.numQubits = lvl.qubits || stage.qubits;
         state.numCols = lvl.cols || stage.cols;
         state.activeSet = lvl.set || stage.set;
@@ -1408,7 +1486,8 @@ document.getElementById('btn-daily-3')?.addEventListener('click', () => initGame
 document.getElementById('modal-menu-btn').addEventListener('click', () => {
     hideVictoryModal();
     if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
-    showMainMenu();
+    if (state.currentMode === 'STAGE') showStagesPage();
+    else showMainMenu();
 });
 
 document.getElementById('tt-next').addEventListener('click', nextTourStep);

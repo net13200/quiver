@@ -282,20 +282,43 @@ body:has(#menu-home:not(.hidden)) {
 /* Learning Map — winding path */
 .learn-map { position: relative; width: 100%; overflow-x: hidden; }
 
-.map-section-banner {
-    position: absolute; left: 0; right: 0;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    font-weight: 700; font-size: 0.9rem; letter-spacing: 0.04em;
-    border-top: 1px solid; border-bottom: 1px solid;
-    z-index: 2;
+/* Section Accordion */
+.section-accordion {
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(15,23,42,0.5);
+    overflow: hidden;
 }
+.section-accordion.locked { opacity: 0.5; }
 
-.map-stage-label {
-    position: absolute; left: 0; right: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.1em; color: #475569; z-index: 2;
+.section-header {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; cursor: pointer; border: none;
+    background: transparent; color: inherit; font-family: inherit; text-align: left;
+    border-left: 3px solid var(--sc, #475569);
+    transition: background 0.15s;
 }
+.section-header:not([disabled]):hover { background: rgba(255,255,255,0.04); }
+.section-header[disabled] { cursor: not-allowed; }
+
+.section-header-left { display: flex; align-items: center; gap: 12px; }
+.section-icon { font-size: 1.3rem; width: 28px; text-align: center; flex-shrink: 0; }
+
+.section-header-info { display: flex; flex-direction: column; gap: 5px; }
+.section-name { font-size: 0.95rem; font-weight: 700; color: #e2e8f0; letter-spacing: 0.02em; }
+
+.section-progress-bar {
+    width: clamp(70px, 22vw, 130px); height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.1); overflow: hidden;
+}
+.section-progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+.section-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.section-progress-text { font-size: 0.8rem; color: #64748b; font-weight: 600; }
+.section-chevron { font-size: 0.75rem; color: #475569; }
+
+.section-body { height: 0; overflow: hidden; transition: height 0.35s ease; }
+.section-body-inner { padding: 8px 8px 20px; }
 
 .map-node-dot {
     position: absolute;
@@ -328,6 +351,9 @@ body:has(#menu-home:not(.hidden)) {
 }
 .map-node-label.done { color: #34d399; }
 .map-node-label:hover { color: #e2e8f0; }
+.map-node-dot.locked { cursor: not-allowed; opacity: 0.55; box-shadow: none; font-size: 13px; }
+.map-node-dot.locked:hover { transform: translate(-50%, -50%); filter: none; }
+.map-node-label.locked { color: #334155; cursor: default; opacity: 0.5; }
 
 /* Gate Selection Pills */
 .gate-checkbox { display: none; }
