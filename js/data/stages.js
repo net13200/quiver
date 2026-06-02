@@ -97,6 +97,20 @@ function getStage6Circuits(prepGateOnq1, prepGateOnq2 = null) {
     return circuits;
 }
 
+// Stage 6.1 intro: Hadamard Test on single-qubit U=X
+// Valid orderings of H0_first, X1, H1, CX01, H0_last
+// Constraints: X1 < H1 < CX01; H0_first < CX01; CX01 < H0_last
+// Merges allowed when gates act on different qubits
+function getStage6_0Circuits() {
+    return [
+        [['H0', 'X1'], ['H1'], ['CX01'], ['H0'], []],
+        [['X1'], ['H0', 'H1'], ['CX01'], ['H0'], []],
+        [['H0'], ['X1'], ['H1'], ['CX01'], ['H0']],
+        [['X1'], ['H0'], ['H1'], ['CX01'], ['H0']],
+        [['X1'], ['H1'], ['H0'], ['CX01'], ['H0']],
+    ];
+}
+
 // Stage 7.1 dynamically handles symmetries for X-Parity
 function getStage7_1Circuits() {
     let circuits = [];
@@ -405,14 +419,24 @@ export const STAGES = [
         qubits: 3, cols: 8, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
         levels: [
             {
-                name: "6.1: Hadamard Test: X Parity",
+                name: "6.1: The Hadamard Test",
+                qubits: 2,
+                cols: 5,
+                set: ['X1', 'H0', 'H1', 'CX01'],
+                quizDesc: "q1 = |−⟩. Build the Hadamard Test to detect that X flips q1's sign — Q0 should land on |1⟩.",
+                hint: "Prepare Q1 as |−⟩ using X then H. Put Q0 in superposition with H. Apply CX01. Close with H on Q0.",
+                lesson: "<b>The Question:</b> Can you find out whether a gate 'flips the sign' of a quantum state — without disturbing that state at all? Yes. The <b>Hadamard Test</b> does exactly this.<br><br><b>Two qubits:</b> Q0 is the <i>ancilla</i> — a scratch qubit that holds the answer. Q1 is the state you want to probe.<br><br><b>The Circuit — three steps:</b><br>1. <b>H on Q0</b> — puts the ancilla in superposition: |0⟩ → |+⟩ = (|0⟩+|1⟩)/√2<br>2. <b>Controlled-X (CX01)</b> — X is applied to Q1 <i>only</i> when Q0 = |1⟩<br>3. <b>H on Q0</b> — converts any hidden phase into a visible bit<br><br><b>Reading the result:</b> <b>Q0 = |0⟩</b> means the gate left Q1's sign unchanged (+1). <b>Q0 = |1⟩</b> means the gate negated Q1's sign (−1).<br><br><b>What happens here:</b> Prepare Q1 in |−⟩ = (|0⟩−|1⟩)/√2 using X then H. The key fact: X|−⟩ = −|−⟩ — X returns |−⟩ with a −1 sign. During the CX, this −1 silently moves onto the |1⟩ branch of Q0's superposition, turning |+⟩ into |−⟩. The final H converts |−⟩ → |1⟩.<br>Q0 ends at |1⟩. Q1 stays in |−⟩, completely undisturbed.<br><br><b>Why it matters:</b> You probed Q1 without measuring it. This 'phase kickback into the ancilla' is the engine behind every quantum error correction syndrome measurement — reading the parities of data qubits without collapsing the quantum information stored in them. The next two levels scale this up to 3 qubits.",
+                circuits: getStage6_0Circuits()
+            },
+            {
+                name: "6.2: Hadamard Test: X Parity",
                 quizDesc: "Prepare (|00⟩ − |11⟩)/√2 on q1 and q2, then run the Hadamard Test to measure the XX expectation value.",
                 circuits: getStage7_1Circuits(),
                 hint: "Prepare (|00⟩ − |11⟩)/√2 on q1 & q2 using X1, H1, CX12. Then H on q0, CX from q0→q1 and q0→q2, then H on q0.",
-                lesson: "<b>What the Hadamard Test does:</b> Given a state |ψ⟩ and a unitary U, this circuit measures <b>⟨ψ|U|ψ⟩</b> — the expectation value (average measured value) of U on |ψ⟩. The result lives in the ancilla q2: the closer ⟨ψ|U|ψ⟩ is to −1, the more likely q0 lands on |1⟩. When |ψ⟩ is an eigenstate of U (U|ψ⟩ = ±|ψ⟩), the expectation value is exactly ±1, and q0 is certain.<br><br><b>The Circuit Shape:</b> H on ancilla q2 → controlled-U on the target qubits → H on q2. Read q0: <b>|0⟩ means ⟨U⟩ = +1, |1⟩ means ⟨U⟩ = −1</b>.<br><br><b>Step by step:</b> q1 and q2 are prepared in (|00⟩−|11⟩)/√2. After the first H, q0 = |+⟩. The two CX gates implement controlled-XX: when q0=|1⟩, both q1 and q2 are flipped. Flipping both qubits of (|00⟩−|11⟩)/√2 swaps the two terms and flips the sign → −(|00⟩−|11⟩)/√2. That −1 factor attaches to the |1⟩ branch of q0, silently shifting it from |+⟩ to |−⟩. The final H converts this phase into a real bit flip: H|−⟩ = |1⟩.<br><br><b>Why this target state?</b> (|00⟩−|11⟩)/√2 is an eigenstate of XX with eigenvalue −1, so ⟨XX⟩ = −1 and q0 is certain to be |1⟩. A state with ⟨XX⟩ = +1, like (|00⟩+|11⟩)/√2, would leave q0 at |0⟩ — try removing the first X1 gate to see this.<br><br><b>Why it matters:</b> q0 revealed the XX parity of q1 and q2 without ever directly measuring them — their entangled state is completely untouched. In quantum error correction, this is exactly how syndrome measurements work: read the parities of data qubits without collapsing the encoded information."
+                lesson: "<b>What the Hadamard Test does:</b> Given a state |ψ⟩ and a unitary U, this circuit measures <b>⟨ψ|U|ψ⟩</b> — the expectation value (average measured value) of U on |ψ⟩. The result lives in the ancilla q2: the closer ⟨ψ|U|ψ⟩ is to −1, the more likely q0 lands on |1⟩. When |ψ⟩ is an eigenstate of U (U|ψ⟩ = ±|ψ⟩), the expectation value is exactly ±1, and q0 is certain.<br><br><b>The Circuit Shape:</b> H on ancilla q2 → controlled-U on the target qubits → H on q2. Read q0: <b>|0⟩ means ⟨U⟩ = +1, |1⟩ means ⟨U⟩ = −1</b>.<br><br><b>Step by step:</b> q1 and q2 are prepared in (|00⟩−|11⟩)/√2. After the first H, q0 = |+⟩. The two CX gates implement controlled-XX: when q0=|1⟩, both q1 and q2 are flipped. Flipping both qubits of (|00⟩−|11⟩)/√2 swaps the two terms and flips the sign → −(|00⟩−|11⟩)/√2. That −1 factor attaches to the |1⟩ branch of q0, silently shifting it from |+⟩ to |−⟩. The final H converts this phase into a real bit flip: H|−⟩ = |1⟩.<br><br><b>Why this target state?</b> (|00⟩−|11⟩)/√2 is an eigenstate of XX with eigenvalue −1, so ⟨XX⟩ = −1 and q0 is certain to be |1⟩. A state with ⟨XX⟩ = +1, like (|00⟩+|11⟩)/√2, would leave q0 at |0⟩ — try removing the first X1 gate to see this.<br><br><b>Why it matters:</b> q0 revealed the XX parity of q1 and q2 without ever directly measuring them — their entangled state is completely untouched. In quantum error correction, this is exactly how syndrome measurements work: read the parities of data qubits without collapsing the encoded information. Z-parity checks do the same — see 6.3."
             },
             {
-                name: "6.2: Hadamard Test: Z Parity",
+                name: "6.3: Hadamard Test: Z Parity",
                 quizDesc: "Prepare (|01⟩ + |10⟩)/√2 on q1 and q2, then run the Hadamard Test to measure the ZZ expectation value.",
                 circuits: getStage7_2Circuits(),
                 hint: "Prepare (|01⟩+|10⟩)/√2 on q1 & q2 using X2, H1, CX12. Sandwich each CX with H on q1 and q2 to build Controlled-Z gates.",
