@@ -326,68 +326,88 @@ export function showRevealCircuit(title, color, targetCircuit, numQubits) {
 }
 
 // --- Quantum Confetti Effect ---
-export function fireQuantumConfetti(startX, startY) {
-    const gateTypes = [
-        { label: 'H', class: 'gate-box', bg: 'var(--gate-bg)' },
-        { label: 'X', class: 'gate-box', bg: 'var(--gate-bg)' },
-        { label: 'Z', class: 'gate-box', bg: 'var(--gate-bg)' },
-        { label: 'P', class: 'confetti-cp' },
-        { label: '•', class: 'confetti-cx' },
-        { label: '⊕', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' },
-        { label: '×', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' }
-    ];
+const _CONFETTI_GATE_TYPES = [
+    { label: 'H', class: 'gate-box', bg: 'var(--gate-bg)' },
+    { label: 'X', class: 'gate-box', bg: 'var(--gate-bg)' },
+    { label: 'Z', class: 'gate-box', bg: 'var(--gate-bg)' },
+    { label: 'P', class: 'confetti-cp' },
+    { label: '•', class: 'confetti-cx' },
+    { label: '⊕', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' },
+    { label: '×', class: '', bg: 'transparent', color: 'var(--cx-color)', size: '20px' }
+];
 
+function _spawnConfettiParticles(startX, startY, count, velFn) {
     const particles = [];
-    const numParticles = 45; 
-
-    for (let i = 0; i < numParticles; i++) {
-        const type = gateTypes[Math.floor(Math.random() * gateTypes.length)];
+    for (let i = 0; i < count; i++) {
+        const type = _CONFETTI_GATE_TYPES[Math.floor(Math.random() * _CONFETTI_GATE_TYPES.length)];
         const el = document.createElement('div');
         el.className = `quantum-confetti ${type.class}`;
         el.innerText = type.label;
-        
+        // Explicit top/left so transform is always relative to viewport origin,
+        // regardless of document layout or overflow-x:hidden on body.
+        el.style.top = '0';
+        el.style.left = '0';
         if (type.bg) el.style.background = type.bg;
         if (type.color) el.style.color = type.color;
         if (type.size) el.style.fontSize = type.size;
-
         document.body.appendChild(el);
-
-        particles.push({
-            el: el,
-            x: startX - 13, 
-            y: startY - 13,
-            vx: ((Math.random() - 0.5) * 18) * 0.9, // Horizontal explosion spread
-            vy: ((Math.random() * -12) - 8) * 0.9,  // Upward velocity
-            rot: Math.random() * 360,
-            rotSpeed: ((Math.random() - 0.5) * 15) * 0.9 
-        });
+        const [vx, vy] = velFn();
+        particles.push({ el, x: startX - 13, y: startY - 13, vx, vy, rot: Math.random() * 360, rotSpeed: (Math.random() - 0.5) * 15 });
     }
 
-    let gravity = 0.5;
-
-    function animate() {
-        let activeParticles = false;
-
+    const H = window.innerHeight;
+    (function animate() {
+        let alive = false;
         particles.forEach(p => {
-            if (p.y < window.innerHeight) {
-                activeParticles = true;
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += gravity; // Pull them down
-                p.rot += p.rotSpeed;
-
+            if (p.y < H + 60) {
+                alive = true;
+                p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.rot += p.rotSpeed;
                 p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`;
             } else if (p.el.parentElement) {
-                p.el.parentElement.removeChild(p.el); // Clean up DOM
+                p.el.parentElement.removeChild(p.el);
             }
         });
+        if (alive) requestAnimationFrame(animate);
+    })();
+}
 
-        if (activeParticles) {
-            requestAnimationFrame(animate);
-        }
+export function fireQuantumConfetti(startX, startY) {
+    _spawnConfettiParticles(startX, startY, 45, () => [
+        ((Math.random() - 0.5) * 18) * 0.9,
+        ((Math.random() * -12) - 8) * 0.9
+    ]);
+}
+
+// Fires cannons from both bottom corners (for section completion).
+// Particles arc upward and inward so both sides are clearly visible on any layout.
+export function fireSectionConfetti() {
+    const W = window.innerWidth, H = window.innerHeight;
+
+    // Left cannon — bottom-left corner, shoots right and up
+    function leftVel() {
+        return [
+            Math.random() * 10 + 5,           // vx: +5 to +15 (rightward)
+            -(Math.random() * 14 + 18)         // vy: -18 to -32 (upward)
+        ];
+    }
+    // Right cannon — bottom-right corner, shoots left and up
+    function rightVel() {
+        return [
+            -(Math.random() * 10 + 5),         // vx: -5 to -15 (leftward)
+            -(Math.random() * 14 + 18)         // vy: -18 to -32 (upward)
+        ];
     }
 
-    requestAnimationFrame(animate);
+    _spawnConfettiParticles(0, H, 60, leftVel);
+    _spawnConfettiParticles(W, H, 60, rightVel);
+    setTimeout(() => {
+        _spawnConfettiParticles(0, H, 45, leftVel);
+        _spawnConfettiParticles(W, H, 45, rightVel);
+    }, 350);
+    setTimeout(() => {
+        _spawnConfettiParticles(0, H, 30, leftVel);
+        _spawnConfettiParticles(W, H, 30, rightVel);
+    }, 700);
 }
 
 // --- Modals ---

@@ -3,7 +3,7 @@ import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutor
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt, fireQuantumConfetti } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
@@ -600,12 +600,7 @@ function showSectionCompleteOverlay() {
 
     overlay.classList.remove('hidden');
 
-    // Staggered confetti bursts
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight * 0.35;
-    setTimeout(() => fireQuantumConfetti(cx, cy), 150);
-    setTimeout(() => fireQuantumConfetti(cx - 120, cy + 40), 450);
-    setTimeout(() => fireQuantumConfetti(cx + 120, cy + 40), 700);
+    fireSectionConfetti();
 }
 
 function hideSectionCompleteOverlay() {
@@ -646,10 +641,7 @@ function showQuizVictory() {
     if (againBtn) againBtn.classList.add('hidden');
 
     if (state._sectionJustCompleted) {
-        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.35;
-        setTimeout(() => fireQuantumConfetti(cx, cy), 300);
-        setTimeout(() => fireQuantumConfetti(cx - 100, cy + 40), 600);
-        setTimeout(() => fireQuantumConfetti(cx + 100, cy + 40), 850);
+        fireSectionConfetti();
     }
 }
 
