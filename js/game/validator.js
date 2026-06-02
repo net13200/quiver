@@ -600,7 +600,7 @@ export function submitGuess(state, renderBoardCallback) {
                     msg.innerText = `${_almostPrefix}Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining.`;
                     msg.style.color = _almostDist === 1 ? '#22c55e' : '#eab308';
 
-                    const sIdx = state._quizSIdx;
+                    const sIdx = state._quizCurrentSIdx ?? state._quizSIdx;
                     const lIdx = state._quizCurrentLevelIdx ?? 0;
                     const levelLabel = `${sIdx}.${lIdx + 1}`;
                     const failActions = document.getElementById('quiz-fail-actions');

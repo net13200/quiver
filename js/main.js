@@ -92,6 +92,7 @@ export const state = {
     quizLives: 3,
     _quizQueue: [],
     _quizCurrentLevelIdx: 0,
+    _quizCurrentSIdx: 0,
 };
 
 // ── URL Router ───────────────────────────────────────────────────────────────
@@ -354,6 +355,28 @@ const SECTION_STYLES = {
     'Quantum Algorithms':{ color: '#22c55e', bg: 'rgba(34,197,94,0.13)',   icon: '🔍' },
 };
 
+// A stage "owns" a quiz node when it has >1 level, or is the last in a run of
+// single-level stages (so single-level stages fold into the next multi-level stage's quiz).
+function hasOwnQuizNode(sIdx) {
+    if (STAGES[sIdx].levels.length > 1) return true;
+    const next = sIdx + 1;
+    return next >= STAGES.length || STAGES[next].levels.length > 1;
+}
+
+// Returns [{sIdx, lIdx}] pool of all levels contributing to the quiz for sIdx,
+// including any preceding consecutive single-level stages absorbed into this quiz.
+function getQuizStagePool(sIdx) {
+    const chain = [sIdx];
+    let i = sIdx - 1;
+    while (i >= 0 && STAGES[i].levels.length === 1 && !hasOwnQuizNode(i)) {
+        chain.unshift(i);
+        i--;
+    }
+    const pool = [];
+    chain.forEach(s => STAGES[s].levels.forEach((_, l) => pool.push({ sIdx: s, lIdx: l })));
+    return pool;
+}
+
 function sectionSlug(name) {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
 }
@@ -420,9 +443,12 @@ function buildSnakeMapEl(sec, isNodeUnlocked) {
             placeNode({ done, unlocked, sIdx, lIdx, name: lvl.name, isQuiz: false });
         });
 
-        const allLevelsDone = stage.levels.every((_, lIdx) => completedStages.includes(`${sIdx}-${lIdx}`));
-        const quizDone = completedQuizzes.includes(sIdx);
-        placeNode({ done: quizDone, unlocked: allLevelsDone, sIdx, lIdx: -1, name: stage.title, isQuiz: true });
+        if (hasOwnQuizNode(sIdx)) {
+            const pool = getQuizStagePool(sIdx);
+            const allPoolLevelsDone = pool.every(({ sIdx: s, lIdx: l }) => completedStages.includes(`${s}-${l}`));
+            const quizDone = completedQuizzes.includes(sIdx);
+            placeNode({ done: quizDone, unlocked: allPoolLevelsDone, sIdx, lIdx: -1, name: stage.title, isQuiz: true });
+        }
     });
     if (nodeInRow > 0) y += ROW_H;
     const totalH = y + PAD_TOP;
@@ -611,12 +637,11 @@ function hideSectionCompleteOverlay() {
 function showQuizVictory() {
     const sIdx = state._quizSIdx;
 
-    // Persist completion
+    // Persist completion — also mark any absorbed single-level stages as quiz-done
     const quizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
-    if (!quizzes.includes(sIdx)) {
-        quizzes.push(sIdx);
-        localStorage.setItem('quarks_quizzes', JSON.stringify(quizzes));
-    }
+    const pool = getQuizStagePool(sIdx);
+    [...new Set(pool.map(e => e.sIdx))].forEach(s => { if (!quizzes.includes(s)) quizzes.push(s); });
+    localStorage.setItem('quarks_quizzes', JSON.stringify(quizzes));
 
     // Detect section completion (all levels + all quizzes of the section done)
     state._sectionJustCompleted = false;
@@ -674,7 +699,11 @@ window.showQuizResult  = showQuizFailed;   // called by validator on quiz fail
 window.hideQuizResult  = hideQuizResult;
 
 window.quizNextQuestion = function() {
-    if (state._quizQueue.length > 0) state._quizCurrentLevelIdx = state._quizQueue.shift();
+    if (state._quizQueue.length > 0) {
+        const next = state._quizQueue.shift();
+        state._quizCurrentSIdx = next.sIdx;
+        state._quizCurrentLevelIdx = next.lIdx;
+    }
     state.quizCurrentQ++;
     state._quizContinuing = true;
     initGame('QUIZ', state._quizSIdx);
@@ -682,8 +711,10 @@ window.quizNextQuestion = function() {
 
 window.quizRetryAfterFail = function() {
     document.getElementById('quiz-fail-actions')?.classList.add('hidden');
-    state._quizQueue.push(state._quizCurrentLevelIdx);
-    state._quizCurrentLevelIdx = state._quizQueue.shift();
+    state._quizQueue.push({ sIdx: state._quizCurrentSIdx, lIdx: state._quizCurrentLevelIdx });
+    const next = state._quizQueue.shift();
+    state._quizCurrentSIdx = next.sIdx;
+    state._quizCurrentLevelIdx = next.lIdx;
     state.quizCurrentQ++;
     state._quizContinuing = true;
     initGame('QUIZ', state._quizSIdx);
@@ -691,7 +722,7 @@ window.quizRetryAfterFail = function() {
 
 window.quizGoToSubstage = function() {
     document.getElementById('quiz-fail-actions')?.classList.add('hidden');
-    initGame('STAGE', state._quizSIdx, state._quizCurrentLevelIdx ?? 0);
+    initGame('STAGE', state._quizCurrentSIdx ?? state._quizSIdx, state._quizCurrentLevelIdx ?? 0);
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1076,12 +1107,14 @@ function initGame(mode, p1, p2) {
             state.quizLives = 3;
             state._quizSessionSeed = Math.floor(Math.random() * 900000) + 100000;
 
-            const levels = quizStage.levels;
-            state.quizTotal = Math.min(5, levels.length);
+            const pool = getQuizStagePool(p1);
+            state.quizTotal = Math.min(5, pool.length);
             const shuffleRng = getSeededRandom(state._quizSessionSeed);
-            const queue = shuffleArray(levels.map((_, i) => i), shuffleRng).slice(0, state.quizTotal);
-            state._quizCurrentLevelIdx = queue[0];
-            state._quizQueue = queue.slice(1);
+            const shuffled = shuffleArray(pool.map((_, i) => i), shuffleRng).slice(0, state.quizTotal);
+            const firstEntry = pool[shuffled[0]];
+            state._quizCurrentSIdx = firstEntry.sIdx;
+            state._quizCurrentLevelIdx = firstEntry.lIdx;
+            state._quizQueue = shuffled.slice(1).map(i => pool[i]);
         }
         state._quizContinuing = false;
         state.attempts = 0;
@@ -1109,12 +1142,13 @@ function initGame(mode, p1, p2) {
         let strictNotice = '';
 
         {
-            const levels = quizStage.levels;
-            const chosenLevel = levels[state._quizCurrentLevelIdx ?? 0];
+            const questionSIdx = state._quizCurrentSIdx ?? p1;
+            const currentQuizStage = STAGES[questionSIdx];
+            const chosenLevel = currentQuizStage.levels[state._quizCurrentLevelIdx ?? 0];
 
-            state.numQubits = chosenLevel.qubits || quizStage.qubits;
-            state.numCols   = chosenLevel.cols   || quizStage.cols;
-            state.activeSet = buildActiveSet(chosenLevel.set || quizStage.set || [], state.numQubits);
+            state.numQubits = chosenLevel.qubits || currentQuizStage.qubits;
+            state.numCols   = chosenLevel.cols   || currentQuizStage.cols;
+            state.activeSet = buildActiveSet(chosenLevel.set || currentQuizStage.set || [], state.numQubits);
             generateMatrices(state.numQubits);
 
             state.secretCircuits = chosenLevel.circuits;
@@ -1122,7 +1156,7 @@ function initGame(mode, p1, p2) {
                 ? `<div class="quiz-task-hint">${chosenLevel.hint}</div>`
                 : '';
             taskHTML = `<div class="quiz-task"><div class="quiz-task-label">Your task:</div><div class="quiz-task-desc">${chosenLevel.quizDesc || chosenLevel.name}</div>${hintLine}</div>`;
-            if (isStrictQuiz) strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
+            if (questionSIdx >= 4) strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
         }
         const dotsHTML = Array(state.quizTotal).fill(0).map((_, i) => {
             const cls = i < state.quizScore ? 'correct' : (i === state.quizScore ? 'current' : '');
