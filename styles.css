@@ -720,3 +720,122 @@ body:has(#menu-home:not(.hidden)) {
 .ach-progress-text { font-size: 0.72rem; color: #64748b; }
 .ach-progress-bar { height: 4px; background: #1e293b; border-radius: 2px; margin-top: 3px; overflow: hidden; }
 .ach-progress-fill { height: 100%; background: #3b82f6; border-radius: 2px; transition: width 0.4s; }
+
+/* ── Quiz Map Nodes ─────────────────────────────────────────────────────── */
+.map-node-dot.quiz-node {
+    background: transparent;
+    border: 3px solid var(--nc, #f59e0b);
+    color: var(--nc, #f59e0b);
+    font-size: 1rem;
+}
+.map-node-dot.quiz-node.done {
+    background: #f59e0b;
+    color: #0f172a;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.35);
+}
+.map-node-label.quiz-label { color: #f59e0b; font-weight: 700; font-size: 0.72rem; }
+.map-node-label.quiz-label.done { color: #fbbf24; }
+
+/* ── Quiz In-Game UI ────────────────────────────────────────────────────── */
+.quiz-header {
+    display: flex; align-items: center; gap: 12px; margin: 6px 0 4px;
+    flex-wrap: wrap;
+}
+.quiz-lives { font-size: 1.05rem; line-height: 1; flex-shrink: 0; }
+.quiz-progress-dots {
+    display: flex; gap: 8px;
+}
+.quiz-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #1e293b; border: 2px solid #334155;
+    transition: background 0.2s, border-color 0.2s;
+}
+.quiz-dot.current { border-color: #f59e0b; background: rgba(245,158,11,0.2); }
+.quiz-dot.correct { background: #22c55e; border-color: #22c55e; }
+.quiz-dot.missed  { background: #ef4444; border-color: #ef4444; }
+
+.quiz-skip-btn { margin-top: 4px !important; background: #334155 !important; color: #94a3b8 !important; }
+.quiz-skip-btn:hover { background: #475569 !important; color: #cbd5e1 !important; }
+
+/* ── Quiz Result Overlay ────────────────────────────────────────────────── */
+.qr-overlay {
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(0,0,0,0.82);
+    display: flex; align-items: center; justify-content: center;
+    animation: scoFadeIn 0.3s ease-out both;
+}
+.qr-banner {
+    background: #0f172a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 36px 32px;
+    max-width: 360px; width: 90%;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    animation: scoBannerIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.qr-label {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #64748b; margin-bottom: 16px;
+}
+.qr-emoji { font-size: 3rem; line-height: 1; margin-bottom: 6px; animation: scoIconPop 0.5s 0.15s cubic-bezier(0.34,1.56,0.64,1) both; }
+.qr-score { font-size: 2.4rem; font-weight: 900; color: #f8fafc; letter-spacing: -1px; animation: scoSlideUp 0.4s 0.2s ease-out both; }
+.qr-dots { display: flex; gap: 8px; justify-content: center; margin: 12px 0; animation: scoSlideUp 0.4s 0.28s ease-out both; }
+.qr-message {
+    font-size: 0.95rem; color: #94a3b8; line-height: 1.5;
+    margin: 4px 0 24px; animation: scoSlideUp 0.4s 0.34s ease-out both;
+}
+.qr-buttons { display: flex; flex-direction: column; gap: 10px; animation: scoSlideUp 0.4s 0.44s ease-out both; }
+.qr-btn-primary {
+    padding: 13px 24px; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    background: #f59e0b; color: #0f172a;
+    transition: filter 0.15s, transform 0.1s;
+}
+.qr-btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.qr-btn-secondary {
+    padding: 11px 24px; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; background: transparent; color: #64748b;
+    transition: color 0.15s, border-color 0.15s;
+}
+.qr-btn-secondary:hover { color: #94a3b8; border-color: rgba(255,255,255,0.25); }
+
+/* Quiz circuit task description (strict mode) */
+.quiz-task {
+    margin: 8px 0 4px;
+    padding: 10px 12px;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+.quiz-task-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #818cf8;
+    margin-bottom: 5px;
+}
+.quiz-task-desc {
+    color: #e2e8f0;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    font-weight: 500;
+}
+.quiz-task-hint {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.45;
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(99,102,241,0.2);
+}
+.quiz-strict-notice {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ef4444;
+    margin-top: 5px;
+    letter-spacing: 0.02em;
+}

@@ -135,7 +135,7 @@ export function submitGuess(state, renderBoardCallback) {
     const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
     let hasWon = statesMatch(userState, state.targetState, state.numQubits);
     
-    let isStrict = (state.currentMode === 'STAGE' && state.currentP1 >= 4);
+    let isStrict = ((state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') && state.currentP1 >= 4);
     if (isStrict && hasWon && !matchedMultiset) {
         hasWon = false; 
         let msg = document.getElementById('message');
@@ -182,6 +182,20 @@ export function submitGuess(state, renderBoardCallback) {
             return;
         }
 
+        // --- QUIZ MODE: correct answer → advance or declare victory ---
+        if (state.currentMode === 'QUIZ') {
+            state.quizScore++;
+            const msg = document.getElementById('message');
+            msg.innerText = '✓ Correct!';
+            msg.style.color = '#22c55e';
+            if (state.quizScore >= state.quizTotal) {
+                setTimeout(() => { msg.innerText = ''; window.showQuizVictory?.(); }, 900);
+            } else {
+                setTimeout(() => { msg.innerText = ''; window.quizNextQuestion?.(); }, 900);
+            }
+            return;
+        }
+
         const wasTutorial = state.isTutorial;
         if (state.isTutorial) {
             state.isTutorial = false;
@@ -206,18 +220,7 @@ export function submitGuess(state, renderBoardCallback) {
         let revealObj = null; 
 
         if (state.currentMode === 'STAGE') {
-            // Check section completion before and after marking, to detect the transition
-            const _csName = STAGES[state.currentP1].section;
-            const _csStagePairs = STAGES.reduce((acc, s, si) => s.section === _csName ? [...acc, si] : acc, []);
-            const _sectionWasComplete = _csStagePairs.every(si =>
-                STAGES[si].levels.every((_, li) => completedStages.includes(`${si}-${li}`)));
-
             markStageCompleted(state.currentP1, state.currentP2);
-
-            if (!_sectionWasComplete && _csStagePairs.every(si =>
-                    STAGES[si].levels.every((_, li) => completedStages.includes(`${si}-${li}`)))) {
-                state._sectionJustCompleted = true;
-            }
             
             let totalLevels = 0;
             STAGES.forEach(s => totalLevels += s.levels.length);
@@ -366,7 +369,7 @@ export function submitGuess(state, renderBoardCallback) {
         setTimeout(() => {
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
             const _menuBtn = document.getElementById('modal-menu-btn');
-            if (_menuBtn) _menuBtn.textContent = state.currentMode === 'STAGE' ? 'All Stages' : 'Main Menu';
+            if (_menuBtn) _menuBtn.textContent = (state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') ? 'Back to Section' : 'Main Menu';
             if (state.currentMode === 'RANDOM') {
                 const controls = document.querySelector('#victory-modal .victory-controls');
                 if (controls && !document.getElementById('modal-restart-btn')) {
@@ -527,6 +530,41 @@ export function submitGuess(state, renderBoardCallback) {
             const msg = document.getElementById('message');
             msg.style.color = '#38bdf8';
             msg.innerText = "Here's the correct circuit — hit Evaluate to complete the tutorial!";
+            return;
+        }
+
+        // --- QUIZ MODE: 3 attempts per question; 3 total lives ---
+        if (state.currentMode === 'QUIZ') {
+            wrap.classList.add('wrong-attempt');
+            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+            const msg = document.getElementById('message');
+
+            if (state.attempts >= 3) {
+                // Question failed
+                state.quizLives--;
+                state.gameOver = true;
+                document.getElementById('submit-btn').classList.add('hidden');
+                wrap.classList.remove('active');
+
+                if (state.quizLives <= 0) {
+                    msg.innerText = '💔 Out of lives — quiz failed!';
+                    msg.style.color = '#ef4444';
+                    setTimeout(() => { msg.innerText = ''; window.showQuizResult?.(); }, 1600);
+                } else {
+                    const l = state.quizLives;
+                    msg.innerText = `Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining…`;
+                    msg.style.color = '#eab308';
+                    setTimeout(() => { msg.innerText = ''; window.quizRetryAfterFail?.(); }, 1900);
+                }
+                return;
+            }
+
+            const left = 3 - state.attempts;
+            msg.innerText = `Not quite — ${left} attempt${left !== 1 ? 's' : ''} left.`;
+            msg.style.color = '#eab308';
+            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
+            state.currentGuess = Array(state.numCols).fill().map(() => []);
+            updateActiveRow(state, renderBoardCallback);
             return;
         }
 

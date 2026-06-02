@@ -135,6 +135,11 @@ export function generateMatrices(N) {
                 let j = (i === 3) ? 7 : (i === 7) ? 3 : i;
                 row[j] = {r:1, i:0}; return row;
             }); GATE_MATRICES['CCX120'] = CCX120;
+
+            // Aliases for swapped control order (CCX is symmetric in its two controls)
+            GATE_MATRICES['CCX102'] = CCX012;
+            GATE_MATRICES['CCX201'] = CCX021;
+            GATE_MATRICES['CCX210'] = CCX120;
         }
         
         for (let ctrl = 0; ctrl < N; ctrl++) {
@@ -226,8 +231,8 @@ export function addGateToColumn(colArray, newGate) {
     return filtered;
 }
 
-// Normalize symmetric gates (SWAP and CP are order-independent) to a canonical form
-// so SWAP10 === SWAP01 and CP_PI_10 === CP_PI_01 in all comparisons.
+// Normalize symmetric gates (SWAP, CP, CCX) to a canonical form
+// so SWAP10 === SWAP01, CP_PI_10 === CP_PI_01, and CCX102 === CCX012 in all comparisons.
 export function normalizeGate(gate) {
     if (gate.startsWith('SWAP')) {
         const q0 = parseInt(gate[4]), q1 = parseInt(gate[5]);
@@ -241,6 +246,13 @@ export function normalizeGate(gate) {
             if (q0 > q1) { parts[parts.length - 1] = `${q1}${q0}`; return parts.join('_'); }
         }
         return gate;
+    }
+    // CCX control qubits are symmetric: CCX(c1,c2,t) === CCX(c2,c1,t)
+    // Gate string format: CCX + c1 + c2 + t (e.g. "CCX012", "CCX102")
+    if (gate.startsWith('CCX') && gate.length === 6) {
+        const c1 = parseInt(gate[3]), c2 = parseInt(gate[4]), t = parseInt(gate[5]);
+        const [lo, hi] = c1 <= c2 ? [c1, c2] : [c2, c1];
+        return `CCX${lo}${hi}${t}`;
     }
     return gate;
 }

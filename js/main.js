@@ -82,7 +82,16 @@ export const state = {
     duelOpponentName: 'Challenger',
     randomSeed: 0,
     randomGateMask: 0,
-    _usePresetSeed: false
+    _usePresetSeed: false,
+    quizScore: 0,
+    quizTotal: 5,
+    quizCurrentQ: 0,
+    _quizSIdx: 0,
+    _quizSessionSeed: 0,
+    _quizContinuing: false,
+    quizLives: 3,
+    _quizQueue: [],
+    _quizCurrentLevelIdx: 0,
 };
 
 // ── URL Router ───────────────────────────────────────────────────────────────
@@ -248,6 +257,15 @@ function getSeededRandom(seed) {
     }
 }
 
+function shuffleArray(arr, rng) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 // A local version of the angle formatter that accepts our custom RNG
 function formatAngleGateSeeded(gNext, rng) {
     if (gNext.startsWith('RZ') || gNext.startsWith('CP')) {
@@ -354,14 +372,27 @@ function computeSectionGroups() {
 }
 
 function makeIsNodeUnlocked() {
+    const completedQuizzes = new Set(JSON.parse(localStorage.getItem('quarks_quizzes') || '[]'));
+    const groups = computeSectionGroups();
+    const sectionBySIdx = new Map();
+    groups.forEach((sec, secIdx) => sec.stages.forEach(({ sIdx }) => sectionBySIdx.set(sIdx, secIdx)));
+
     const allNodes = [];
     STAGES.forEach((stage, sIdx) => stage.levels.forEach((_, lIdx) => allNodes.push({ sIdx, lIdx })));
     const map = new Map(allNodes.map(({ sIdx, lIdx }, i) => [`${sIdx}-${lIdx}`, i]));
+
     return (sIdx, lIdx) => {
         const i = map.get(`${sIdx}-${lIdx}`);
+        if (i === undefined) return false;
         if (i === 0) return true;
         const prev = allNodes[i - 1];
-        return completedStages.includes(`${prev.sIdx}-${prev.lIdx}`);
+        if (!completedStages.includes(`${prev.sIdx}-${prev.lIdx}`)) return false;
+        // Cross-section transition: all quizzes of the previous section must be done
+        if (sectionBySIdx.get(prev.sIdx) !== sectionBySIdx.get(sIdx)) {
+            const prevSec = groups[sectionBySIdx.get(prev.sIdx)];
+            if (!prevSec.stages.every(({ sIdx: s }) => completedQuizzes.has(s))) return false;
+        }
+        return true;
     };
 }
 
@@ -370,18 +401,28 @@ function buildSnakeMapEl(sec, isNodeUnlocked) {
     const ns = 'http://www.w3.org/2000/svg';
     let y = PAD_TOP, nodeInRow = 0, rowDir = 1;
     const nodes = [], pathPts = [];
+    const completedQuizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
+
+    function placeNode(nodeData) {
+        const xIdx = rowDir > 0 ? nodeInRow : (NODES_PER_ROW - 1 - nodeInRow);
+        nodeData.nx = X_POS[xIdx];
+        nodeData.ny = y + NODE_R;
+        nodes.push(nodeData);
+        if (nodeData.unlocked) pathPts.push({ x: nodeData.nx, y: nodeData.ny });
+        nodeInRow++;
+        if (nodeInRow >= NODES_PER_ROW) { nodeInRow = 0; rowDir = -rowDir; y += ROW_H; }
+    }
 
     sec.stages.forEach(({ stage, sIdx }) => {
         stage.levels.forEach((lvl, lIdx) => {
-            const xIdx = rowDir > 0 ? nodeInRow : (NODES_PER_ROW - 1 - nodeInRow);
-            const nx = X_POS[xIdx], ny = y + NODE_R;
             const done = completedStages.includes(`${sIdx}-${lIdx}`);
             const unlocked = done || isNodeUnlocked(sIdx, lIdx);
-            nodes.push({ nx, ny, done, unlocked, sIdx, lIdx, name: lvl.name });
-            if (unlocked) pathPts.push({ x: nx, y: ny });
-            nodeInRow++;
-            if (nodeInRow >= NODES_PER_ROW) { nodeInRow = 0; rowDir = -rowDir; y += ROW_H; }
+            placeNode({ done, unlocked, sIdx, lIdx, name: lvl.name, isQuiz: false });
         });
+
+        const allLevelsDone = stage.levels.every((_, lIdx) => completedStages.includes(`${sIdx}-${lIdx}`));
+        const quizDone = completedQuizzes.includes(sIdx);
+        placeNode({ done: quizDone, unlocked: allLevelsDone, sIdx, lIdx: -1, name: stage.title, isQuiz: true });
     });
     if (nodeInRow > 0) y += ROW_H;
     const totalH = y + PAD_TOP;
@@ -423,18 +464,25 @@ function buildSnakeMapEl(sec, isNodeUnlocked) {
 
     nodes.forEach(item => {
         const dot = document.createElement('div');
-        dot.className = 'map-node-dot' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '');
-        dot.style.cssText = `left:${item.nx}%;top:${item.ny}px;--nc:${item.unlocked ? sec.style.color : '#1e293b'};`;
-        if (item.done) dot.textContent = '✓';
-        else if (!item.unlocked) dot.textContent = '🔒';
-        if (item.unlocked) dot.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+        if (item.isQuiz) {
+            dot.className = 'map-node-dot quiz-node' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '');
+            dot.style.cssText = `left:${item.nx}%;top:${item.ny}px;--nc:${item.unlocked ? '#f59e0b' : '#1e293b'};`;
+            dot.textContent = !item.unlocked ? '🔒' : '★';
+            if (item.unlocked) dot.onclick = () => initGame('QUIZ', item.sIdx);
+        } else {
+            dot.className = 'map-node-dot' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '');
+            dot.style.cssText = `left:${item.nx}%;top:${item.ny}px;--nc:${item.unlocked ? sec.style.color : '#1e293b'};`;
+            if (item.done) dot.textContent = '✓';
+            else if (!item.unlocked) dot.textContent = '🔒';
+            if (item.unlocked) dot.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+        }
         mapEl.appendChild(dot);
 
         const lbl = document.createElement('div');
-        lbl.className = 'map-node-label' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '');
+        lbl.className = 'map-node-label' + (item.done ? ' done' : '') + (!item.unlocked ? ' locked' : '') + (item.isQuiz ? ' quiz-label' : '');
         lbl.style.cssText = `left:${item.nx}%;top:${item.ny + 22 + 5}px;`;
-        lbl.textContent = item.name.replace(/^[\d\.]+[\.:]?\s*/, '');
-        if (item.unlocked) lbl.onclick = () => initGame('STAGE', item.sIdx, item.lIdx);
+        lbl.textContent = item.isQuiz ? 'Quiz ★' : item.name.replace(/^[\d\.]+[\.:]?\s*/, '');
+        if (item.unlocked) lbl.onclick = () => item.isQuiz ? initGame('QUIZ', item.sIdx) : initGame('STAGE', item.sIdx, item.lIdx);
         mapEl.appendChild(lbl);
     });
 
@@ -563,6 +611,96 @@ function showSectionCompleteOverlay() {
 function hideSectionCompleteOverlay() {
     document.getElementById('section-complete-overlay').classList.add('hidden');
 }
+
+// ── Quiz Helpers ─────────────────────────────────────────────────────────────
+function showQuizVictory() {
+    const sIdx = state._quizSIdx;
+
+    // Persist completion
+    const quizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
+    if (!quizzes.includes(sIdx)) {
+        quizzes.push(sIdx);
+        localStorage.setItem('quarks_quizzes', JSON.stringify(quizzes));
+    }
+
+    // Detect section completion (all levels + all quizzes of the section done)
+    state._sectionJustCompleted = false;
+    const groups = computeSectionGroups();
+    const currentSec = groups.find(g => g.stages.some(({ sIdx: s }) => s === sIdx));
+    if (currentSec) {
+        const freshQuizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
+        const allLevelsDone = currentSec.stages.every(({ stage, sIdx: s }) =>
+            stage.levels.every((_, lIdx) => completedStages.includes(`${s}-${lIdx}`)));
+        const allQuizzesDone = currentSec.stages.every(({ sIdx: s }) => freshQuizzes.includes(s));
+        if (allLevelsDone && allQuizzesDone) state._sectionJustCompleted = true;
+    }
+
+    const hasNext = state._quizSIdx + 1 < STAGES.length;
+    showVictoryModal('Quiz Complete! ★', `${state.quizScore} / ${state.quizTotal} correct`, null, hasNext || state._sectionJustCompleted, null);
+
+    const menuBtn = document.getElementById('modal-menu-btn');
+    if (menuBtn) menuBtn.textContent = 'Back to Section';
+    const nextBtn = document.getElementById('modal-next-btn');
+    if (nextBtn) nextBtn.textContent = state._sectionJustCompleted ? 'Next Section →' : 'Next Stage →';
+    const againBtn = document.getElementById('modal-again-btn');
+    if (againBtn) againBtn.classList.add('hidden');
+
+    if (state._sectionJustCompleted) {
+        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.35;
+        setTimeout(() => fireQuantumConfetti(cx, cy), 300);
+        setTimeout(() => fireQuantumConfetti(cx - 100, cy + 40), 600);
+        setTimeout(() => fireQuantumConfetti(cx + 100, cy + 40), 850);
+    }
+}
+
+function showQuizFailed() {
+    const score = state.quizScore;
+    const total = state.quizTotal;
+    const sIdx = state._quizSIdx;
+
+    document.getElementById('qr-emoji').textContent = '💔';
+    document.getElementById('qr-score').textContent = `${score} / ${total}`;
+    document.getElementById('qr-message').textContent = "Don't worry — every attempt makes you stronger. Try again!";
+
+    const dotsHTML = Array(total).fill(0).map((_, i) =>
+        `<div class="quiz-dot ${i < score ? 'correct' : 'missed'}"></div>`
+    ).join('');
+    document.getElementById('qr-dots').innerHTML = dotsHTML;
+
+    document.getElementById('qr-retry-btn').onclick = () => { hideQuizResult(); initGame('QUIZ', sIdx); };
+    document.getElementById('qr-back-btn').onclick  = () => { hideQuizResult(); showCurrentSection(); };
+
+    document.getElementById('quiz-result-overlay').classList.remove('hidden');
+}
+
+function hideQuizResult() {
+    document.getElementById('quiz-result-overlay').classList.add('hidden');
+}
+
+window.showQuizVictory = showQuizVictory;
+window.showQuizResult  = showQuizFailed;   // called by validator on quiz fail
+window.hideQuizResult  = hideQuizResult;
+
+window.quizNextQuestion = function() {
+    if (state._quizSIdx >= 4) {
+        if (state._quizQueue.length > 0) state._quizCurrentLevelIdx = state._quizQueue.shift();
+    } else {
+        state.quizCurrentQ++;
+    }
+    state._quizContinuing = true;
+    initGame('QUIZ', state._quizSIdx);
+};
+
+window.quizRetryAfterFail = function() {
+    if (state._quizSIdx >= 4) {
+        state._quizQueue.push(state._quizCurrentLevelIdx);
+        state._quizCurrentLevelIdx = state._quizQueue.shift();
+    } else {
+        state.quizCurrentQ++;
+    }
+    state._quizContinuing = true;
+    initGame('QUIZ', state._quizSIdx);
+};
 // ─────────────────────────────────────────────────────────────────────────────
 
 // --- Main Menu Initialization ---
@@ -914,10 +1052,140 @@ function initGame(mode, p1, p2) {
         state.numCols = 8;
         state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
         state.secretCircuits = [[]];
-        
+
         instructions.innerHTML = `<div class="stage-breadcrumb">Sandbox</div><div class="stage-level-title">${state.numQubits} Qubit${state.numQubits>1?'s':''}</div><div class="stage-subtitle">Experiment freely. Click evaluate to take a snapshot of the state!</div>`;
         targetBox.style.display = 'none';
         liveBox.style.display = 'block';
+
+    } else if (mode === 'QUIZ') {
+        clearBtn.classList.add('hidden');
+        stageNav.classList.add('hidden');
+        const quizStage = STAGES[p1];
+        state._quizSIdx = p1;
+        state.currentP1 = p1;
+
+        const isStrictQuiz = state._quizSIdx >= 4;
+        const _isContinuing = state._quizContinuing;
+
+        if (!_isContinuing) {
+            state.quizCurrentQ = 0;
+            state.quizScore = 0;
+            state.quizLives = 3;
+            state._quizSessionSeed = Math.floor(Math.random() * 900000) + 100000;
+
+            if (isStrictQuiz) {
+                const levels = quizStage.levels;
+                state.quizTotal = Math.min(5, levels.length);
+                const shuffleRng = getSeededRandom(state._quizSessionSeed);
+                const queue = shuffleArray(levels.map((_, i) => i), shuffleRng).slice(0, state.quizTotal);
+                state._quizCurrentLevelIdx = queue[0];
+                state._quizQueue = queue.slice(1);
+            } else {
+                state.quizTotal = 5;
+            }
+        }
+        state._quizContinuing = false;
+        state.attempts = 0;
+
+        const quizRng = getSeededRandom(state._quizSessionSeed + state.quizCurrentQ * 777);
+        const _QUIZ_SPECIALS = new Set(['QFT', 'IQFT', 'IQFT2']);
+        const _BASE_NAMES = ['X','Y','Z','H','SX','RZ','CX','CP','SWAP','CCX'];
+
+        function buildActiveSet(rawSet, nQubits) {
+            const baseNames = rawSet.filter(g => _BASE_NAMES.includes(g));
+            const expanded  = rawSet.filter(g => !_QUIZ_SPECIALS.has(g) && !_BASE_NAMES.includes(g));
+            const specials  = rawSet.filter(g => _QUIZ_SPECIALS.has(g));
+            const set = [...expanded, ...expandGateSet(baseNames, nQubits), ...specials];
+            return set.length ? set : expandGateSet(['X', 'H'], nQubits);
+        }
+
+        let taskHTML = '';
+        let strictNotice = '';
+
+        if (isStrictQuiz) {
+            const levels = quizStage.levels;
+            const chosenLevel = levels[state._quizCurrentLevelIdx ?? 0];
+
+            state.numQubits = chosenLevel.qubits || quizStage.qubits;
+            state.numCols   = chosenLevel.cols   || quizStage.cols;
+            state.activeSet = buildActiveSet(chosenLevel.set || quizStage.set || [], state.numQubits);
+            generateMatrices(state.numQubits);
+
+            state.secretCircuits = chosenLevel.circuits;
+            const hintLine = chosenLevel.hint
+                ? `<div class="quiz-task-hint">${chosenLevel.hint}</div>`
+                : '';
+            taskHTML = `<div class="quiz-task"><div class="quiz-task-label">Your task:</div><div class="quiz-task-desc">${chosenLevel.quizDesc || chosenLevel.name}</div>${hintLine}</div>`;
+            strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
+        } else {
+            state.numQubits = quizStage.qubits;
+            state.numCols   = quizStage.cols;
+            state.activeSet = buildActiveSet(quizStage.set || [], state.numQubits);
+            generateMatrices(state.numQubits);
+
+            let quizCircuit = [];
+            const quizMinActive = Math.max(2, Math.ceil(state.numCols * 0.35));
+            let quizActiveLen = Math.floor(quizRng() * (state.numCols - quizMinActive + 1)) + quizMinActive;
+            let quizSingleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
+            let quizSingleToPlace = 2;
+            let quizRunningState = computeStateVector([], state.numQubits, GATE_MATRICES);
+
+            for (let i = 0; i < state.numCols; i++) {
+                if (i < quizActiveLen) {
+                    let col = [];
+                    let placed = 0;
+                    const isNonTrivialQ = (g) => !statesMatch(
+                        computeStateVector([[g]], state.numQubits, GATE_MATRICES, quizRunningState),
+                        quizRunningState, state.numQubits
+                    );
+                    if (quizSingleToPlace > 0 && quizSingleQSet.length > 0) {
+                        let g = formatAngleGateSeeded(quizSingleQSet[Math.floor(quizRng() * quizSingleQSet.length)], quizRng);
+                        if (isNonTrivialQ(g)) { col.push(g); quizSingleToPlace--; placed++; }
+                        if (quizSingleToPlace > 0 && state.numQubits >= 2) {
+                            let g2 = formatAngleGateSeeded(quizSingleQSet[Math.floor(quizRng() * quizSingleQSet.length)], quizRng);
+                            if (canFit(col, g2) && isNonTrivialQ(g2)) { col.push(g2); quizSingleToPlace--; placed++; }
+                        }
+                    } else {
+                        let g = formatAngleGateSeeded(state.activeSet[Math.floor(quizRng() * state.activeSet.length)], quizRng);
+                        if (isNonTrivialQ(g)) { col.push(g); placed++; }
+                    }
+                    for (let a = placed; a < state.numQubits; a++) {
+                        if (quizRng() > 0.5) {
+                            let gNext = formatAngleGateSeeded(state.activeSet[Math.floor(quizRng() * state.activeSet.length)], quizRng);
+                            if (canFit(col, gNext) && isNonTrivialQ(gNext)) col.push(gNext);
+                        }
+                    }
+                    quizRunningState = computeStateVector([col], state.numQubits, GATE_MATRICES, quizRunningState);
+                    quizCircuit.push(col);
+                } else quizCircuit.push([]);
+            }
+
+            const quizZeroState = computeStateVector([], state.numQubits, GATE_MATRICES);
+            if (statesMatch(computeStateVector(quizCircuit, state.numQubits, GATE_MATRICES), quizZeroState, state.numQubits)) {
+                quizCircuit[0] = [state.activeSet[0] || 'H0'];
+            }
+            state.secretCircuits = [quizCircuit];
+        }
+        const dotsHTML = Array(state.quizTotal).fill(0).map((_, i) => {
+            const cls = i < state.quizScore ? 'correct' : (i === state.quizScore ? 'current' : '');
+            return `<div class="quiz-dot ${cls}"></div>`;
+        }).join('');
+        const livesHTML = '❤️'.repeat(state.quizLives) + '🖤'.repeat(3 - state.quizLives);
+
+        const attemptsCounter = document.getElementById('attempts-counter');
+        if (attemptsCounter) attemptsCounter.innerText = '';
+
+        instructions.innerHTML = `
+            <div class="stage-breadcrumb">${quizStage.title} · Quiz</div>
+            <div class="quiz-header">
+                <div class="quiz-progress-dots">${dotsHTML}</div>
+                <div class="quiz-lives">${livesHTML}</div>
+            </div>
+            ${taskHTML}
+            ${strictNotice}`;
+
+        targetBox.style.display = 'block';
+        liveBox.style.display = 'none';
 
     } else if (mode === 'LAB') {
         clearBtn.classList.add('hidden');
@@ -1220,6 +1488,9 @@ function renderBoard() {
         attemptsCounter.style.display = 'none';
         timedBar.classList.remove('hidden');
         updateTimedStatusBar(state);
+    } else if (state.currentMode === 'QUIZ') {
+        attemptsCounter.style.display = 'block';
+        attemptsCounter.innerText = `Attempts Remaining: ${3 - state.attempts}`;
     } else {
         attemptsCounter.style.display = 'block';
         attemptsCounter.innerText = `Attempts Remaining: ${6 - state.attempts}`;
@@ -1495,6 +1766,12 @@ document.getElementById('modal-next-btn').addEventListener('click', () => {
         showSectionCompleteOverlay();
         return;
     }
+    if (state.currentMode === 'QUIZ') {
+        const nextSIdx = state._quizSIdx + 1;
+        if (nextSIdx < STAGES.length) initGame('STAGE', nextSIdx, 0);
+        else showMainMenu();
+        return;
+    }
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
         initGame('STAGE', state.currentP1, state.currentP2 + 1);
     } else if (state.currentP1 + 1 < STAGES.length) {
@@ -1513,6 +1790,8 @@ document.getElementById('again-btn').addEventListener('click', () => {
 document.getElementById('modal-again-btn').addEventListener('click', () => {
     hideVictoryModal();
     state._sectionJustCompleted = false;
+    const againBtn = document.getElementById('modal-again-btn');
+    if (againBtn) againBtn.classList.remove('hidden'); // restore in case quiz hid it
     if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
     else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl);
     else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
@@ -1526,10 +1805,12 @@ document.getElementById('btn-daily-3')?.addEventListener('click', () => initGame
 document.getElementById('modal-menu-btn').addEventListener('click', () => {
     hideVictoryModal();
     if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
-    if (state.currentMode === 'STAGE' && state._sectionJustCompleted) {
+    const _againBtn = document.getElementById('modal-again-btn');
+    if (_againBtn) _againBtn.classList.remove('hidden'); // restore if quiz hid it
+    if (state._sectionJustCompleted) {
         state._sectionJustCompleted = false;
         showSectionCompleteOverlay();
-    } else if (state.currentMode === 'STAGE') {
+    } else if (state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') {
         showCurrentSection();
     } else {
         showMainMenu();
