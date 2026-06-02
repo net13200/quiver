@@ -231,36 +231,42 @@ export const STAGES = [
         levels: [
             {
                 name: "1. Circuit Notation",
+                quizDesc: "The qubit starts at |0⟩ with no gates needed — just evaluate the empty circuit",
                 hint: "The board starts completely empty. Since it already matches the target state, just hit Evaluate!",
                 lesson: "### Welcome to the Quantum Realm!\n\nA quantum circuit is read **left to right**, like a musical score. Each horizontal line represents a **qubit** — a quantum bit.\n\n### Bra-Ket Notation\nIn quantum computing we label states using **Dirac notation**: $|·⟩$ (called a 'ket').\n\n* $|0⟩$ — this qubit will land on 0 when measured.\n* $|1⟩$ — this qubit will land on 1 when measured.\n\n### Amplitudes\nThe number in front of the ket is the **amplitude**. Squaring it gives the measurement probability.\n\nYour target reads:\n$$|ψ⟩ = 1 · |0⟩$$\n\nAmplitude = 1, so probability = 1² = 100%. It will definitely be a 0!\n\nEvery wire starts at $|0⟩$ by default, so an empty board already matches. **Just hit Evaluate!**",
                 circuits: [[[]]]
             },
             {
                 name: "2. Superposition",
+                quizDesc: "Put the qubit into equal superposition: |+⟩ = (|0⟩ + |1⟩)/√2",
                 hint: "Place a single Hadamard (H) gate on the wire to split the qubit into a 50/50 superposition.",
                 lesson: "### Breaking Free From Binary\n\nClassical bits are locked to 0 or 1. Qubits can exist in a **superposition** of both at the same time!\n\nA Hadamard (**H**) gate creates a perfect 50/50 blend:\n$$|ψ⟩ = 1/√2 · |0⟩ + 1/√2 · |1⟩$$\n\n### Where Does 1/√2 Come From?\n**Probabilities = amplitude squared.** For a 50% outcome we need:\n$$amplitude² = 1/2$$\n$$amplitude = √(1/2) = 1/√2 ≈ 0.707$$\n\nSo $1/√2$ is simply *the square root of 50%*.\n\n### The Action Plan\nPlace an **H** gate on the wire. Watch the **Live Bloch Sphere** on the right — the state vector drops from the North Pole to the equator. That's superposition!",
                 circuits: [[['H0']]]
             },
             {
                 name: "3. Bloch Sphere & Phase",
+                quizDesc: "Reach the minus-phase superposition |−⟩ = (|0⟩ − |1⟩)/√2",
                 hint: "Combine an H gate with a Z gate to flip the phase of the superposition to negative.",
                 lesson: "### Reading the Bloch Sphere\n\nThe **Live Bloch Sphere** on the right is a 3D map of your qubit's state:\n* **North Pole** → $|0⟩$, the qubit is definitely 0.\n* **South Pole** → $|1⟩$, the qubit is definitely 1.\n* **Equator** → 50/50 superposition!\n\n### The Power of Phase\nAmplitudes can be **negative**. Your target has a minus sign:\n$$|ψ⟩ = 1/√2 · |0⟩ − 1/√2 · |1⟩$$\n\nSquaring a negative still gives a positive probability: $(-1/√2)² = 1/2 = 50%$. Measuring it still gives a random 0 or 1. But the **phase shift** flips the qubit to the *opposite side* of the equator.\n\n### Why Phase Matters\nAmplitudes behave like **waves**: positive = crest, negative = trough. By controlling phase, quantum algorithms make wrong answers **cancel out** (destructive interference) and the correct answer **amplify** to 100% (constructive interference)!\n\n### The Goal\nApply **H** to reach the equator, then **Z** to flip the phase.",
                 circuits: [[['H0'], ['Z0']]]
             },
             {
                 name: "4. X Gate",
+                quizDesc: "Flip the qubit from |0⟩ to |1⟩ using a single gate",
                 hint: "Flip the qubit entirely to the South Pole.",
                 lesson: "<b>The Mechanism:</b> The Pauli-X gate acts as a quantum NOT gate. It rotates the qubit 180 degrees around the X-axis, flipping it from the North Pole (|0⟩) to the South Pole (|1⟩).<br><br><b>Why it matters:</b> Bit-flips are the most basic form of logic. In quantum error correction, identifying and fixing accidental X-flips caused by environmental noise is a major area of research.",
                 circuits: [[['X0']]]
             },
             {
                 name: "5. SX Gate",
+                quizDesc: "Apply a half-X rotation to reach the −Y pole: (|0⟩ − i|1⟩)/√2",
                 hint: "A single half-X rotation from the ground state.",
                 lesson: "<b>The Mechanism:</b> A single SX gate on |0⟩ pushes the qubit to the negative Y-axis. Notice how different combinations of rotations can reach different points on the equator.<br><br><b>Why it matters:</b> The X, Y, and Z axes represent non-commuting observables. Navigating precisely between them is exactly how quantum states are calibrated, tested, and manipulated inside physical hardware like superconducting transmon qubits.",
                 circuits: [[['SX0']]]
             },
             {
                 name: "6. Complex Amplitudes",
+                quizDesc: "Reach the +Y pole (|0⟩ + i|1⟩)/√2 — start by flipping to |1⟩, then apply SX",
                 hint: "Combine a full X flip and a half-X (SX) rotation.",
                 lesson: "<b>The Mechanism:</b> In the previous level, SX on |0⟩ landed at the -Y pole: (|0⟩ − i|1⟩)/√2. Now flip to |1⟩ first with X, then apply the same SX rotation — and you land on the <em>opposite</em> Y pole: (|0⟩ + i|1⟩)/√2. That 'i' in front of |1⟩ is a purely imaginary amplitude.<br><br><b>Why it matters:</b> Complex amplitudes are fundamental to quantum mechanics. Controlling imaginary phases is a key building block for advanced algorithms like the Quantum Fourier Transform, a core component of Shor's algorithm for breaking RSA encryption.",
                 circuits: [[['X0'], ['SX0']]]
@@ -275,24 +281,25 @@ export const STAGES = [
         levels: [
             {
                 name: "1.1: 2-Qubit States",
+                quizDesc: "Prepare the 2-qubit state |01⟩ — flip only q1 to |1⟩",
                 hint: "The board now has 2 qubits (q0 top, q1 bottom). Place an X gate on the bottom wire to flip it to |1⟩.",
                 lesson: "### Combining Wires\n\nWhen we chain multiple qubits together they form a **register**. We read wires **top to bottom** as a single binary string.\n\nOn this 2-qubit board:\n* Top wire = **q₀** (Qubit 0)\n* Bottom wire = **q₁** (Qubit 1)\n\n### Reading Multi-Qubit States\nThe target $1|01⟩$ means two assignments:\n* **q₀ → 0** (no gate needed)\n* **q₁ → 1** (needs to be flipped!)\n\n### How the X Gate Works\nEvery wire starts at 0. The **X gate** (quantum NOT) flips a qubit from $|0⟩$ to $|1⟩$.\n\nPlace an **X** gate on the bottom wire — watch its Bloch Sphere drop to the South Pole!\n\n### What's Next?\nWith two qubits, an entirely new phenomenon becomes possible: **entanglement**, where qubits become quantum-mechanically inseparable. That's what this stage explores.",
                 circuits: [[['X1']]]
             },
             {
-                name: "1.2: Bell State Φ+", circuits: [[['H0'], ['CX01']]], hint: "Entangle |+⟩ on Q0 with |0⟩ on Q1.",
+                name: "1.2: Bell State Φ+", quizDesc: "Prepare the Bell state Φ+ = (|00⟩ + |11⟩)/√2", circuits: [[['H0'], ['CX01']]], hint: "Entangle |+⟩ on Q0 with |0⟩ on Q1.",
                 lesson: "<b>The Mechanism:</b> The CNOT gate is represented on the board by a solid control dot connected vertically to a ⊕ target cross. It flips the target qubit *only* if the control qubit is |1⟩. Because our control qubit is in a superposition of |0⟩ and |1⟩, the target becomes a superposition of flipped and not-flipped. They are now mathematically locked together.<br><br><b>Why it matters:</b> This is maximum entanglement. Measuring one qubit instantly dictates the state of the other, regardless of distance. This is the exact state used in Quantum Teleportation and Superdense Coding."
             },
             {
-                name: "1.3: Bell State Φ-", circuits: [[['X0'], ['H0'], ['CX01']]], hint: "Entangle |-⟩ on Q0 with |0⟩ on Q1.",
+                name: "1.3: Bell State Φ-", quizDesc: "Prepare the Bell state Φ− = (|00⟩ − |11⟩)/√2", circuits: [[['X0'], ['H0'], ['CX01']]], hint: "Entangle |-⟩ on Q0 with |0⟩ on Q1.",
                 lesson: "<b>The Mechanism:</b> By starting the control qubit in the |-⟩ state before entangling, we embed a relative negative phase into the entangled pair.<br><br><b>Why it matters:</b> Entanglement isn't just about perfectly correlated classical data. By manipulating the phase within an entangled pair, quantum networks can encode extra classical bits of information, transferring 2 bits of data using only 1 physical qubit (Superdense coding)."
             },
             {
-                name: "1.4: Bell State Ψ+", circuits: [[['X1'], ['H0'], ['CX01']]], hint: "Flip the target before entangling.",
+                name: "1.4: Bell State Ψ+", quizDesc: "Prepare the Bell state Ψ+ = (|01⟩ + |10⟩)/√2", circuits: [[['X1'], ['H0'], ['CX01']]], hint: "Flip the target before entangling.",
                 lesson: "<b>The Mechanism:</b> Here, the qubits are perfectly *anti-correlated*. If you measure a 0 on Q0, you are guaranteed to find a 1 on Q1, and vice versa.<br><br><b>Why it matters:</b> Anti-correlated Bell states are frequently used in Quantum Key Distribution (like the E91 protocol) to generate perfectly secure, unhackable encryption keys between two distant parties."
             },
             {
-                name: "1.5: Bell State Ψ-", circuits: [[['X0', 'X1'], ['H0'], ['CX01']]], hint: "Start with |11⟩ before entangling.",
+                name: "1.5: Bell State Ψ-", quizDesc: "Prepare the Bell state Ψ− = (|01⟩ − |10⟩)/√2", circuits: [[['X0', 'X1'], ['H0'], ['CX01']]], hint: "Start with |11⟩ before entangling.",
                 lesson: "<b>The Mechanism:</b> Known as the 'Singlet State', this is the most unique of the four. It is rotationally invariant—meaning no matter what axis (X, Y, or Z) you measure these qubits on, they will always yield opposite results.<br><br><b>Why it matters:</b> Because of its perfect symmetry, the Singlet State is highly resistant to certain types of environmental noise, making it a foundational concept for creating Decoherence-Free Subspaces in quantum memory."
             }
         ]
@@ -304,7 +311,7 @@ export const STAGES = [
         qubits: 2, cols: 5, set: ['X0', 'X1', 'H0', 'H1', 'CX01', 'CX10'],
         levels: [
             { 
-                name: "2.1: CZ from CNOT", circuits: [[['H0', 'H1'], ['H1'], ['CX01'], ['H1']]], hint: "H X H = Z. (The first column places both qubits in |+⟩ so the CZ effect is visible!)",
+                name: "2.1: CZ from CNOT", quizDesc: "Implement a CZ gate on |++⟩ using CNOT and Hadamard gates", circuits: [[['H0', 'H1'], ['H1'], ['CX01'], ['H1']]], hint: "H X H = Z. (The first column places both qubits in |+⟩ so the CZ effect is visible!)",
                 lesson: "<b>The Mechanism:</b> A Controlled-Z (CZ) applies a negative phase only when both qubits are |1⟩. Since H turns X into Z (and vice versa), sandwiching the target of a CNOT between two Hadamards transforms the controlled-bit-flip into a controlled-phase-flip.<br><br><b>Why it matters:</b> Real quantum hardware often only supports one type of native 2-qubit gate (like the CX gate on IBM hardware). 'Quantum Compilers' must rewrite advanced algorithms using these basic gate identities to physically run the code on the chip."
             }
         ]
@@ -316,7 +323,7 @@ export const STAGES = [
         qubits: 3, cols: 5, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
         levels: [
             { 
-                name: "3.1: GHZ State", circuits: [[['H0'], ['CX01'], ['CX12']]], hint: "Create a superposition, then chain the CNOTs down the line.",
+                name: "3.1: GHZ State", quizDesc: "Create a 3-qubit GHZ state (|000⟩ + |111⟩)/√2 by entangling all three qubits", circuits: [[['H0'], ['CX01'], ['CX12']]], hint: "Create a superposition, then chain the CNOTs down the line.",
                 lesson: "<b>The Mechanism:</b> The Greenberger–Horne–Zeilinger (GHZ) state entangles three qubits so they are either all |000⟩ or all |111⟩. We build it by creating a standard Bell pair, and then using a second CNOT to 'infect' a third qubit with the entanglement.<br><br><b>Why it matters:</b> GHZ states demonstrate quantum non-locality far more powerfully than 2-qubit Bell pairs. They are incredibly useful in Quantum Metrology (creating hyper-sensitive measurement devices) and Quantum Secret Sharing protocols."
             }
         ]

@@ -682,22 +682,16 @@ window.showQuizResult  = showQuizFailed;   // called by validator on quiz fail
 window.hideQuizResult  = hideQuizResult;
 
 window.quizNextQuestion = function() {
-    if (state._quizSIdx >= 4) {
-        if (state._quizQueue.length > 0) state._quizCurrentLevelIdx = state._quizQueue.shift();
-    } else {
-        state.quizCurrentQ++;
-    }
+    if (state._quizQueue.length > 0) state._quizCurrentLevelIdx = state._quizQueue.shift();
+    state.quizCurrentQ++;
     state._quizContinuing = true;
     initGame('QUIZ', state._quizSIdx);
 };
 
 window.quizRetryAfterFail = function() {
-    if (state._quizSIdx >= 4) {
-        state._quizQueue.push(state._quizCurrentLevelIdx);
-        state._quizCurrentLevelIdx = state._quizQueue.shift();
-    } else {
-        state.quizCurrentQ++;
-    }
+    state._quizQueue.push(state._quizCurrentLevelIdx);
+    state._quizCurrentLevelIdx = state._quizQueue.shift();
+    state.quizCurrentQ++;
     state._quizContinuing = true;
     initGame('QUIZ', state._quizSIdx);
 };
@@ -1073,21 +1067,16 @@ function initGame(mode, p1, p2) {
             state.quizLives = 3;
             state._quizSessionSeed = Math.floor(Math.random() * 900000) + 100000;
 
-            if (isStrictQuiz) {
-                const levels = quizStage.levels;
-                state.quizTotal = Math.min(5, levels.length);
-                const shuffleRng = getSeededRandom(state._quizSessionSeed);
-                const queue = shuffleArray(levels.map((_, i) => i), shuffleRng).slice(0, state.quizTotal);
-                state._quizCurrentLevelIdx = queue[0];
-                state._quizQueue = queue.slice(1);
-            } else {
-                state.quizTotal = 5;
-            }
+            const levels = quizStage.levels;
+            state.quizTotal = Math.min(5, levels.length);
+            const shuffleRng = getSeededRandom(state._quizSessionSeed);
+            const queue = shuffleArray(levels.map((_, i) => i), shuffleRng).slice(0, state.quizTotal);
+            state._quizCurrentLevelIdx = queue[0];
+            state._quizQueue = queue.slice(1);
         }
         state._quizContinuing = false;
         state.attempts = 0;
 
-        const quizRng = getSeededRandom(state._quizSessionSeed + state.quizCurrentQ * 777);
         const _QUIZ_SPECIALS = new Set(['QFT', 'IQFT', 'IQFT2']);
         const _BASE_NAMES = ['X','Y','Z','H','SX','RZ','CX','CP','SWAP','CCX'];
 
@@ -1102,7 +1091,7 @@ function initGame(mode, p1, p2) {
         let taskHTML = '';
         let strictNotice = '';
 
-        if (isStrictQuiz) {
+        {
             const levels = quizStage.levels;
             const chosenLevel = levels[state._quizCurrentLevelIdx ?? 0];
 
@@ -1116,55 +1105,7 @@ function initGame(mode, p1, p2) {
                 ? `<div class="quiz-task-hint">${chosenLevel.hint}</div>`
                 : '';
             taskHTML = `<div class="quiz-task"><div class="quiz-task-label">Your task:</div><div class="quiz-task-desc">${chosenLevel.quizDesc || chosenLevel.name}</div>${hintLine}</div>`;
-            strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
-        } else {
-            state.numQubits = quizStage.qubits;
-            state.numCols   = quizStage.cols;
-            state.activeSet = buildActiveSet(quizStage.set || [], state.numQubits);
-            generateMatrices(state.numQubits);
-
-            let quizCircuit = [];
-            const quizMinActive = Math.max(2, Math.ceil(state.numCols * 0.35));
-            let quizActiveLen = Math.floor(quizRng() * (state.numCols - quizMinActive + 1)) + quizMinActive;
-            let quizSingleQSet = state.activeSet.filter(g => getOccupiedQubits(g).length === 1);
-            let quizSingleToPlace = 2;
-            let quizRunningState = computeStateVector([], state.numQubits, GATE_MATRICES);
-
-            for (let i = 0; i < state.numCols; i++) {
-                if (i < quizActiveLen) {
-                    let col = [];
-                    let placed = 0;
-                    const isNonTrivialQ = (g) => !statesMatch(
-                        computeStateVector([[g]], state.numQubits, GATE_MATRICES, quizRunningState),
-                        quizRunningState, state.numQubits
-                    );
-                    if (quizSingleToPlace > 0 && quizSingleQSet.length > 0) {
-                        let g = formatAngleGateSeeded(quizSingleQSet[Math.floor(quizRng() * quizSingleQSet.length)], quizRng);
-                        if (isNonTrivialQ(g)) { col.push(g); quizSingleToPlace--; placed++; }
-                        if (quizSingleToPlace > 0 && state.numQubits >= 2) {
-                            let g2 = formatAngleGateSeeded(quizSingleQSet[Math.floor(quizRng() * quizSingleQSet.length)], quizRng);
-                            if (canFit(col, g2) && isNonTrivialQ(g2)) { col.push(g2); quizSingleToPlace--; placed++; }
-                        }
-                    } else {
-                        let g = formatAngleGateSeeded(state.activeSet[Math.floor(quizRng() * state.activeSet.length)], quizRng);
-                        if (isNonTrivialQ(g)) { col.push(g); placed++; }
-                    }
-                    for (let a = placed; a < state.numQubits; a++) {
-                        if (quizRng() > 0.5) {
-                            let gNext = formatAngleGateSeeded(state.activeSet[Math.floor(quizRng() * state.activeSet.length)], quizRng);
-                            if (canFit(col, gNext) && isNonTrivialQ(gNext)) col.push(gNext);
-                        }
-                    }
-                    quizRunningState = computeStateVector([col], state.numQubits, GATE_MATRICES, quizRunningState);
-                    quizCircuit.push(col);
-                } else quizCircuit.push([]);
-            }
-
-            const quizZeroState = computeStateVector([], state.numQubits, GATE_MATRICES);
-            if (statesMatch(computeStateVector(quizCircuit, state.numQubits, GATE_MATRICES), quizZeroState, state.numQubits)) {
-                quizCircuit[0] = [state.activeSet[0] || 'H0'];
-            }
-            state.secretCircuits = [quizCircuit];
+            if (isStrictQuiz) strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
         }
         const dotsHTML = Array(state.quizTotal).fill(0).map((_, i) => {
             const cls = i < state.quizScore ? 'correct' : (i === state.quizScore ? 'current' : '');
