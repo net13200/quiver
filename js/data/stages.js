@@ -38,15 +38,15 @@ function getStage5_3Circuits() {
 }
 
 // Stage 6 dynamically handles all logical permutations for the Swap Test
-function getStage6Circuits(prepGateOnQ1, prepGateOnQ2 = null) {
+function getStage6Circuits(prepGateOnq1, prepGateOnq2 = null) {
     let circuits = [];
     CSWAP_VARIANTS.forEach(seq => {
         let canMergeOuter = seq[0][0].startsWith('CX');
 
         let prepOptions = [];
-        if (prepGateOnQ1 && prepGateOnQ2) {
-            // Three independent gates (H0, Q1-prep, Q2-prep) — all column groupings
-            const g = ['H0', prepGateOnQ1, prepGateOnQ2];
+        if (prepGateOnq1 && prepGateOnq2) {
+            // Three independent gates (H0, q1-prep, q2-prep) — all column groupings
+            const g = ['H0', prepGateOnq1, prepGateOnq2];
             // 1-column
             prepOptions.push([[...g]]);
             // 2-column partitions
@@ -63,10 +63,10 @@ function getStage6Circuits(prepGateOnQ1, prepGateOnQ2 = null) {
             prepOptions.push([[g[1]], [g[2]], [g[0]]]);
             prepOptions.push([[g[2]], [g[0]], [g[1]]]);
             prepOptions.push([[g[2]], [g[1]], [g[0]]]);
-        } else if (prepGateOnQ1) {
-            prepOptions.push([['H0'], [prepGateOnQ1]]);
-            prepOptions.push([[prepGateOnQ1], ['H0']]);
-            prepOptions.push([['H0', prepGateOnQ1]]);
+        } else if (prepGateOnq1) {
+            prepOptions.push([['H0'], [prepGateOnq1]]);
+            prepOptions.push([[prepGateOnq1], ['H0']]);
+            prepOptions.push([['H0', prepGateOnq1]]);
         } else {
             prepOptions.push([['H0']]);
         }
@@ -81,8 +81,8 @@ function getStage6Circuits(prepGateOnQ1, prepGateOnQ2 = null) {
         });
 
         if (canMergeOuter) {
-            let startMergedPrep = prepGateOnQ1
-                ? (prepGateOnQ2 ? [[prepGateOnQ1, prepGateOnQ2]] : [[prepGateOnQ1]])
+            let startMergedPrep = prepGateOnq1
+                ? (prepGateOnq2 ? [[prepGateOnq1, prepGateOnq2]] : [[prepGateOnq1]])
                 : [];
             let seqStartMerged = JSON.parse(JSON.stringify(seq));
             seqStartMerged[0].push('H0');
@@ -287,16 +287,16 @@ export const STAGES = [
                 circuits: [[['X1']]]
             },
             {
-                name: "1.2: Bell State Φ+", quizDesc: "Prepare the Bell state Φ⁺ = (|00⟩ + |11⟩)/√2.", circuits: [[['H0'], ['CX01']]], hint: "Entangle |+⟩ on Q0 with |0⟩ on Q1.",
+                name: "1.2: Bell State Φ+", quizDesc: "Prepare the Bell state Φ⁺ = (|00⟩ + |11⟩)/√2.", circuits: [[['H0'], ['CX01']]], hint: "Entangle |+⟩ on q2 with |0⟩ on q1.",
                 lesson: "<b>The Mechanism:</b> The CNOT gate is represented on the board by a solid control dot connected vertically to a ⊕ target cross. It flips the target qubit *only* if the control qubit is |1⟩. Because our control qubit is in a superposition of |0⟩ and |1⟩, the target becomes a superposition of flipped and not-flipped. They are now mathematically locked together.<br><br><b>Why it matters:</b> This is maximum entanglement. Measuring one qubit instantly dictates the state of the other, regardless of distance. This is the exact state used in Quantum Teleportation and Superdense Coding."
             },
             {
-                name: "1.3: Bell State Φ-", quizDesc: "Prepare the Bell state Φ⁻ = (|00⟩ − |11⟩)/√2.", circuits: [[['X0'], ['H0'], ['CX01']]], hint: "Entangle |-⟩ on Q0 with |0⟩ on Q1.",
+                name: "1.3: Bell State Φ-", quizDesc: "Prepare the Bell state Φ⁻ = (|00⟩ − |11⟩)/√2.", circuits: [[['X0'], ['H0'], ['CX01']]], hint: "Entangle |-⟩ on q2 with |0⟩ on q1.",
                 lesson: "<b>The Mechanism:</b> By starting the control qubit in the |-⟩ state before entangling, we embed a relative negative phase into the entangled pair.<br><br><b>Why it matters:</b> Entanglement isn't just about perfectly correlated classical data. By manipulating the phase within an entangled pair, quantum networks can encode extra classical bits of information, transferring 2 bits of data using only 1 physical qubit (Superdense coding)."
             },
             {
                 name: "1.4: Bell State Ψ+", quizDesc: "Prepare the Bell state Ψ⁺ = (|01⟩ + |10⟩)/√2.", circuits: [[['X1'], ['H0'], ['CX01']]], hint: "Flip the target before entangling.",
-                lesson: "<b>The Mechanism:</b> Here, the qubits are perfectly *anti-correlated*. If you measure a 0 on Q0, you are guaranteed to find a 1 on Q1, and vice versa.<br><br><b>Why it matters:</b> Anti-correlated Bell states are frequently used in Quantum Key Distribution (like the E91 protocol) to generate perfectly secure, unhackable encryption keys between two distant parties."
+                lesson: "<b>The Mechanism:</b> Here, the qubits are perfectly *anti-correlated*. If you measure a 0 on q2, you are guaranteed to find a 1 on q1, and vice versa.<br><br><b>Why it matters:</b> Anti-correlated Bell states are frequently used in Quantum Key Distribution (like the E91 protocol) to generate perfectly secure, unhackable encryption keys between two distant parties."
             },
             {
                 name: "1.5: Bell State Ψ-", quizDesc: "Prepare the Bell state Ψ⁻ = (|01⟩ − |10⟩)/√2.", circuits: [[['X0', 'X1'], ['H0'], ['CX01']]], hint: "Start with |11⟩ before entangling.",
@@ -345,8 +345,8 @@ export const STAGES = [
                     [['X2'], ['H1'], ['CX12'], ['CX21'], ['CX12']],
                     [['X2'], ['H1'], ['CX21'], ['CX12'], ['CX21']]
                 ],
-                hint: "Prepare Q1 = |+⟩ (H) and Q2 = |1⟩ (X). Swap them with three alternating CNOT gates — watch the Bloch spheres exchange positions.",
-                lesson: "<b>The Mechanism:</b> The SWAP gate exchanges the full quantum states of two qubits — including superpositions and phases. Here Q1 starts in |+⟩ = (|0⟩+|1⟩)/√2 and Q2 in |1⟩. After the three-CNOT sequence, Q1 holds |1⟩ and Q2 holds |+⟩. The XOR logic of back-and-forth CNOTs performs the swap without needing a third 'scratch' qubit.<br><br><b>Why it matters:</b> Physical qubits on a microchip are usually only wired to their immediate neighbors. If an algorithm requires entangling two distant qubits on opposite sides of the chip, the compiler <em>must</em> route their information through the grid using SWAP networks."
+                hint: "Prepare q1 = |+⟩ (H) and q2 = |1⟩ (X). Swap them with three alternating CNOT gates — watch the Bloch spheres exchange positions.",
+                lesson: "<b>The Mechanism:</b> The SWAP gate exchanges the full quantum states of two qubits — including superpositions and phases. Here q1 starts in |+⟩ = (|0⟩+|1⟩)/√2 and q2 in |1⟩. After the three-CNOT sequence, q1 holds |1⟩ and q2 holds |+⟩. The XOR logic of back-and-forth CNOTs performs the swap without needing a third 'scratch' qubit.<br><br><b>Why it matters:</b> Physical qubits on a microchip are usually only wired to their immediate neighbors. If an algorithm requires entangling two distant qubits on opposite sides of the chip, the compiler <em>must</em> route their information through the grid using SWAP networks."
             },
             {
                 name: "4.2: CSWAP (3 CCX)",
@@ -356,15 +356,15 @@ export const STAGES = [
                     [...p, ['CCX012'], ['CCX021'], ['CCX012']],
                     [...p, ['CCX021'], ['CCX012'], ['CCX021']]
                 ]),
-                hint: "Superpose Q0 (H) and Q1 (H). Then conditionally swap Q1 and Q2 using three Toffoli gates.",
-                lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits <em>only</em> if the control qubit is |1⟩. Here Q1 starts in |+⟩ and Q2 in |0⟩. When Q0 = |+⟩ (superposition), the gate conditionally swaps: the |1⟩ branch of Q0 exchanges Q1 and Q2, while the |0⟩ branch leaves them unchanged. We build it by upgrading all three CNOTs from the previous circuit into Toffoli (CCX) gates controlled by Q0.<br><br><b>Why it matters:</b> The Fredkin gate is a universal reversible logic gate. With a superposition control, CSWAP creates entanglement between the control and the swapped registers — the foundation of the Swap Test algorithm."
+                hint: "Superpose q2 (H) and q1 (H). Then conditionally swap q1 and q2 using three Toffoli gates.",
+                lesson: "<b>The Mechanism:</b> The Controlled-SWAP (Fredkin) gate swaps the target qubits <em>only</em> if the control qubit is |1⟩. Here q1 starts in |+⟩ and q2 in |0⟩. When q2 = |+⟩ (superposition), the gate conditionally swaps: the |1⟩ branch of q2 exchanges q1 and q2, while the |0⟩ branch leaves them unchanged. We build it by upgrading all three CNOTs from the previous circuit into Toffoli (CCX) gates controlled by q2.<br><br><b>Why it matters:</b> The Fredkin gate is a universal reversible logic gate. With a superposition control, CSWAP creates entanglement between the control and the swapped registers — the foundation of the Swap Test algorithm."
             },
             {
                 name: "4.3: CSWAP (Mixed)",
                 quizDesc: "q0 = |+⟩, q1 = |+⟩. Implement the same CSWAP gate (control: q0, targets: q1 ↔ q2) using a mix of Toffoli and CX gates.",
                 set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20', 'CCX012', 'CCX021'],
                 circuits: getStage5_3Circuits(),
-                hint: "Same setup as 4.2 — Q0 and Q1 in |+⟩. This time, wrap a single Toffoli in two CNOTs to achieve the identical conditional swap.",
+                hint: "Same setup as 4.2 — q2 and q1 in |+⟩. This time, wrap a single Toffoli in two CNOTs to achieve the identical conditional swap.",
                 lesson: "<b>The Mechanism:</b> The same CSWAP — same input states, same output — but compiled down to 1 Toffoli and 2 CNOTs instead of 3 Toffolis. The key insight is that only one of the three back-and-forth flips needs to be conditional; the flanking CNOTs handle the cascade, reducing the heavy-gate count by two-thirds.<br><br><b>Why it matters:</b> Every gate introduces noise, and Toffoli gates are notoriously expensive on real hardware. Compiling circuits to use fewer heavy gates while achieving the exact same mathematical result — quantum compilation — is a major area of quantum software engineering."
             }
         ]
@@ -379,22 +379,22 @@ export const STAGES = [
                 name: "5.1: Swap Test: Same",
                 quizDesc: "Run the Swap Test comparing q1 = |+⟩ against q2 = |+⟩.",
                 circuits: getStage6Circuits('H1', 'H2'),
-                hint: "Prepare Q1 = |+⟩ and Q2 = |+⟩ with two Hadamards. Superpose the ancilla (Q0) with H, apply the CSWAP, then close with another H on Q0.",
-                lesson: "<b>The Mechanism:</b> The Swap Test measures how similar two quantum states are. Superpose an ancilla (Q0), use it to CSWAP the two target states (Q1, Q2), then interfere Q0 with a final Hadamard. The probability of measuring Q0 as |0⟩ is P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Here Q1 = Q2 = |+⟩, so |⟨ψ|φ⟩|² = 1 and Q0 deterministically returns to |0⟩.<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test computes the inner product of two quantum states with a single ancilla measurement, offering a potential exponential speedup for Quantum AI."
+                hint: "Prepare q1 = |+⟩ and q2 = |+⟩ with two Hadamards. Superpose the ancilla (q2) with H, apply the CSWAP, then close with another H on q2.",
+                lesson: "<b>The Mechanism:</b> The Swap Test measures how similar two quantum states are. Superpose an ancilla (q2), use it to CSWAP the two target states (q1, q2), then interfere q2 with a final Hadamard. The probability of measuring q2 as |0⟩ is P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Here q1 = q2 = |+⟩, so |⟨ψ|φ⟩|² = 1 and q2 deterministically returns to |0⟩.<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test computes the inner product of two quantum states with a single ancilla measurement, offering a potential exponential speedup for Quantum AI."
             },
             {
                 name: "5.2: Swap Test: Orthogonal",
                 quizDesc: "Run the Swap Test comparing q1 = |1⟩ against q2 = |0⟩.",
                 circuits: getStage6Circuits('X1'),
-                hint: "Flip Q1 to |1⟩. Then run the exact same Swap Test logic as before!",
-                lesson: "<b>The Mechanism:</b> Now we test two completely orthogonal (opposite) states: |1⟩ (on Q1) and |0⟩ (on Q2). Their inner product is 0. Following our Swap Test formula: P(0) = 0.5 + 0.5(0) = 0.5. This means the ancilla qubit has exactly a 50% chance of being measured as |0⟩. Look at the Bloch sphere—Q0 is perfectly balanced on the equator!<br><br><b>Why it matters:</b> This demonstrates the lower bounds of the algorithm. When measuring the ancilla, P(0) = 0.5 is the absolute minimum you can get, proving that the datasets encoded in the qubits have absolutely zero overlap."
+                hint: "Flip q1 to |1⟩. Then run the exact same Swap Test logic as before!",
+                lesson: "<b>The Mechanism:</b> Now we test two completely orthogonal (opposite) states: |1⟩ (on q1) and |0⟩ (on q2). Their inner product is 0. Following our Swap Test formula: P(0) = 0.5 + 0.5(0) = 0.5. This means the ancilla qubit has exactly a 50% chance of being measured as |0⟩. Look at the Bloch sphere—Q0 is perfectly balanced on the equator!<br><br><b>Why it matters:</b> This demonstrates the lower bounds of the algorithm. When measuring the ancilla, P(0) = 0.5 is the absolute minimum you can get, proving that the datasets encoded in the qubits have absolutely zero overlap."
             },
             {
                 name: "5.3: Swap Test: Overlap",
                 quizDesc: "Run the Swap Test comparing q1 = |+⟩ against q2 = |0⟩.",
                 circuits: getStage6Circuits('H1'),
-                hint: "Prep Q1 with a Hadamard to |+⟩. Run the Swap Test again to see what partial overlap looks like.",
-                lesson: "<b>The Mechanism:</b> What if the states are only partially similar? Here we compare |+⟩ and |0⟩. Their squared inner product is 0.5. The formula gives P(0) = 0.5 + 0.5(0.5) = 0.75 (or 75%). Look at the statevector amplitudes—by checking Q0, we measured the exact mathematical overlap of our two target states!<br><br><b>Why it matters:</b> This is the real magic of the Swap test. It doesn't just say 'yes' or 'no'; it computes the exact continuous inner product (the quantum equivalent of the classical dot product). This serves as the computational backbone for advanced algorithms like Quantum Support Vector Machines (QSVM)."
+                hint: "Prep q1 with a Hadamard to |+⟩. Run the Swap Test again to see what partial overlap looks like.",
+                lesson: "<b>The Mechanism:</b> What if the states are only partially similar? Here we compare |+⟩ and |0⟩. Their squared inner product is 0.5. The formula gives P(0) = 0.5 + 0.5(0.5) = 0.75 (or 75%). Look at the statevector amplitudes—by checking q2, we measured the exact mathematical overlap of our two target states!<br><br><b>Why it matters:</b> This is the real magic of the Swap test. It doesn't just say 'yes' or 'no'; it computes the exact continuous inner product (the quantum equivalent of the classical dot product). This serves as the computational backbone for advanced algorithms like Quantum Support Vector Machines (QSVM)."
             }
         ]
     },
@@ -405,18 +405,18 @@ export const STAGES = [
         qubits: 3, cols: 8, set: ['X0','X1','X2', 'H0','H1','H2', 'CX01','CX10','CX12','CX21', 'CX02', 'CX20'],
         levels: [
             {
-                name: "6.1: H-Test: X Parity",
+                name: "6.1: Hadamard Test: X Parity",
                 quizDesc: "Prepare (|00⟩ − |11⟩)/√2 on q1 and q2, then run the Hadamard Test to measure the XX expectation value.",
                 circuits: getStage7_1Circuits(),
                 hint: "Prepare (|00⟩ − |11⟩)/√2 on q1 & q2 using X1, H1, CX12. Then H on q0, CX from q0→q1 and q0→q2, then H on q0.",
-                lesson: "<b>What the Hadamard Test does:</b> Given a state |ψ⟩ and a unitary U, this circuit measures <b>⟨ψ|U|ψ⟩</b> — the expectation value (average measured value) of U on |ψ⟩. The result lives in the ancilla Q0: the closer ⟨ψ|U|ψ⟩ is to −1, the more likely q0 lands on |1⟩. When |ψ⟩ is an eigenstate of U (U|ψ⟩ = ±|ψ⟩), the expectation value is exactly ±1, and q0 is certain.<br><br><b>The Circuit Shape:</b> H on ancilla Q0 → controlled-U on the target qubits → H on Q0. Read q0: <b>|0⟩ means ⟨U⟩ = +1, |1⟩ means ⟨U⟩ = −1</b>.<br><br><b>Step by step:</b> q1 and q2 are prepared in (|00⟩−|11⟩)/√2. After the first H, q0 = |+⟩. The two CX gates implement controlled-XX: when q0=|1⟩, both q1 and q2 are flipped. Flipping both qubits of (|00⟩−|11⟩)/√2 swaps the two terms and flips the sign → −(|00⟩−|11⟩)/√2. That −1 factor attaches to the |1⟩ branch of q0, silently shifting it from |+⟩ to |−⟩. The final H converts this phase into a real bit flip: H|−⟩ = |1⟩.<br><br><b>Why this target state?</b> (|00⟩−|11⟩)/√2 is an eigenstate of XX with eigenvalue −1, so ⟨XX⟩ = −1 and q0 is certain to be |1⟩. A state with ⟨XX⟩ = +1, like (|00⟩+|11⟩)/√2, would leave q0 at |0⟩ — try removing the first X1 gate to see this.<br><br><b>Why it matters:</b> q0 revealed the XX parity of q1 and q2 without ever directly measuring them — their entangled state is completely untouched. In quantum error correction, this is exactly how syndrome measurements work: read the parities of data qubits without collapsing the encoded information."
+                lesson: "<b>What the Hadamard Test does:</b> Given a state |ψ⟩ and a unitary U, this circuit measures <b>⟨ψ|U|ψ⟩</b> — the expectation value (average measured value) of U on |ψ⟩. The result lives in the ancilla q2: the closer ⟨ψ|U|ψ⟩ is to −1, the more likely q0 lands on |1⟩. When |ψ⟩ is an eigenstate of U (U|ψ⟩ = ±|ψ⟩), the expectation value is exactly ±1, and q0 is certain.<br><br><b>The Circuit Shape:</b> H on ancilla q2 → controlled-U on the target qubits → H on q2. Read q0: <b>|0⟩ means ⟨U⟩ = +1, |1⟩ means ⟨U⟩ = −1</b>.<br><br><b>Step by step:</b> q1 and q2 are prepared in (|00⟩−|11⟩)/√2. After the first H, q0 = |+⟩. The two CX gates implement controlled-XX: when q0=|1⟩, both q1 and q2 are flipped. Flipping both qubits of (|00⟩−|11⟩)/√2 swaps the two terms and flips the sign → −(|00⟩−|11⟩)/√2. That −1 factor attaches to the |1⟩ branch of q0, silently shifting it from |+⟩ to |−⟩. The final H converts this phase into a real bit flip: H|−⟩ = |1⟩.<br><br><b>Why this target state?</b> (|00⟩−|11⟩)/√2 is an eigenstate of XX with eigenvalue −1, so ⟨XX⟩ = −1 and q0 is certain to be |1⟩. A state with ⟨XX⟩ = +1, like (|00⟩+|11⟩)/√2, would leave q0 at |0⟩ — try removing the first X1 gate to see this.<br><br><b>Why it matters:</b> q0 revealed the XX parity of q1 and q2 without ever directly measuring them — their entangled state is completely untouched. In quantum error correction, this is exactly how syndrome measurements work: read the parities of data qubits without collapsing the encoded information."
             },
             {
-                name: "6.2: H-Test: Z Parity",
+                name: "6.2: Hadamard Test: Z Parity",
                 quizDesc: "Prepare (|01⟩ + |10⟩)/√2 on q1 and q2, then run the Hadamard Test to measure the ZZ expectation value.",
                 circuits: getStage7_2Circuits(),
-                hint: "Prepare (|01⟩+|10⟩)/√2 on Q1 & Q2 using X2, H1, CX12. Sandwich each CX with H on Q1 and Q2 to build Controlled-Z gates.",
-                lesson: "<b>Same structure, new operator:</b> This time we measure Z-parity (Z⊗Z). The target state is (|01⟩+|10⟩)/√2 — Q1 and Q2 are always opposite (one is 0, the other is 1). Z⊗Z has eigenvalue −1 here because Z|0⟩ = +|0⟩ and Z|1⟩ = −|1⟩: the two Z outcomes always disagree, giving a net −1.<br><br><b>Building a Controlled-Z:</b> There is no native CZ gate on this board, but H·CX·H = CZ is a standard identity. Sandwiching CX01 with H gates on Q1 turns it into a controlled-Z from Q0 to Q1. The same trick on CX02 gives a controlled-Z to Q2. Together they implement a controlled-(Z⊗Z).<br><br><b>The outcome:</b> The −1 eigenvalue kicks back into Q0's phase, drifting it from |+⟩ to |−⟩. The final H converts this to |1⟩ — identical logic to 6.1, just a different operator and target state.<br><br><b>Why it matters:</b> X-parity and Z-parity are complementary checks: X-parity detects phase-flip errors, Z-parity detects bit-flip errors. By continuously measuring both — without disturbing the data qubits — a quantum computer can pinpoint and correct errors in real time. This is the foundation of the surface code, today's most promising path to fault-tolerant quantum computing."
+                hint: "Prepare (|01⟩+|10⟩)/√2 on q1 & q2 using X2, H1, CX12. Sandwich each CX with H on q1 and q2 to build Controlled-Z gates.",
+                lesson: "<b>Same structure, new operator:</b> This time we measure Z-parity (Z⊗Z). The target state is (|01⟩+|10⟩)/√2 — q1 and q2 are always opposite (one is 0, the other is 1). Z⊗Z has eigenvalue −1 here because Z|0⟩ = +|0⟩ and Z|1⟩ = −|1⟩: the two Z outcomes always disagree, giving a net −1.<br><br><b>Building a Controlled-Z:</b> There is no native CZ gate on this board, but H·CX·H = CZ is a standard identity. Sandwiching CX01 with H gates on q1 turns it into a controlled-Z from q2 to q1. The same trick on CX02 gives a controlled-Z to q2. Together they implement a controlled-(Z⊗Z).<br><br><b>The outcome:</b> The −1 eigenvalue kicks back into q2's phase, drifting it from |+⟩ to |−⟩. The final H converts this to |1⟩ — identical logic to 6.1, just a different operator and target state.<br><br><b>Why it matters:</b> X-parity and Z-parity are complementary checks: X-parity detects phase-flip errors, Z-parity detects bit-flip errors. By continuously measuring both — without disturbing the data qubits — a quantum computer can pinpoint and correct errors in real time. This is the foundation of the surface code, today's most promising path to fault-tolerant quantum computing."
             }
         ]
     },
@@ -430,29 +430,29 @@ export const STAGES = [
                 name: "7.1: S Gate (π/2)",
                 quizDesc: "Prepare the state (|0⟩ + i|1⟩)/√2 using a Hadamard and a single RZ rotation.",
                 circuits: [[['H0'], ['RZ_PI2_0']]],
-                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard on Q0.",
+                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard on q2.",
                 lesson: "<b>The Mechanism:</b> The RZ gate applies a specific phase rotation around the Z-axis of the Bloch sphere. When θ = π/2, this is commonly called the <b>S gate</b>. Applying it to |+⟩ rotates the state 90 degrees along the equator.<br><br><b>Why it matters:</b> The S gate introduces complex/imaginary amplitudes into the system, taking us to the |+i⟩ state on the Y-axis. This forms the building blocks for creating robust combinations of non-real quantum states."
             },
             {
                 name: "7.2: T Gate (π/4)",
                 quizDesc: "Prepare the state (|0⟩ + e^(iπ/4)|1⟩)/√2 using a Hadamard and a single RZ rotation.",
                 circuits: [[['H0'], ['RZ_PI4_0']]],
-                hint: "Select π/4 from the dropdown, apply after a Hadamard on Q0.",
+                hint: "Select π/4 from the dropdown, apply after a Hadamard on q2.",
                 lesson: "<b>The Mechanism:</b> When θ = π/4, the RZ gate is known as the <b>T gate</b>. It rotates the state 45 degrees along the equator. <br><br><b>Why it matters:</b> The T gate is arguably the most important gate in quantum computing. The basic Clifford gates (H, X, CNOT, S) can be efficiently simulated on a classical computer. To achieve true 'Quantum Advantage', you *must* use non-Clifford gates like the T gate. It provides the universal continuous rotation capability needed for complex algorithms."
             },
             {
                 name: "7.3: Combining Phases",
                 quizDesc: "Flip q0 to |1⟩ using only Hadamard and RZ gates — no X gate allowed.",
                 circuits: [[['H0'], ['RZ_PI4_0'], ['RZ_PI4_0'], ['RZ_PI2_0'], ['H0']]],
-                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards on Q0.",
+                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards on q2.",
                 lesson: "<b>The Mechanism:</b> Z-rotations commute, meaning their angles simply add together! π/4 + π/4 + π/2 exactly equals π. An RZ(π) gate is equivalent to a Pauli-Z gate. So H -> (T + T + S) -> H is exactly mathematically identical to H -> Z -> H, which equals X!<br><br><b>Why it matters:</b> Because T gates are highly susceptible to noise, advanced quantum error correction schemes spend massive resources on 'Magic State Distillation' just to execute a single reliable T gate. Knowing how to combine and compile these phase rotations optimally determines how fast a quantum program can run before decoherence destroys it."
             },
             {
                 name: "7.4: Controlled Phase",
                 quizDesc: "q0 = |+⟩, q1 = |+⟩. Implement a CP(π/2) gate using only RZ rotations and CX gates.",
                 circuits: getStage8_4Circuits(),
-                hint: "Prep Q0 and Q1 with H. Add RZ(π/4) to both, CX(0,1), RZ(-π/4) on Q1, and CX(0,1).",
-                lesson: "<b>The Goal:</b> CP(θ) must add a phase of e^(iθ) to |11⟩ and leave |00⟩, |01⟩, |10⟩ unchanged. The RZ gate only adds phase when a qubit is |1⟩ — the challenge is combining single-qubit RZ gates and CNOTs to target only the joint |11⟩ condition.<br><br><b>Circuit structure:</b> RZ(θ/2) on Q0, RZ(θ/2) on Q1, then the CNOT sandwich: CX · RZ(−θ/2) on Q1 · CX.<br><br><b>The CNOT sandwich:</b> The two CNOTs flip Q1 around the middle RZ. When Q0=|0⟩ the CNOTs do nothing — the RZ fires on Q1 normally. When Q0=|1⟩ the CNOTs flip Q1 before and after, so the RZ fires on the <i>flipped</i> Q1. This means the sandwich subtracts phase from |01⟩ (Q1=|1⟩, no flip) and from |10⟩ (Q1 flipped to |1⟩), but not from |11⟩ (Q1 flipped to |0⟩, RZ sees |0⟩ and does nothing).<br><br><b>State by state (θ = π/2, each RZ angle = π/4):</b><br>· |00⟩: Q0=|0⟩ → no RZ on Q0; Q1=|0⟩ → no RZ on Q1; sandwich sees |0⟩ → nothing. <b>Total: 0</b><br>· |01⟩: no RZ on Q0; +π/4 from Q1; sandwich subtracts π/4 (Q1=|1⟩). <b>Total: 0</b><br>· |10⟩: +π/4 from Q0; no RZ on Q1; sandwich subtracts π/4 (flipped Q1=|1⟩). <b>Total: 0</b><br>· |11⟩: +π/4 from Q0; +π/4 from Q1; sandwich sees flipped Q1=|0⟩, does nothing. <b>Total: +π/2 = e^(iπ/2) ✓</b><br><br><b>Why the RZ on Q0?</b> Without it, |10⟩ would have net −π/4 from the sandwich alone — incorrectly phase-shifted. The RZ(θ/2) on Q0 adds exactly +π/4 when Q0=|1⟩, cancelling the sandwich's contribution on |10⟩ while leaving |11⟩ unaffected (both contributions stack).<br><br><b>Why it matters:</b> This is how quantum computers physically execute CP gates in hardware. Every CP gate in the Quantum Fourier Transform (Stage 8) is compiled down to exactly this CNOT-sandwich technique inside the chip."
+                hint: "Prep q2 and q1 with H. Add RZ(π/4) to both, CX(0,1), RZ(-π/4) on q1, and CX(0,1).",
+                lesson: "<b>The Goal:</b> CP(θ) must add a phase of e^(iθ) to |11⟩ and leave |00⟩, |01⟩, |10⟩ unchanged. The RZ gate only adds phase when a qubit is |1⟩ — the challenge is combining single-qubit RZ gates and CNOTs to target only the joint |11⟩ condition.<br><br><b>Circuit structure:</b> RZ(θ/2) on q2, RZ(θ/2) on q1, then the CNOT sandwich: CX · RZ(−θ/2) on q1 · CX.<br><br><b>The CNOT sandwich:</b> The two CNOTs flip q1 around the middle RZ. When q2=|0⟩ the CNOTs do nothing — the RZ fires on q1 normally. When q2=|1⟩ the CNOTs flip q1 before and after, so the RZ fires on the <i>flipped</i> q1. This means the sandwich subtracts phase from |01⟩ (q1=|1⟩, no flip) and from |10⟩ (q1 flipped to |1⟩), but not from |11⟩ (q1 flipped to |0⟩, RZ sees |0⟩ and does nothing).<br><br><b>State by state (θ = π/2, each RZ angle = π/4):</b><br>· |00⟩: q2=|0⟩ → no RZ on q2; q1=|0⟩ → no RZ on q1; sandwich sees |0⟩ → nothing. <b>Total: 0</b><br>· |01⟩: no RZ on q2; +π/4 from q1; sandwich subtracts π/4 (q1=|1⟩). <b>Total: 0</b><br>· |10⟩: +π/4 from q2; no RZ on q1; sandwich subtracts π/4 (flipped q1=|1⟩). <b>Total: 0</b><br>· |11⟩: +π/4 from q2; +π/4 from q1; sandwich sees flipped q1=|0⟩, does nothing. <b>Total: +π/2 = e^(iπ/2) ✓</b><br><br><b>Why the RZ on q2?</b> Without it, |10⟩ would have net −π/4 from the sandwich alone — incorrectly phase-shifted. The RZ(θ/2) on q2 adds exactly +π/4 when q2=|1⟩, cancelling the sandwich's contribution on |10⟩ while leaving |11⟩ unaffected (both contributions stack).<br><br><b>Why it matters:</b> This is how quantum computers physically execute CP gates in hardware. Every CP gate in the Quantum Fourier Transform (Stage 8) is compiled down to exactly this CNOT-sandwich technique inside the chip."
             }
         ]
     },
@@ -473,14 +473,14 @@ export const STAGES = [
                 name: "8.2: QFT (2 Qubits)",
                 quizDesc: "Apply the 2-qubit Quantum Fourier Transform.",
                 circuits: getStage9_2Circuits(),
-                hint: "Apply H to Q0, then a Controlled-Phase (π/2) from Q1 to Q0. Apply H to Q1, then use the SWAP gate!",
-                lesson: "<b>The Circuit:</b> H on Q0 places it on the equator (phase 0). CP(π/2) from Q1 would add a 90° kick to Q0's phase — but only if Q1 = |1⟩. Then H on Q1, and a SWAP to fix the output bit order.<br><br><b>Phase Rule:</b> After the 2-qubit QFT on an input |x⟩, each qubit holds a phase angle that encodes x:<ul><li><b>Q0</b> — the slow clock: phase = x × 90°. Completes one full rotation as x steps 0→4.</li><li><b>Q1</b> — the fast clock: phase = x × 180°. Completes two full rotations as x steps 0→4.</li></ul>For our input x=0: both phases are 0°, so both qubits land at |+⟩. For x=1 they'd read 90° and 180°; for x=2, 180° and 0°; for x=3, 270° and 180°. Every value of x produces a unique pair of angles — its frequency fingerprint.<br><br><b>Why the CP gate?</b> Without it, Q0 would always land at phase 0° regardless of Q1's value. The CP(π/2) is what lets Q1's bit value <em>bleed into</em> Q0's phase, coupling the two qubits into a joint frequency encoding.<br><br><b>Why the SWAP?</b> The raw QFT circuit naturally outputs the most-significant frequency on the bottom wire. The SWAP corrects the bit order so Q0 (top) carries the coarser, slower phase."
+                hint: "Apply H to q2, then a Controlled-Phase (π/2) from q1 to q2. Apply H to q1, then use the SWAP gate!",
+                lesson: "<b>The Circuit:</b> H on q2 places it on the equator (phase 0). CP(π/2) from q1 would add a 90° kick to q2's phase — but only if q1 = |1⟩. Then H on q1, and a SWAP to fix the output bit order.<br><br><b>Phase Rule:</b> After the 2-qubit QFT on an input |x⟩, each qubit holds a phase angle that encodes x:<ul><li><b>q2</b> — the slow clock: phase = x × 90°. Completes one full rotation as x steps 0→4.</li><li><b>q1</b> — the fast clock: phase = x × 180°. Completes two full rotations as x steps 0→4.</li></ul>For our input x=0: both phases are 0°, so both qubits land at |+⟩. For x=1 they'd read 90° and 180°; for x=2, 180° and 0°; for x=3, 270° and 180°. Every value of x produces a unique pair of angles — its frequency fingerprint.<br><br><b>Why the CP gate?</b> Without it, q2 would always land at phase 0° regardless of q1's value. The CP(π/2) is what lets q1's bit value <em>bleed into</em> q2's phase, coupling the two qubits into a joint frequency encoding.<br><br><b>Why the SWAP?</b> The raw QFT circuit naturally outputs the most-significant frequency on the bottom wire. The SWAP corrects the bit order so q2 (top) carries the coarser, slower phase."
             },
             {
                 name: "8.3: QFT (3 Qubits)",
                 quizDesc: "Apply the 3-qubit Quantum Fourier Transform.",
                 circuits: getStage9_3Circuits(),
-                hint: "H on Q0, CP(π/2) Q1->Q0, CP(π/4) Q2->Q0. Then H on Q1, CP(π/2) Q2->Q1. Finally H on Q2, and SWAP Q0 and Q2.",
+                hint: "H on q2, CP(π/2) q1->q2, CP(π/4) q2->q2. Then H on q1, CP(π/2) q2->q1. Finally H on q2, and SWAP q2 and q2.",
                 lesson: "<b>The Mechanism:</b> The full QFT cascades H and increasingly smaller CP gates. Each subsequent qubit adds a finer and finer angle (π/2, π/4, π/8...) to the target. It perfectly maps a binary number |x⟩ into a phase state where each qubit's angle represents a fraction of a full circle.<br><br><b>Why it matters:</b> This is the heart of Quantum Phase Estimation and Shor's Algorithm. By working in this Fourier regime (the XY plane), a quantum computer can evaluate the global properties of a function exponentially faster than any classical supercomputer ever could!"
             }
         ]
