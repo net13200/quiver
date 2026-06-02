@@ -1775,6 +1775,10 @@ document.getElementById('modal-menu-btn').addEventListener('click', () => {
     }
 });
 
+document.getElementById('modal-view-solution-btn').addEventListener('click', () => {
+    hideVictoryModal();
+});
+
 document.getElementById('tt-next').addEventListener('click', nextTourStep);
 document.getElementById('tt-skip').addEventListener('click', () => {
     endTour();

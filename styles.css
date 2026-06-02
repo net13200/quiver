@@ -438,6 +438,24 @@ body:has(#menu-home:not(.hidden)) {
 }
 .victory-controls .btn { flex: 1; }
 
+.modal-view-solution-btn {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    margin: 10px auto 0;
+    background: transparent;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+.modal-view-solution-btn:hover { border-color: #7c3aed; color: #c4b5fd; }
+
 /* Collapsible optimization note */
 .opt-note {
     margin-top: 12px;
