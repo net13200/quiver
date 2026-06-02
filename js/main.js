@@ -3,7 +3,7 @@ import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutor
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt, fireQuantumConfetti } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
@@ -515,6 +515,54 @@ function showCurrentSection() {
     else showStagesPage();
 }
 window.showCurrentSection = showCurrentSection;
+
+function showSectionCompleteOverlay() {
+    const groups = computeSectionGroups();
+    const currentSec = groups.find(g => g.stages.some(({ sIdx }) => sIdx === state.currentP1));
+    if (!currentSec) { showCurrentSection(); return; }
+    const nextSec = groups[groups.indexOf(currentSec) + 1] || null;
+
+    const overlay = document.getElementById('section-complete-overlay');
+    overlay.style.setProperty('--sco-color', currentSec.style.color);
+    overlay.style.setProperty('--sco-bg', currentSec.style.bg);
+
+    document.getElementById('sco-done-icon').textContent = currentSec.style.icon;
+    document.getElementById('sco-done-name').textContent = currentSec.name;
+    document.getElementById('sco-done-name').style.color = currentSec.style.color;
+
+    const unlockWrap = document.getElementById('sco-unlock-wrap');
+    const exploreBtn = document.getElementById('sco-explore-btn');
+
+    if (nextSec) {
+        unlockWrap.style.display = '';
+        document.getElementById('sco-next-icon').textContent = nextSec.style.icon;
+        document.getElementById('sco-next-name').textContent = nextSec.name;
+        document.getElementById('sco-next-name').style.color = nextSec.style.color;
+        exploreBtn.textContent = `Explore ${nextSec.name} →`;
+        exploreBtn.style.background = nextSec.style.color;
+        exploreBtn.onclick = () => { hideSectionCompleteOverlay(); showSectionDetail(nextSec.slug); };
+    } else {
+        unlockWrap.style.display = 'none';
+        exploreBtn.textContent = '🎉 View All Sections';
+        exploreBtn.style.background = currentSec.style.color;
+        exploreBtn.onclick = () => { hideSectionCompleteOverlay(); showStagesPage(); };
+    }
+
+    document.getElementById('sco-back-btn').onclick = () => { hideSectionCompleteOverlay(); showCurrentSection(); };
+
+    overlay.classList.remove('hidden');
+
+    // Staggered confetti bursts
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight * 0.35;
+    setTimeout(() => fireQuantumConfetti(cx, cy), 150);
+    setTimeout(() => fireQuantumConfetti(cx - 120, cy + 40), 450);
+    setTimeout(() => fireQuantumConfetti(cx + 120, cy + 40), 700);
+}
+
+function hideSectionCompleteOverlay() {
+    document.getElementById('section-complete-overlay').classList.add('hidden');
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // --- Main Menu Initialization ---
@@ -1442,12 +1490,17 @@ document.getElementById('game-menu-btn').addEventListener('click', goToMainMenu)
 // 7. Modal Buttons
 document.getElementById('modal-next-btn').addEventListener('click', () => {
     hideVictoryModal();
+    if (state._sectionJustCompleted) {
+        state._sectionJustCompleted = false;
+        showSectionCompleteOverlay();
+        return;
+    }
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
         initGame('STAGE', state.currentP1, state.currentP2 + 1);
     } else if (state.currentP1 + 1 < STAGES.length) {
-        initGame('STAGE', state.currentP1 + 1, 0); 
+        initGame('STAGE', state.currentP1 + 1, 0);
     } else {
-        showMainMenu(); 
+        showMainMenu();
     }
 });
 
@@ -1459,6 +1512,7 @@ document.getElementById('again-btn').addEventListener('click', () => {
 
 document.getElementById('modal-again-btn').addEventListener('click', () => {
     hideVictoryModal();
+    state._sectionJustCompleted = false;
     if (state.currentMode === 'RANDOM') initGame('RANDOM', state.currentLvl);
     else if (state.currentMode === 'DAILY') initGame('DAILY', state.currentLvl);
     else if (state.currentMode === 'STAGE') initGame('STAGE', state.currentP1, state.currentP2);
@@ -1472,8 +1526,14 @@ document.getElementById('btn-daily-3')?.addEventListener('click', () => initGame
 document.getElementById('modal-menu-btn').addEventListener('click', () => {
     hideVictoryModal();
     if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
-    if (state.currentMode === 'STAGE') showCurrentSection();
-    else showMainMenu();
+    if (state.currentMode === 'STAGE' && state._sectionJustCompleted) {
+        state._sectionJustCompleted = false;
+        showSectionCompleteOverlay();
+    } else if (state.currentMode === 'STAGE') {
+        showCurrentSection();
+    } else {
+        showMainMenu();
+    }
 });
 
 document.getElementById('tt-next').addEventListener('click', nextTourStep);

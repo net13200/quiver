@@ -466,6 +466,70 @@ body:has(#menu-home:not(.hidden)) {
     .victory-banner p { font-size: 1rem; margin-bottom: 16px; }
 }
 
+/* ── Section Complete Overlay ──────────────────────────────────────────────── */
+.sco-overlay {
+    position: fixed; inset: 0; z-index: 900;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(2, 6, 23, 0.94);
+    animation: scoFadeIn 0.35s ease-out both;
+}
+@keyframes scoFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.sco-banner {
+    position: relative; max-width: 400px; width: 90%;
+    text-align: center; padding: 44px 32px 36px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: radial-gradient(ellipse 80% 60% at 50% 20%, var(--sco-bg, rgba(59,130,246,0.18)) 0%, transparent 70%),
+                #0f172a;
+    animation: scoBannerIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes scoBannerIn { from { opacity: 0; transform: scale(0.88) translateY(20px); } to { opacity: 1; transform: none; } }
+
+.sco-label {
+    font-size: 0.7rem; font-weight: 800; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #94a3b8; margin-bottom: 20px;
+}
+
+.sco-done-icon { font-size: 3.6rem; line-height: 1; margin-bottom: 8px; animation: scoIconPop 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes scoIconPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.sco-done-name {
+    font-size: 1.5rem; font-weight: 800; letter-spacing: 0.01em; margin-bottom: 0;
+    animation: scoSlideUp 0.4s 0.3s ease-out both;
+}
+@keyframes scoSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.sco-divider {
+    height: 1px; background: rgba(255,255,255,0.08); margin: 24px 0;
+    animation: scoSlideUp 0.4s 0.35s ease-out both;
+}
+
+.sco-unlock-wrap { animation: scoSlideUp 0.4s 0.45s ease-out both; }
+.sco-unlock-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #fbbf24; margin-bottom: 12px;
+}
+.sco-next-icon { font-size: 2.4rem; line-height: 1; margin-bottom: 6px; }
+.sco-next-name { font-size: 1.1rem; font-weight: 700; }
+
+.sco-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; animation: scoSlideUp 0.4s 0.55s ease-out both; }
+
+.sco-btn-primary {
+    padding: 14px 24px; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; cursor: pointer; font-family: inherit;
+    color: #fff; transition: filter 0.15s, transform 0.12s;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.sco-btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+.sco-btn-secondary {
+    padding: 12px 24px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+    background: transparent; color: #64748b; transition: color 0.15s, border-color 0.15s;
+}
+.sco-btn-secondary:hover { color: #94a3b8; border-color: rgba(255,255,255,0.22); }
+
 /* --- Tap-to-Place Grid UI --- */
 .palette-item.selected {
     border-color: #22c55e;

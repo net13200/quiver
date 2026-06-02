@@ -206,7 +206,18 @@ export function submitGuess(state, renderBoardCallback) {
         let revealObj = null; 
 
         if (state.currentMode === 'STAGE') {
+            // Check section completion before and after marking, to detect the transition
+            const _csName = STAGES[state.currentP1].section;
+            const _csStagePairs = STAGES.reduce((acc, s, si) => s.section === _csName ? [...acc, si] : acc, []);
+            const _sectionWasComplete = _csStagePairs.every(si =>
+                STAGES[si].levels.every((_, li) => completedStages.includes(`${si}-${li}`)));
+
             markStageCompleted(state.currentP1, state.currentP2);
+
+            if (!_sectionWasComplete && _csStagePairs.every(si =>
+                    STAGES[si].levels.every((_, li) => completedStages.includes(`${si}-${li}`)))) {
+                state._sectionJustCompleted = true;
+            }
             
             let totalLevels = 0;
             STAGES.forEach(s => totalLevels += s.levels.length);
