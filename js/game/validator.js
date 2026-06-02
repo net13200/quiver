@@ -388,10 +388,30 @@ export function submitGuess(state, renderBoardCallback) {
             achToasts.forEach((t, i) => setTimeout(() => showAchievementToast(t.name, t.icon), 900 + i * 1700));
         }
 
+        const isFinalSubstage = state.currentMode === 'STAGE' &&
+            state.currentP2 === STAGES[state.currentP1].levels.length - 1;
+
         setTimeout(() => {
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
             const _menuBtn = document.getElementById('modal-menu-btn');
             if (_menuBtn) _menuBtn.textContent = (state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') ? 'Back to Section' : 'Main Menu';
+            if (isFinalSubstage) {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-test-yourself-btn')) {
+                    const testBtn = document.createElement('button');
+                    testBtn.id = 'modal-test-yourself-btn';
+                    testBtn.className = 'btn';
+                    testBtn.style.background = '#f59e0b';
+                    testBtn.style.color = '#0f172a';
+                    testBtn.style.fontWeight = '700';
+                    testBtn.innerText = 'Test Yourself ★';
+                    testBtn.addEventListener('click', () => {
+                        hideVictoryModal();
+                        window.initGame?.('QUIZ', state.currentP1);
+                    });
+                    controls.insertBefore(testBtn, controls.firstChild);
+                }
+            }
             if (state.currentMode === 'RANDOM') {
                 const controls = document.querySelector('#victory-modal .victory-controls');
                 if (controls && !document.getElementById('modal-restart-btn')) {

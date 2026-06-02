@@ -1275,6 +1275,7 @@ function initGame(mode, p1, p2) {
     }
 }
 
+window.initGame = initGame;
 window.initLabGame = n => initGame('LAB', n);
 window.initDailyGame = n => initGame('DAILY', n);
 
