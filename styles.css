@@ -177,6 +177,10 @@ body {
 #submit-btn:disabled { background-color: #475569; cursor: not-allowed; color: #94a3b8; }
 #menu-btn { background: #475569; }
 #menu-btn:hover { background: #334155; }
+#game-menu-btn { background: #1e3a5f; }
+#game-menu-btn:hover { background: #1e40af; }
+#modal-menu-btn { background: #1e3a5f !important; }
+#modal-menu-btn:hover { background: #1e40af !important; }
 .btn-green { background-color: #059669 !important; }
 .btn-green:hover { background-color: #047857 !important; }
 .btn-yellow { background-color: #eab308 !important; color: #000 !important; }
