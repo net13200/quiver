@@ -8,6 +8,28 @@ import { ACHIEVEMENT_MAP } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
 
+// Returns the minimum number of gate insertions/deletions needed to turn
+// the user's circuit into any of the valid circuits (multiset edit distance).
+function minGateEditDistance(guess, secretCircuits) {
+    const userGates = [];
+    for (const col of guess) for (const g of col) if (g && g !== 'I') userGates.push(normalizeGate(g));
+
+    let minDist = Infinity;
+    for (const circuit of secretCircuits) {
+        const targetGates = [];
+        for (const col of circuit) for (const g of col) if (g && g !== 'I') targetGates.push(normalizeGate(g));
+
+        const countU = {}, countT = {};
+        for (const g of userGates)  countU[g] = (countU[g] || 0) + 1;
+        for (const g of targetGates) countT[g] = (countT[g] || 0) + 1;
+        const keys = new Set([...Object.keys(countU), ...Object.keys(countT)]);
+        let dist = 0;
+        for (const g of keys) dist += Math.abs((countU[g] || 0) - (countT[g] || 0));
+        if (dist < minDist) minDist = dist;
+    }
+    return minDist;
+}
+
 // NEW: Accept the renderBoardCallback from main.js
 export function submitGuess(state, renderBoardCallback) {
     if (state.gameOver) return;
@@ -546,14 +568,17 @@ export function submitGuess(state, renderBoardCallback) {
                 document.getElementById('submit-btn').classList.add('hidden');
                 wrap.classList.remove('active');
 
+                const _almostDist = minGateEditDistance(state.currentGuess, state.secretCircuits);
                 if (state.quizLives <= 0) {
-                    msg.innerText = '💔 Out of lives — quiz failed!';
+                    const _almostSuffix = _almostDist === 1 ? ' So close — just 1 gate off!' : '';
+                    msg.innerText = `💔 Out of lives — quiz failed!${_almostSuffix}`;
                     msg.style.color = '#ef4444';
                     setTimeout(() => { msg.innerText = ''; window.showQuizResult?.(); }, 1600);
                 } else {
                     const l = state.quizLives;
-                    msg.innerText = `Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining.`;
-                    msg.style.color = '#eab308';
+                    const _almostPrefix = _almostDist === 1 ? 'So close! Just 1 gate off. ' : '';
+                    msg.innerText = `${_almostPrefix}Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining.`;
+                    msg.style.color = _almostDist === 1 ? '#22c55e' : '#eab308';
 
                     const sIdx = state._quizSIdx;
                     const lIdx = state._quizCurrentLevelIdx ?? 0;
@@ -569,8 +594,14 @@ export function submitGuess(state, renderBoardCallback) {
             }
 
             const left = 3 - state.attempts;
-            msg.innerText = `Not quite — ${left} attempt${left !== 1 ? 's' : ''} left.`;
-            msg.style.color = '#eab308';
+            const dist = minGateEditDistance(state.currentGuess, state.secretCircuits);
+            if (dist === 1) {
+                msg.innerText = `So close! You're just 1 gate away!`;
+                msg.style.color = '#22c55e';
+            } else {
+                msg.innerText = `Not quite — ${left} attempt${left !== 1 ? 's' : ''} left.`;
+                msg.style.color = '#eab308';
+            }
             setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
             state.currentGuess = Array(state.numCols).fill().map(() => []);
             updateActiveRow(state, renderBoardCallback);
