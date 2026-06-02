@@ -205,6 +205,9 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
 #main-menu { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease-out; }
 
 /* Home screen */
+body:has(#menu-home:not(.hidden)) {
+    padding: 0;
+}
 #menu-home {
     display: flex;
     flex-direction: column;
@@ -212,8 +215,9 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     justify-content: center;
     gap: 52px;
     min-height: 100svh;
+    padding: 32px 20px;
     text-align: center;
-    background: radial-gradient(ellipse 70% 50% at 50% 38%, rgba(59,130,246,0.13) 0%, rgba(139,92,246,0.08) 45%, transparent 70%);
+    background: radial-gradient(ellipse 60% 40% at 50% 38%, rgba(59,130,246,0.22) 0%, rgba(139,92,246,0.14) 40%, transparent 65%);
 }
 #menu-welcome-sub { margin: 0; font-size: 1.1rem; color: #64748b; }
 .home-logo {
