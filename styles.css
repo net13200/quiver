@@ -64,15 +64,6 @@ body {
     box-shadow: 0 6px 20px rgba(0,0,0,0.5);
 }
 
-.app-logo-small {
-    max-width: 250px;
-    width: 80%;
-    height: auto;
-    margin: 0 auto 15px auto;
-    display: block;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
 
 #game-view { display: none; width: 100%; flex-direction: column; align-items: center;}
 #game-top-bar { width: 100%; display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 0; }
