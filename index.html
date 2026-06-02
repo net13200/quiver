@@ -23,115 +23,117 @@
 <body>
 
     <div id="main-menu">
-        <img src="assets/logo.jpg" ‘alt="Quiver - Quantum Game" class="app-logo">
+        <img src="assets/logo.jpg" alt="Quiver - Quantum Game" class="app-logo">
 
-        <div id="menu-welcome">
-            <h2 id="menu-welcome-title">Welcome to Quiver!</h2>
-            <p id="menu-welcome-sub" style="font-size: 1.5rem;">Level up in quantum computing</p>
-        </div>
+        <!-- ── HOME SCREEN ─────────────────────────────────────────── -->
+        <div id="menu-home">
+            <div id="menu-welcome">
+                <h2 id="menu-welcome-title">Welcome to Quiver!</h2>
+                <p id="menu-welcome-sub">Level up in quantum computing</p>
+            </div>
 
-        <div id="global-stats">
-            <span>⭐ <span id="menu-total-points">0</span> pts</span>
-            <span>🔥 Streak: <span id="menu-highest-streak">0</span></span>
-            <span>📅 Daily: <span id="menu-daily-streak">0</span> day<span id="menu-daily-streak-s">s</span></span>
-            <button id="btn-replay-tutorial" class="btn" style="background:#3b82f6; width:auto; padding:3px 12px; font-size:0.8rem;">Replay Tutorial</button>
-        </div>
-
-        <div id="mode-cards">
-            <div class="mode-card" data-mode="learn">
-                <div class="mode-card-icon">📚</div>
-                <div class="mode-card-title">Learn</div>
-                <div class="mode-card-desc">Structured stages from zero to complex quantum algorithms.</div>
-            </div>
-            <div class="mode-card" data-mode="play">
-                <div class="mode-card-icon">🎲</div>
-                <div class="mode-card-title">Play</div>
-                <div class="mode-card-desc">Randomized puzzles with customizable gates and difficulty.</div>
-            </div>
-            <div class="mode-card" data-mode="daily">
-                <div class="mode-card-icon">📅</div>
-                <div class="mode-card-title">Daily</div>
-                <div class="mode-card-desc">Three challenges refreshed every 24 hours.</div>
-            </div>
-            <div class="mode-card" data-mode="timed">
-                <div class="mode-card-icon">⏱</div>
-                <div class="mode-card-title">Time Collapse</div>
-                <div class="mode-card-desc">Race the clock — solve as many circuits as possible.</div>
-            </div>
-            <div class="mode-card" data-mode="sandbox">
-                <div class="mode-card-icon">🔬</div>
-                <div class="mode-card-title">Sandbox</div>
-                <div class="mode-card-desc">Experiment freely with no rules or targets.</div>
-            </div>
-            <div class="mode-card" data-mode="achievements">
-                <div class="mode-card-icon">🏆</div>
-                <div class="mode-card-title">Achievements</div>
-                <div class="mode-card-desc" id="ach-card-desc">Track your milestones</div>
+            <div id="home-btns">
+                <button id="btn-go-learn" class="home-btn" onclick="window.showStagesPage()">Learn</button>
+                <button id="btn-go-play" class="home-btn" onclick="window.showPlayPage()">Play</button>
             </div>
         </div>
 
-        <div id="mode-panels">
-            <div id="panel-learn" class="mode-panel hidden">
-                <button class="panel-back-btn">← All Modes</button>
-                <p class="panel-desc">Follow a structured curriculum of interactive stages to learn quantum principles step-by-step.</p>
-                <div id="stages-container"></div>
-            </div>
-            <div id="panel-play" class="mode-panel hidden">
-                <button class="panel-back-btn">← All Modes</button>
-                <p class="panel-desc">Test your skills with randomized quantum circuit puzzles. Equivalent circuits win! <button id="btn-score-info" style="background:#3b82f6;color:white;border:none;border-radius:50%;width:20px;height:20px;font-weight:bold;cursor:pointer;font-size:0.75rem;vertical-align:middle;">?</button></p>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <p style="font-size:0.85rem; color:#94a3b8; margin:0;">1. Customize your gate pool:</p>
-                    <button id="btn-toggle-gates" style="background:none; border:1px solid #64748b; color:#cbd5e1; border-radius:4px; cursor:pointer; font-size:0.75rem; padding:2px 8px; transition:background 0.2s;">Toggle All</button>
+        <!-- ── STAGES PAGE ─────────────────────────────────────────── -->
+        <div id="menu-stages" class="hidden">
+            <button class="panel-back-btn" id="stages-back-btn">← Home</button>
+            <div id="stages-container"></div>
+        </div>
+
+        <!-- ── PLAY PAGE ───────────────────────────────────────────── -->
+        <div id="menu-play-page" class="hidden">
+            <button class="panel-back-btn" id="play-page-back-btn">← Home</button>
+
+            <div id="mode-cards">
+                <div class="mode-card" data-mode="play">
+                    <div class="mode-card-icon">🎲</div>
+                    <div class="mode-card-title">Play</div>
+                    <div class="mode-card-desc">Randomized puzzles with customizable gates and difficulty.</div>
                 </div>
-                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;" id="play-gate-selection">
-                    <input type="checkbox" id="chk-x" value="X" class="gate-checkbox" checked><label for="chk-x" class="gate-label">X</label>
-                    <input type="checkbox" id="chk-y" value="Y" class="gate-checkbox"><label for="chk-y" class="gate-label">Y</label>
-                    <input type="checkbox" id="chk-z" value="Z" class="gate-checkbox"><label for="chk-z" class="gate-label">Z</label>
-                    <input type="checkbox" id="chk-h" value="H" class="gate-checkbox" checked><label for="chk-h" class="gate-label">H</label>
-                    <input type="checkbox" id="chk-sx" value="SX" class="gate-checkbox"><label for="chk-sx" class="gate-label">SX</label>
-                    <input type="checkbox" id="chk-rz" value="RZ" class="gate-checkbox"><label for="chk-rz" class="gate-label">RZ</label>
-                    <input type="checkbox" id="chk-cx" value="CX" class="gate-checkbox" checked><label for="chk-cx" class="gate-label">CX</label>
-                    <input type="checkbox" id="chk-cp" value="CP" class="gate-checkbox"><label for="chk-cp" class="gate-label">CP</label>
-                    <input type="checkbox" id="chk-swap" value="SWAP" class="gate-checkbox"><label for="chk-swap" class="gate-label">SWAP</label>
-                    <input type="checkbox" id="chk-ccx" value="CCX" class="gate-checkbox"><label for="chk-ccx" class="gate-label">CCX</label>
+                <div class="mode-card" data-mode="daily">
+                    <div class="mode-card-icon">📅</div>
+                    <div class="mode-card-title">Daily</div>
+                    <div class="mode-card-desc">Three challenges refreshed every 24 hours.</div>
                 </div>
-                <p style="font-size:0.85rem; color:#94a3b8; margin:0 0 10px 0;">2. Choose your board size & difficulty:</p>
-                <div class="menu-row">
-                    <button class="menu-btn btn-green" id="btn-rand-1">Easy (1 Qubit, 4 Gates)</button>
-                    <button class="menu-btn btn-yellow" id="btn-rand-2">Medium (2 Qubits, 6 Gates)</button>
-                    <button class="menu-btn" style="background:#ef4444;" id="btn-rand-3">Hard (3 Qubits, 10 Gates)</button>
+                <div class="mode-card" data-mode="timed">
+                    <div class="mode-card-icon">⏱</div>
+                    <div class="mode-card-title">Time Collapse</div>
+                    <div class="mode-card-desc">Race the clock — solve as many circuits as possible.</div>
                 </div>
-            </div>
-            <div id="panel-daily" class="mode-panel hidden">
-                <button class="panel-back-btn">← All Modes</button>
-                <p class="panel-desc">Play three random puzzles using all gates. Changes every 24 hours!</p>
-                <div class="menu-row">
-                    <button class="menu-btn btn-green" id="btn-daily-1">Easy (1 Qubit)</button>
-                    <button class="menu-btn btn-yellow" id="btn-daily-2">Medium (2 Qubits)</button>
-                    <button class="menu-btn" style="background:#ef4444;" id="btn-daily-3">Hard (3 Qubits)</button>
+                <div class="mode-card" data-mode="sandbox">
+                    <div class="mode-card-icon">🔬</div>
+                    <div class="mode-card-title">Sandbox</div>
+                    <div class="mode-card-desc">Experiment freely with no rules or targets.</div>
+                </div>
+                <div class="mode-card mode-card-wide" data-mode="achievements">
+                    <div class="mode-card-icon">🏆</div>
+                    <div class="mode-card-title">Achievements</div>
+                    <div class="mode-card-desc" id="ach-card-desc">Track your milestones</div>
                 </div>
             </div>
-            <div id="panel-timed" class="mode-panel hidden">
-                <button class="panel-back-btn">← All Modes</button>
-                <p class="panel-desc">Race against the clock! Solve as many circuits as possible before the wavefunction collapses. +20s per solve, −5s per wrong attempt.</p>
-                <div class="menu-row">
-                    <button class="menu-btn btn-green" id="btn-timed-1">Easy<br><small>1 Qubit</small><br><small id="timed-best-1" style="opacity:0.7;">Best: —</small></button>
-                    <button class="menu-btn btn-yellow" id="btn-timed-2">Medium<br><small>2 Qubits</small><br><small id="timed-best-2" style="opacity:0.7;">Best: —</small></button>
-                    <button class="menu-btn" style="background:#ef4444;" id="btn-timed-3">Hard<br><small>3 Qubits</small><br><small id="timed-best-3" style="opacity:0.7;">Best: —</small></button>
+
+            <div id="mode-panels">
+                <div id="panel-play" class="mode-panel hidden">
+                    <button class="panel-back-btn">← Back</button>
+                    <p class="panel-desc">Test your skills with randomized quantum circuit puzzles. Equivalent circuits win! <button id="btn-score-info" style="background:#3b82f6;color:white;border:none;border-radius:50%;width:20px;height:20px;font-weight:bold;cursor:pointer;font-size:0.75rem;vertical-align:middle;">?</button></p>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <p style="font-size:0.85rem; color:#94a3b8; margin:0;">1. Customize your gate pool:</p>
+                        <button id="btn-toggle-gates" style="background:none; border:1px solid #64748b; color:#cbd5e1; border-radius:4px; cursor:pointer; font-size:0.75rem; padding:2px 8px; transition:background 0.2s;">Toggle All</button>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;" id="play-gate-selection">
+                        <input type="checkbox" id="chk-x" value="X" class="gate-checkbox" checked><label for="chk-x" class="gate-label">X</label>
+                        <input type="checkbox" id="chk-y" value="Y" class="gate-checkbox"><label for="chk-y" class="gate-label">Y</label>
+                        <input type="checkbox" id="chk-z" value="Z" class="gate-checkbox"><label for="chk-z" class="gate-label">Z</label>
+                        <input type="checkbox" id="chk-h" value="H" class="gate-checkbox" checked><label for="chk-h" class="gate-label">H</label>
+                        <input type="checkbox" id="chk-sx" value="SX" class="gate-checkbox"><label for="chk-sx" class="gate-label">SX</label>
+                        <input type="checkbox" id="chk-rz" value="RZ" class="gate-checkbox"><label for="chk-rz" class="gate-label">RZ</label>
+                        <input type="checkbox" id="chk-cx" value="CX" class="gate-checkbox" checked><label for="chk-cx" class="gate-label">CX</label>
+                        <input type="checkbox" id="chk-cp" value="CP" class="gate-checkbox"><label for="chk-cp" class="gate-label">CP</label>
+                        <input type="checkbox" id="chk-swap" value="SWAP" class="gate-checkbox"><label for="chk-swap" class="gate-label">SWAP</label>
+                        <input type="checkbox" id="chk-ccx" value="CCX" class="gate-checkbox"><label for="chk-ccx" class="gate-label">CCX</label>
+                    </div>
+                    <p style="font-size:0.85rem; color:#94a3b8; margin:0 0 10px 0;">2. Choose your board size &amp; difficulty:</p>
+                    <div class="menu-row">
+                        <button class="menu-btn btn-green" id="btn-rand-1">Easy (1 Qubit, 4 Gates)</button>
+                        <button class="menu-btn btn-yellow" id="btn-rand-2">Medium (2 Qubits, 6 Gates)</button>
+                        <button class="menu-btn" style="background:#ef4444;" id="btn-rand-3">Hard (3 Qubits, 10 Gates)</button>
+                    </div>
                 </div>
-            </div>
-            <div id="panel-sandbox" class="mode-panel hidden">
-                <button class="panel-back-btn">← All Modes</button>
-                <p class="panel-desc">Experiment freely on an infinite board. Place gates and evaluate your snapshots to see the output.</p>
-                <div class="menu-row">
-                    <button class="menu-btn" style="background:#475569" id="btn-free-1">1 Qubit</button>
-                    <button class="menu-btn" style="background:#475569" id="btn-free-2">2 Qubits</button>
-                    <button class="menu-btn" style="background:#475569" id="btn-free-3">3 Qubits</button>
+                <div id="panel-daily" class="mode-panel hidden">
+                    <button class="panel-back-btn">← Back</button>
+                    <p class="panel-desc">Play three random puzzles using all gates. Changes every 24 hours!</p>
+                    <div class="menu-row">
+                        <button class="menu-btn btn-green" id="btn-daily-1">Easy (1 Qubit)</button>
+                        <button class="menu-btn btn-yellow" id="btn-daily-2">Medium (2 Qubits)</button>
+                        <button class="menu-btn" style="background:#ef4444;" id="btn-daily-3">Hard (3 Qubits)</button>
+                    </div>
                 </div>
-            </div>
-            <div id="panel-achievements" class="mode-panel hidden">
-                <button class="panel-back-btn">← All Modes</button>
-                <div id="achievements-container"></div>
+                <div id="panel-timed" class="mode-panel hidden">
+                    <button class="panel-back-btn">← Back</button>
+                    <p class="panel-desc">Race against the clock! Solve as many circuits as possible before the wavefunction collapses. +20s per solve, −5s per wrong attempt.</p>
+                    <div class="menu-row">
+                        <button class="menu-btn btn-green" id="btn-timed-1">Easy<br><small>1 Qubit</small><br><small id="timed-best-1" style="opacity:0.7;">Best: —</small></button>
+                        <button class="menu-btn btn-yellow" id="btn-timed-2">Medium<br><small>2 Qubits</small><br><small id="timed-best-2" style="opacity:0.7;">Best: —</small></button>
+                        <button class="menu-btn" style="background:#ef4444;" id="btn-timed-3">Hard<br><small>3 Qubits</small><br><small id="timed-best-3" style="opacity:0.7;">Best: —</small></button>
+                    </div>
+                </div>
+                <div id="panel-sandbox" class="mode-panel hidden">
+                    <button class="panel-back-btn">← Back</button>
+                    <p class="panel-desc">Experiment freely on an infinite board. Place gates and evaluate your snapshots to see the output.</p>
+                    <div class="menu-row">
+                        <button class="menu-btn" style="background:#475569" id="btn-free-1">1 Qubit</button>
+                        <button class="menu-btn" style="background:#475569" id="btn-free-2">2 Qubits</button>
+                        <button class="menu-btn" style="background:#475569" id="btn-free-3">3 Qubits</button>
+                    </div>
+                </div>
+                <div id="panel-achievements" class="mode-panel hidden">
+                    <button class="panel-back-btn">← Back</button>
+                    <div id="achievements-container"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -171,7 +173,7 @@
                     <div class="palette-label">
                         Gate Palette
                         <span id="rz-angle-container" style="display:none; margin-left: 15px; font-size: 0.8rem; color: #38bdf8;">
-                            θ = 
+                            θ =
                             <select id="rz-angle" style="background: #1e293b; color: white; border: 1px solid #38bdf8; border-radius: 4px; padding: 2px; cursor: pointer;">
                                 <option value="PI">π — Z gate</option>
                                 <option value="PI2">π/2 — S gate</option>
@@ -194,7 +196,7 @@
                     <button id="again-btn" class="btn btn-green hidden">Play Again</button>
                     <button id="game-menu-btn" class="btn">Main Menu</button>
                 </div>
-    
+
                 <div id="message"></div>
                 <div id="history-board" style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px;"></div>
             </div>
@@ -215,7 +217,7 @@
                     <div class="guide-card"><b>SX (√X Gate)</b><span class="math-expr">SX|0⟩ = ½(1+i)|0⟩ + ½(1-i)|1⟩<br>SX|1⟩ = ½(1-i)|0⟩ + ½(1+i)|1⟩</span></div>
                     <div class="guide-card"><b>RZ (Phase)</b><span class="math-expr">RZ(θ)|0⟩ = |0⟩<br>RZ(θ)|1⟩ = e^{iθ}|1⟩</span></div>
                     <div class="guide-card"><b>CP (Controlled-Phase)</b><span class="math-expr">Adds phase θ if both are |1⟩.</span></div>
-                    <div class="guide-card" style="grid-column: 1/-1;"><b>CX (CNOT) & CCX (Toffoli)</b><span class="math-expr">Flips Target (⊕) if all Controls (•) are |1⟩.</span></div>
+                    <div class="guide-card" style="grid-column: 1/-1;"><b>CX (CNOT) &amp; CCX (Toffoli)</b><span class="math-expr">Flips Target (⊕) if all Controls (•) are |1⟩.</span></div>
                     <div class="guide-card" style="grid-column: 1/-1;"><b>SWAP</b><span class="math-expr">SWAP|x,y⟩ = |y,x⟩<br>Exchanges the states of two qubits (×).</span></div>
                 </div>
             </div>
@@ -253,7 +255,7 @@
     </div>
 
     <div id="tutorial-overlay" class="tutorial-overlay"></div>
-    
+
     <div id="tutorial-tooltip" class="tutorial-tooltip">
         <h3 id="tt-title" style="margin-top: 0; color: #38bdf8;">Welcome!</h3>
         <p id="tt-text" style="font-size: 0.95rem; line-height: 1.5;"></p>
@@ -262,7 +264,7 @@
             <button id="tt-next" class="btn btn-green" style="padding: 5px 10px; font-size: 0.8rem; width: auto;">Next</button>
         </div>
     </div>
-    
+
     <script type="module" src="js/main.js"></script>
     <script>
       if ('serviceWorker' in navigator) {

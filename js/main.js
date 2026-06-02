@@ -102,6 +102,10 @@ function handleRoute(hash) {
     const p2  = Math.max(0, parseInt(parts[2] ?? '1') - 1);  // URL is 1-based
     if (!seg) {
         showMainMenu();
+    } else if (seg === 'stages') {
+        showStagesPage();
+    } else if (seg === 'play') {
+        showPlayPage();
     } else if (seg === 'learn') {
         initGame('STAGE', p1, p2);
     } else if (seg === 'random') {
@@ -255,29 +259,62 @@ function formatAngleGateSeeded(gNext, rng) {
     return gNext;
 }
 
+function showHome() {
+    document.getElementById('menu-home').classList.remove('hidden');
+    document.getElementById('menu-stages').classList.add('hidden');
+    document.getElementById('menu-play-page').classList.add('hidden');
+}
+
+function showStagesPage() {
+    pushRoute('#/stages');
+    document.getElementById('game-view').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'flex';
+    state.isDuelMode = false;
+    buildMenu();
+    document.getElementById('menu-home').classList.add('hidden');
+    document.getElementById('menu-stages').classList.remove('hidden');
+    document.getElementById('menu-play-page').classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.showStagesPage = showStagesPage;
+
+function showPlayPage() {
+    pushRoute('#/play');
+    document.getElementById('game-view').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'flex';
+    state.isDuelMode = false;
+    buildMenu();
+    document.getElementById('menu-home').classList.add('hidden');
+    document.getElementById('menu-stages').classList.add('hidden');
+    document.getElementById('menu-play-page').classList.remove('hidden');
+    showModeCards();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.showPlayPage = showPlayPage;
+
 function showMainMenu() {
     pushRoute('#/');
     document.getElementById('game-view').style.display = 'none';
     state.isDuelMode = false;
     buildMenu();
     document.getElementById('main-menu').style.display = 'flex';
-    showModeCards();
+    showHome();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (state.tutorialJustCompleted) {
         state.tutorialJustCompleted = false;
         setTimeout(() => {
-            const learnCard = document.querySelector('.mode-card[data-mode="learn"]');
-            if (learnCard) {
-                learnCard.classList.add('ghost-pulse');
-                learnCard.style.position = 'relative';
+            const learnBtn = document.getElementById('btn-go-learn');
+            if (learnBtn) {
+                learnBtn.classList.add('ghost-pulse');
+                learnBtn.style.position = 'relative';
                 const msg = document.createElement('div');
                 msg.className = 'ghost-text';
                 msg.innerText = 'Start your quantum journey here!';
-                learnCard.appendChild(msg);
+                learnBtn.appendChild(msg);
                 setTimeout(() => {
-                    learnCard.classList.remove('ghost-pulse');
-                    learnCard.style.position = '';
+                    learnBtn.classList.remove('ghost-pulse');
+                    learnBtn.style.position = '';
                     msg.remove();
                 }, 5000);
             }
@@ -287,12 +324,16 @@ function showMainMenu() {
 
 // --- Main Menu Initialization ---
 function buildMenu() {
-    // 1. Update the Global Stats Bar
-    document.getElementById('menu-total-points').innerText = totalPoints;
-    document.getElementById('menu-highest-streak').innerText = highestStreak;
+    // 1. Update the Global Stats Bar (elements may not exist if stats bar is hidden)
+    const _pts = document.getElementById('menu-total-points');
+    if (_pts) _pts.innerText = totalPoints;
+    const _str = document.getElementById('menu-highest-streak');
+    if (_str) _str.innerText = highestStreak;
     const _ds = parseInt(localStorage.getItem('quiver_daily_streak') || '0');
-    document.getElementById('menu-daily-streak').innerText = _ds;
-    document.getElementById('menu-daily-streak-s').innerText = _ds === 1 ? '' : 's';
+    const _dsel = document.getElementById('menu-daily-streak');
+    if (_dsel) _dsel.innerText = _ds;
+    const _dss = document.getElementById('menu-daily-streak-s');
+    if (_dss) _dss.innerText = _ds === 1 ? '' : 's';
 
     // 2. Build the Stages — board-game snake path (boustrophedon)
     const container = document.getElementById('stages-container');
@@ -1227,9 +1268,13 @@ function showModeCards() {
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', () => showModePanel(card.dataset.mode));
 });
-document.querySelectorAll('.panel-back-btn').forEach(btn => {
+// Play sub-panel back buttons → back to mode cards (within play page)
+document.querySelectorAll('#mode-panels .panel-back-btn').forEach(btn => {
     btn.addEventListener('click', showModeCards);
 });
+// Page-level back buttons → home
+document.getElementById('stages-back-btn').addEventListener('click', showMainMenu);
+document.getElementById('play-page-back-btn').addEventListener('click', showMainMenu);
 
 // 2. Play Menu Configurations
 document.getElementById('btn-toggle-gates').addEventListener('click', toggleAllGates);
@@ -1376,7 +1421,7 @@ document.getElementById('tt-skip').addEventListener('click', () => {
     state.isTutorial = false;
     state.tutorialPhase = 'NONE';
 });
-document.getElementById('btn-replay-tutorial').addEventListener('click', () => {
+document.getElementById('btn-replay-tutorial')?.addEventListener('click', () => {
     showTutorialPrompt(
         () => {
             initGame('RANDOM', 1);
