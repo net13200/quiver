@@ -55,13 +55,8 @@ body {
 
 /* Logo Styles */
 .app-logo {
-    max-width: 350px;
-    width: 90%;
-    height: auto;
-    margin: 0 auto 15px auto;
     display: block;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    margin: 0 auto;
 }
 
 
@@ -219,12 +214,9 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     min-height: 88vh;
     text-align: center;
 }
-#menu-welcome { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-#menu-welcome-eyebrow { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #475b69; }
-#menu-welcome-title { margin: 0; font-size: 5rem; font-weight: 800; color: #f1f5f9; letter-spacing: -0.04em; line-height: 1; }
-#menu-welcome-sub { margin: 0; font-size: 1.5rem; color: #64748b; }
+#menu-welcome-sub { margin: 0; font-size: 1.1rem; color: #64748b; }
 .home-logo {
-    width: clamp(120px, 38vw, 380px);
+    width: clamp(200px, 42vw, 480px);
     height: auto;
     margin: 0 auto;
     animation: logoFadeIn 0.7s ease-out both;
@@ -250,8 +242,7 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
 #btn-go-play  { background: #8b5cf6; color: #fff; box-shadow: 0 4px 28px rgba(139,92,246,0.45); }
 
 @media (max-width: 520px) {
-    #menu-welcome-title { font-size: 3.5rem; }
-    #menu-home { gap: 40px; min-height: 82vh; }
+    #menu-home { gap: 24px; min-height: 0; padding: 32px 0; }
     #home-btns { flex-direction: column; width: 100%; gap: 10px; }
     .home-btn { width: 100%; padding: 20px; font-size: 1.15rem; }
 }
