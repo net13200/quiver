@@ -161,7 +161,7 @@ export function submitGuess(state, renderBoardCallback) {
     if (isStrict && hasWon && !matchedMultiset) {
         hasWon = false; 
         let msg = document.getElementById('message');
-        msg.innerText = "Equivalent state found, but exact canonical algorithm required!";
+        msg.innerText = "Correct quantum state, but this stage requires a specific gate sequence!";
         msg.style.color = "#eab308";
         setTimeout(() => { if(!state.gameOver) msg.innerText = ""; }, 2500);
     }
@@ -236,7 +236,7 @@ export function submitGuess(state, renderBoardCallback) {
         }
         
         let mainTitle = "Stage Cleared!";
-        let subTitle = matchedCircuit ? "Perfect Canonical Match!" : "Equivalent Circuit Found!";
+        let subTitle = matchedCircuit ? "Perfect Match!" : "Valid Circuit Found!";
         let statsText = null;
         let showNextBtn = false;
         let revealObj = null; 
@@ -256,7 +256,7 @@ export function submitGuess(state, renderBoardCallback) {
             else if (state.currentP1 === STAGES.length - 1 && state.currentP2 === STAGES[state.currentP1].levels.length - 1) subTitle = "Final Stage Complete!";
             
             if (!matchedMultiset && !matchedCircuit) {
-                revealObj = { revealTitle: "A Canonical Circuit Was:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
+                revealObj = { revealTitle: "One Valid Circuit Is:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
         } else if (state.currentMode === 'RANDOM' || state.currentMode === 'DAILY') {
             if (wasTutorial) {
@@ -631,7 +631,7 @@ export function submitGuess(state, renderBoardCallback) {
             document.getElementById('message').style.color = "#ef4444";
             
             if (state.currentMode === 'STAGE') {
-                showRevealCircuit("A Canonical Target Was:", "#ef4444", state.secretCircuits[0], state.numQubits);
+                showRevealCircuit("The Target Circuit Was:", "#ef4444", state.secretCircuits[0], state.numQubits);
                 document.getElementById('again-btn').innerText = "Retry Stage";
                 document.getElementById('again-btn').classList.remove('hidden');
             } else {

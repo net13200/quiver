@@ -851,7 +851,7 @@ function initGame(mode, p1, p2) {
         state.secretCircuits = lvl.circuits;
         
         let isStrict = (p1 >= 4);
-        let rulesText = isStrict ? "<br><span style='color:#ef4444; font-size:0.85rem; font-weight:bold;'>Strict Mode: A canonical implementation is required!</span>" : "";
+        let rulesText = isStrict ? "<br><span style='color:#ef4444; font-size:0.85rem; font-weight:bold;'>Strict Mode: An exact implementation is required!</span>" : "";
         let lessonHTML = lvl.lesson ? `<button id="lesson-btn" class="hint-btn" style="background:#059669;" onclick="showLesson()">Read Lesson</button><div id="lesson-text" class="lesson-text hidden">${lvl.lesson}</div>` : "";
         let labBtnHTML = p1 === 8 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryQftLab()">Try the QFT</button>`
                        : p1 === 9 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryAdderLab()">Try the QFT Adder</button>`
@@ -886,7 +886,7 @@ function initGame(mode, p1, p2) {
             
             // Daily uses ALL gates, ignoring user selection
             state.activeSet = expandGateSet(['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'], state.numQubits);
-            instructions.innerHTML = `<div class="stage-breadcrumb">Daily Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Equivalent circuits win! Resets at midnight.</div>`;
+            instructions.innerHTML = `<div class="stage-breadcrumb">Daily Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Any valid solution wins! Resets at midnight.</div>`;
         } else {
             if (state._usePresetSeed) {
                 state._usePresetSeed = false;
@@ -906,7 +906,7 @@ function initGame(mode, p1, p2) {
                 const idx = GATE_MASK_ORDER.indexOf(g);
                 return idx >= 0 ? mask | (1 << idx) : mask;
             }, 0);
-            instructions.innerHTML = `<div class="stage-breadcrumb">Random Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Guess the circuit. Equivalent circuits win!</div>`;
+            instructions.innerHTML = `<div class="stage-breadcrumb">Random Puzzle</div><div class="stage-level-title">${['Easy', 'Medium', 'Hard'][p1-1]}</div><div class="stage-subtitle">Guess the circuit. Any valid solution wins!</div>`;
         }
         
         generateMatrices(state.numQubits);
