@@ -66,9 +66,6 @@ body {
 
 
 #game-view { display: none; width: 100%; flex-direction: column; align-items: center;}
-#game-top-bar { width: 100%; display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 0; }
-.menu-back-btn { position: absolute; left: 0; background: none; border: 1px solid #334155; color: #94a3b8; border-radius: 6px; padding: 5px 12px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
-.menu-back-btn:hover { border-color: #7c3aed; color: #c4b5fd; }
 
 .instructions { font-size: 0.95rem; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 800px; line-height: 1.4;}
 .stage-breadcrumb { font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; font-weight: 600; }
@@ -227,7 +224,7 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
 #menu-welcome-title { margin: 0; font-size: 5rem; font-weight: 800; color: #f1f5f9; letter-spacing: -0.04em; line-height: 1; }
 #menu-welcome-sub { margin: 0; font-size: 1.5rem; color: #64748b; }
 .home-logo {
-    width: min(180px, 45vw);
+    width: min(280px, 55vw);
     height: auto;
     margin: 0 auto;
     animation: logoFadeIn 0.7s ease-out both;
