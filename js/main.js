@@ -1340,6 +1340,7 @@ document.getElementById('stage-prev-btn').addEventListener('click', () => {
         initGame('STAGE', prevStage, STAGES[prevStage].levels.length - 1);
     }
 });
+document.getElementById('stage-all-btn').addEventListener('click', showStagesPage);
 document.getElementById('stage-next-btn').addEventListener('click', () => {
     if (state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
         initGame('STAGE', state.currentP1, state.currentP2 + 1);
