@@ -222,7 +222,6 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
 #main-menu { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease-out; }
 
 /* Home screen */
-#main-menu:has(#menu-home:not(.hidden)) .app-logo { display: none; }
 #menu-home {
     display: flex;
     flex-direction: column;
@@ -233,9 +232,19 @@ canvas { border-radius: 8px; background: #0f172a; border: 1px solid var(--border
     text-align: center;
 }
 #menu-welcome { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-#menu-welcome-eyebrow { margin: 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #475569; }
+#menu-welcome-eyebrow { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #475b69; }
 #menu-welcome-title { margin: 0; font-size: 5rem; font-weight: 800; color: #f1f5f9; letter-spacing: -0.04em; line-height: 1; }
-#menu-welcome-sub { margin: 0; font-size: 1rem; color: #64748b; }
+#menu-welcome-sub { margin: 0; font-size: 1.5rem; color: #64748b; }
+.home-logo {
+    max-width: 25rem;
+    width: 155%;
+    margin: 0 auto;
+    animation: logoFadeIn 3s ease-out both;
+}
+@keyframes logoFadeIn {
+    from { opacity: 0; transform: translateY(-10px) scale(0.93); }
+    to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
 #home-btns { display: flex; gap: 12px; }
 .home-btn {
     padding: 16px 56px;
