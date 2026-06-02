@@ -248,7 +248,7 @@ body:has(#menu-home:not(.hidden)) {
 
 @media (max-width: 520px) {
     #menu-home { gap: 28px; }
-    .home-logo { width: clamp(240px, 68vw, 320px); }
+    .home-logo { width: clamp(260px, 74vw, 340px); }
     #home-btns { gap: 10px; }
     .home-btn { padding: 16px 36px; }
 }
