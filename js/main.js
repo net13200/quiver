@@ -507,6 +507,14 @@ function showSectionDetail(slug) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 window.showSectionDetail = showSectionDetail;
+
+function showCurrentSection() {
+    const groups = computeSectionGroups();
+    const sec = groups.find(g => g.stages.some(({ sIdx }) => sIdx === state.currentP1));
+    if (sec) showSectionDetail(sec.slug);
+    else showStagesPage();
+}
+window.showCurrentSection = showCurrentSection;
 // ─────────────────────────────────────────────────────────────────────────────
 
 // --- Main Menu Initialization ---
@@ -1464,7 +1472,7 @@ document.getElementById('btn-daily-3')?.addEventListener('click', () => initGame
 document.getElementById('modal-menu-btn').addEventListener('click', () => {
     hideVictoryModal();
     if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
-    if (state.currentMode === 'STAGE') showStagesPage();
+    if (state.currentMode === 'STAGE') showCurrentSection();
     else showMainMenu();
 });
 
