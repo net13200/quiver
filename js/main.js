@@ -1373,8 +1373,6 @@ function goToMainMenu() {
     if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
     showMainMenu();
 }
-const gameLogo = document.getElementById('game-logo');
-if (gameLogo) gameLogo.addEventListener('click', goToMainMenu);
 document.getElementById('menu-btn').addEventListener('click', goToMainMenu);
 document.getElementById('game-menu-btn').addEventListener('click', goToMainMenu);
 
