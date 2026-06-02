@@ -552,9 +552,18 @@ export function submitGuess(state, renderBoardCallback) {
                     setTimeout(() => { msg.innerText = ''; window.showQuizResult?.(); }, 1600);
                 } else {
                     const l = state.quizLives;
-                    msg.innerText = `Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining…`;
+                    msg.innerText = `Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining.`;
                     msg.style.color = '#eab308';
-                    setTimeout(() => { msg.innerText = ''; window.quizRetryAfterFail?.(); }, 1900);
+
+                    const sIdx = state._quizSIdx;
+                    const lIdx = state._quizCurrentLevelIdx ?? 0;
+                    const levelLabel = `${sIdx}.${lIdx + 1}`;
+                    const failActions = document.getElementById('quiz-fail-actions');
+                    const reviewBtn  = document.getElementById('quiz-fail-review-btn');
+                    if (failActions && reviewBtn) {
+                        reviewBtn.textContent = `Review ${levelLabel}`;
+                        failActions.classList.remove('hidden');
+                    }
                 }
                 return;
             }

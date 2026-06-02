@@ -839,3 +839,36 @@ body:has(#menu-home:not(.hidden)) {
     margin-top: 5px;
     letter-spacing: 0.02em;
 }
+#quiz-fail-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+#quiz-fail-actions.hidden { display: none; }
+.quiz-fail-btn {
+    flex: 1;
+    min-width: 130px;
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #334155;
+    background: transparent;
+    color: #94a3b8;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.quiz-fail-btn:hover {
+    border-color: #7c3aed;
+    color: #c4b5fd;
+}
+.quiz-fail-review {
+    border-color: #b45309;
+    color: #fbbf24;
+}
+.quiz-fail-review:hover {
+    border-color: #f59e0b;
+    background: rgba(245,158,11,0.08);
+    color: #fde68a;
+}

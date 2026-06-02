@@ -681,11 +681,17 @@ window.quizNextQuestion = function() {
 };
 
 window.quizRetryAfterFail = function() {
+    document.getElementById('quiz-fail-actions')?.classList.add('hidden');
     state._quizQueue.push(state._quizCurrentLevelIdx);
     state._quizCurrentLevelIdx = state._quizQueue.shift();
     state.quizCurrentQ++;
     state._quizContinuing = true;
     initGame('QUIZ', state._quizSIdx);
+};
+
+window.quizGoToSubstage = function() {
+    document.getElementById('quiz-fail-actions')?.classList.add('hidden');
+    initGame('STAGE', state._quizSIdx, state._quizCurrentLevelIdx ?? 0);
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1079,6 +1085,14 @@ function initGame(mode, p1, p2) {
         }
         state._quizContinuing = false;
         state.attempts = 0;
+
+        // Reset fail-action buttons for this question
+        const _failActions = document.getElementById('quiz-fail-actions');
+        if (_failActions) {
+            _failActions.classList.add('hidden');
+            document.getElementById('quiz-fail-next-btn').onclick = () => window.quizRetryAfterFail?.();
+            document.getElementById('quiz-fail-review-btn').onclick = () => window.quizGoToSubstage?.();
+        }
 
         const _QUIZ_SPECIALS = new Set(['QFT', 'IQFT', 'IQFT2']);
         const _BASE_NAMES = ['X','Y','Z','H','SX','RZ','CX','CP','SWAP','CCX'];
