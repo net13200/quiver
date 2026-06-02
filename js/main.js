@@ -826,8 +826,19 @@ function initGame(mode, p1, p2) {
         const isFirst = (p1 === 0 && p2 === 0);
         const isLast = (p1 === STAGES.length - 1 && p2 === STAGES[p1].levels.length - 1);
         const currentDone = completedStages.includes(`${p1}-${p2}`);
-        document.getElementById('stage-prev-btn').disabled = isFirst;
-        document.getElementById('stage-next-btn').disabled = isLast || !currentDone;
+
+        const lvlLabel = (s, l) => `${s}.${l + 1}`;
+        const prevP1 = p2 > 0 ? p1 : p1 - 1;
+        const prevP2 = p2 > 0 ? p2 - 1 : STAGES[p1 - 1]?.levels.length - 1;
+        const nextP1 = p2 + 1 < STAGES[p1].levels.length ? p1 : p1 + 1;
+        const nextP2 = p2 + 1 < STAGES[p1].levels.length ? p2 + 1 : 0;
+
+        const prevBtn = document.getElementById('stage-prev-btn');
+        const nextBtn = document.getElementById('stage-next-btn');
+        prevBtn.disabled = isFirst;
+        nextBtn.disabled = isLast || !currentDone;
+        prevBtn.innerHTML = isFirst ? '&#8592; Prev' : `&#8592; ${lvlLabel(prevP1, prevP2)}`;
+        nextBtn.innerHTML = (isLast || !currentDone) ? 'Next &#8594;' : `${lvlLabel(nextP1, nextP2)} &#8594;`;
         state.numQubits = lvl.qubits || stage.qubits;
         state.numCols = lvl.cols || stage.cols;
         state.activeSet = lvl.set || stage.set;
