@@ -452,21 +452,21 @@ export const STAGES = [
         levels: [
             {
                 name: "7.1: S Gate (π/2)",
-                quizDesc: "Prepare the state (|0⟩ + i|1⟩)/√2 using a Hadamard and a single RZ rotation.",
+                quizDesc: "Prepare the state (|0⟩ + i|1⟩)/√2.",
                 circuits: [[['H0'], ['RZ_PI2_0']]],
                 hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard on q0.",
                 lesson: "<b>The Mechanism:</b> The RZ gate applies a specific phase rotation around the Z-axis of the Bloch sphere. When θ = π/2, this is commonly called the <b>S gate</b>. Applying it to |+⟩ rotates the state 90 degrees along the equator.<br><br><b>Why it matters:</b> The S gate introduces complex/imaginary amplitudes into the system, taking us to the |+i⟩ state on the Y-axis. This forms the building blocks for creating robust combinations of non-real quantum states."
             },
             {
                 name: "7.2: T Gate (π/4)",
-                quizDesc: "Prepare the state (|0⟩ + e^(iπ/4)|1⟩)/√2 using a Hadamard and a single RZ rotation.",
+                quizDesc: "Prepare the state (|0⟩ + e^(iπ/4)|1⟩)/√2.",
                 circuits: [[['H0'], ['RZ_PI4_0']]],
                 hint: "Select π/4 from the dropdown, apply after a Hadamard on q0.",
                 lesson: "<b>The Mechanism:</b> When θ = π/4, the RZ gate is known as the <b>T gate</b>. It rotates the state 45 degrees along the equator. <br><br><b>Why it matters:</b> The T gate is arguably the most important gate in quantum computing. The basic Clifford gates (H, X, CNOT, S) can be efficiently simulated on a classical computer. To achieve true 'Quantum Advantage', you *must* use non-Clifford gates like the T gate. It provides the universal continuous rotation capability needed for complex algorithms."
             },
             {
                 name: "7.3: Combining Phases",
-                quizDesc: "Flip q0 to |1⟩ using only Hadamard and RZ gates — no X gate allowed.",
+                quizDesc: "Flip q0 to |1⟩ using only Hadamard and 3 RZ gates aggregating to a pi phase.",
                 circuits: [[['H0'], ['RZ_PI4_0'], ['RZ_PI4_0'], ['RZ_PI2_0'], ['H0']]],
                 hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards on q0.",
                 lesson: "<b>The Mechanism:</b> Z-rotations commute, meaning their angles simply add together! π/4 + π/4 + π/2 exactly equals π. An RZ(π) gate is equivalent to a Pauli-Z gate. So H -> (T + T + S) -> H is exactly mathematically identical to H -> Z -> H, which equals X!<br><br><b>Why it matters:</b> Because T gates are highly susceptible to noise, advanced quantum error correction schemes spend massive resources on 'Magic State Distillation' just to execute a single reliable T gate. Knowing how to combine and compile these phase rotations optimally determines how fast a quantum program can run before decoherence destroys it."
