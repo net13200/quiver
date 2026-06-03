@@ -389,7 +389,18 @@ export function submitGuess(state, renderBoardCallback) {
         }
 
         const isFinalSubstage = state.currentMode === 'STAGE' &&
-            state.currentP2 === STAGES[state.currentP1].levels.length - 1;
+            state.currentP2 === STAGES[state.currentP1].levels.length - 1 &&
+            (() => {
+                const completedQuizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
+                // Find the stage that owns the quiz for currentP1 (single-level stages fold forward)
+                let ownerIdx = state.currentP1;
+                while (ownerIdx + 1 < STAGES.length &&
+                       STAGES[ownerIdx].levels.length === 1 &&
+                       STAGES[ownerIdx + 1].levels.length === 1) {
+                    ownerIdx++;
+                }
+                return !completedQuizzes.includes(ownerIdx);
+            })();
 
         setTimeout(() => {
             showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);

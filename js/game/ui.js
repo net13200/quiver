@@ -412,7 +412,7 @@ export function fireSectionConfetti() {
 
 // --- Modals ---
 export function showVictoryModal(title, subtitle, statsText, showNext, revealObj) {
-    ['modal-restart-btn', 'modal-play-challenge-btn', 'modal-daily-challenge-btn', 'modal-duel-btn', 'modal-lab-next-btn', 'modal-daily-next-btn'].forEach(id => {
+    ['modal-restart-btn', 'modal-play-challenge-btn', 'modal-daily-challenge-btn', 'modal-duel-btn', 'modal-lab-next-btn', 'modal-daily-next-btn', 'modal-test-yourself-btn'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
