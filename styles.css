@@ -80,7 +80,7 @@ body {
 }
 .hint-btn:hover { filter: brightness(1.1); }
 .hint-text { margin-top: 10px; font-style: italic; color: #eab308; }
-.lesson-text { margin-top: 10px; color: #cbd5e1; font-size: 0.9rem; text-align: left; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; border-left: 3px solid #38bdf8; line-height: 1.5;}
+.lesson-text { margin-top: 10px; color: #cbd5e1; font-size: 0.9rem; text-align: left; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; border-left: 3px solid #38bdf8; line-height: 1.5; max-height: 55vh; overflow-y: auto; }
 .lesson-text b { color: #38bdf8; }
 
 .main-layout {
