@@ -454,28 +454,28 @@ export const STAGES = [
                 name: "7.1: S Gate (π/2)",
                 quizDesc: "Prepare the state (|0⟩ + i|1⟩)/√2 using a Hadamard and a single RZ rotation.",
                 circuits: [[['H0'], ['RZ_PI2_0']]],
-                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard on q2.",
+                hint: "Select π/2 from the RZ dropdown in the palette, then apply it after a Hadamard on q0.",
                 lesson: "<b>The Mechanism:</b> The RZ gate applies a specific phase rotation around the Z-axis of the Bloch sphere. When θ = π/2, this is commonly called the <b>S gate</b>. Applying it to |+⟩ rotates the state 90 degrees along the equator.<br><br><b>Why it matters:</b> The S gate introduces complex/imaginary amplitudes into the system, taking us to the |+i⟩ state on the Y-axis. This forms the building blocks for creating robust combinations of non-real quantum states."
             },
             {
                 name: "7.2: T Gate (π/4)",
                 quizDesc: "Prepare the state (|0⟩ + e^(iπ/4)|1⟩)/√2 using a Hadamard and a single RZ rotation.",
                 circuits: [[['H0'], ['RZ_PI4_0']]],
-                hint: "Select π/4 from the dropdown, apply after a Hadamard on q2.",
+                hint: "Select π/4 from the dropdown, apply after a Hadamard on q0.",
                 lesson: "<b>The Mechanism:</b> When θ = π/4, the RZ gate is known as the <b>T gate</b>. It rotates the state 45 degrees along the equator. <br><br><b>Why it matters:</b> The T gate is arguably the most important gate in quantum computing. The basic Clifford gates (H, X, CNOT, S) can be efficiently simulated on a classical computer. To achieve true 'Quantum Advantage', you *must* use non-Clifford gates like the T gate. It provides the universal continuous rotation capability needed for complex algorithms."
             },
             {
                 name: "7.3: Combining Phases",
                 quizDesc: "Flip q0 to |1⟩ using only Hadamard and RZ gates — no X gate allowed.",
                 circuits: [[['H0'], ['RZ_PI4_0'], ['RZ_PI4_0'], ['RZ_PI2_0'], ['H0']]],
-                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards on q2.",
+                hint: "Apply two T gates (π/4) and one S gate (π/2) sequentially between Hadamards on q0.",
                 lesson: "<b>The Mechanism:</b> Z-rotations commute, meaning their angles simply add together! π/4 + π/4 + π/2 exactly equals π. An RZ(π) gate is equivalent to a Pauli-Z gate. So H -> (T + T + S) -> H is exactly mathematically identical to H -> Z -> H, which equals X!<br><br><b>Why it matters:</b> Because T gates are highly susceptible to noise, advanced quantum error correction schemes spend massive resources on 'Magic State Distillation' just to execute a single reliable T gate. Knowing how to combine and compile these phase rotations optimally determines how fast a quantum program can run before decoherence destroys it."
             },
             {
                 name: "7.4: Controlled Phase",
                 quizDesc: "q0 = |+⟩, q1 = |+⟩. Implement a CP(π/2) gate using only RZ rotations and CX gates.",
                 circuits: getStage8_4Circuits(),
-                hint: "Prep q2 and q1 with H. Add RZ(π/4) to both, CX(0,1), RZ(-π/4) on q1, and CX(0,1).",
+                hint: "Prep q0 and q1 with H. Add RZ(π/4) to both, CX(0,1), RZ(-π/4) on q1, and CX(0,1).",
                 lesson: "<b>The Goal:</b> CP(θ) must add a phase of e^(iθ) to |11⟩ and leave |00⟩, |01⟩, |10⟩ unchanged. The RZ gate only adds phase when a qubit is |1⟩ — the challenge is combining single-qubit RZ gates and CNOTs to target only the joint |11⟩ condition.<br><br><b>Circuit structure:</b> RZ(θ/2) on q2, RZ(θ/2) on q1, then the CNOT sandwich: CX · RZ(−θ/2) on q1 · CX.<br><br><b>The CNOT sandwich:</b> The two CNOTs flip q1 around the middle RZ. When q2=|0⟩ the CNOTs do nothing — the RZ fires on q1 normally. When q2=|1⟩ the CNOTs flip q1 before and after, so the RZ fires on the <i>flipped</i> q1. This means the sandwich subtracts phase from |01⟩ (q1=|1⟩, no flip) and from |10⟩ (q1 flipped to |1⟩), but not from |11⟩ (q1 flipped to |0⟩, RZ sees |0⟩ and does nothing).<br><br><b>State by state (θ = π/2, each RZ angle = π/4):</b><br>· |00⟩: q2=|0⟩ → no RZ on q2; q1=|0⟩ → no RZ on q1; sandwich sees |0⟩ → nothing. <b>Total: 0</b><br>· |01⟩: no RZ on q2; +π/4 from q1; sandwich subtracts π/4 (q1=|1⟩). <b>Total: 0</b><br>· |10⟩: +π/4 from q2; no RZ on q1; sandwich subtracts π/4 (flipped q1=|1⟩). <b>Total: 0</b><br>· |11⟩: +π/4 from q2; +π/4 from q1; sandwich sees flipped q1=|0⟩, does nothing. <b>Total: +π/2 = e^(iπ/2) ✓</b><br><br><b>Why the RZ on q2?</b> Without it, |10⟩ would have net −π/4 from the sandwich alone — incorrectly phase-shifted. The RZ(θ/2) on q2 adds exactly +π/4 when q2=|1⟩, cancelling the sandwich's contribution on |10⟩ while leaving |11⟩ unaffected (both contributions stack).<br><br><b>Why it matters:</b> This is how quantum computers physically execute CP gates in hardware. Every CP gate in the Quantum Fourier Transform (Stage 8) is compiled down to exactly this CNOT-sandwich technique inside the chip."
             }
         ]
@@ -497,14 +497,14 @@ export const STAGES = [
                 name: "8.2: QFT (2 Qubits)",
                 quizDesc: "Apply the 2-qubit Quantum Fourier Transform.",
                 circuits: getStage9_2Circuits(),
-                hint: "Apply H to q2, then a Controlled-Phase (π/2) from q1 to q2. Apply H to q1, then use the SWAP gate!",
-                lesson: "<b>The Circuit:</b> H on q2 places it on the equator (phase 0). CP(π/2) from q1 would add a 90° kick to q2's phase — but only if q1 = |1⟩. Then H on q1, and a SWAP to fix the output bit order.<br><br><b>Phase Rule:</b> After the 2-qubit QFT on an input |x⟩, each qubit holds a phase angle that encodes x:<ul><li><b>q2</b> — the slow clock: phase = x × 90°. Completes one full rotation as x steps 0→4.</li><li><b>q1</b> — the fast clock: phase = x × 180°. Completes two full rotations as x steps 0→4.</li></ul>For our input x=0: both phases are 0°, so both qubits land at |+⟩. For x=1 they'd read 90° and 180°; for x=2, 180° and 0°; for x=3, 270° and 180°. Every value of x produces a unique pair of angles — its frequency fingerprint.<br><br><b>Why the CP gate?</b> Without it, q2 would always land at phase 0° regardless of q1's value. The CP(π/2) is what lets q1's bit value <em>bleed into</em> q2's phase, coupling the two qubits into a joint frequency encoding.<br><br><b>Why the SWAP?</b> The raw QFT circuit naturally outputs the most-significant frequency on the bottom wire. The SWAP corrects the bit order so q2 (top) carries the coarser, slower phase."
+                hint: "Apply H to q0, then a Controlled-Phase (π/2) from q1 to q0. Apply H to q1, then use the SWAP gate!",
+                lesson: "<b>The Circuit:</b> H on q0 places it on the equator (phase 0). CP(π/2) from q1 would add a 90° kick to q0's phase — but only if q1 = |1⟩. Then H on q1, and a SWAP to fix the output bit order.<br><br><b>Phase Rule:</b> After the 2-qubit QFT on an input |x⟩, each qubit holds a phase angle that encodes x:<ul><li><b>q2</b> — the slow clock: phase = x × 90°. Completes one full rotation as x steps 0→4.</li><li><b>q1</b> — the fast clock: phase = x × 180°. Completes two full rotations as x steps 0→4.</li></ul>For our input x=0: both phases are 0°, so both qubits land at |+⟩. For x=1 they'd read 90° and 180°; for x=2, 180° and 0°; for x=3, 270° and 180°. Every value of x produces a unique pair of angles — its frequency fingerprint.<br><br><b>Why the CP gate?</b> Without it, q2 would always land at phase 0° regardless of q1's value. The CP(π/2) is what lets q1's bit value <em>bleed into</em> q2's phase, coupling the two qubits into a joint frequency encoding.<br><br><b>Why the SWAP?</b> The raw QFT circuit naturally outputs the most-significant frequency on the bottom wire. The SWAP corrects the bit order so q0 (top) carries the coarser, slower phase."
             },
             {
                 name: "8.3: QFT (3 Qubits)",
                 quizDesc: "Apply the 3-qubit Quantum Fourier Transform.",
                 circuits: getStage9_3Circuits(),
-                hint: "H on q2, CP(π/2) q1->q2, CP(π/4) q2->q2. Then H on q1, CP(π/2) q2->q1. Finally H on q2, and SWAP q2 and q2.",
+                hint: "H on q0, CP(π/2) q1->q0, CP(π/4) q2->q0. Then H on q1, CP(π/2) q2->q1. Finally H on q2, and SWAP q2 and q2.",
                 lesson: "<b>The Mechanism:</b> The full QFT cascades H and increasingly smaller CP gates. Each subsequent qubit adds a finer and finer angle (π/2, π/4, π/8...) to the target. It perfectly maps a binary number |x⟩ into a phase state where each qubit's angle represents a fraction of a full circle.<br><br><b>Why it matters:</b> This is the heart of Quantum Phase Estimation and Shor's Algorithm. By working in this Fourier regime (the XY plane), a quantum computer can evaluate the global properties of a function exponentially faster than any classical supercomputer ever could!"
             }
         ]
