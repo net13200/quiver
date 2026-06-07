@@ -7,207 +7,122 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #0b0d14; color: #c9d1e0; min-height: 100vh; }
 
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #0b0d14;
-            color: #c9d1e0;
-            min-height: 100vh;
-        }
-
-        /* ── Auth screen ── */
-        #auth-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            gap: 16px;
-            padding: 24px;
-        }
+        /* ── Auth ── */
+        #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 16px; padding: 24px; }
         #auth-screen h1 { font-size: 1.8rem; color: #fff; }
-        #auth-screen p  { color: #7c8a9e; font-size: 0.9rem; }
+        #auth-screen p  { color: #7c8a9e; font-size: 0.9rem; text-align: center; }
         #auth-screen a  { color: #818cf8; }
-        #key-input {
-            width: 100%;
-            max-width: 480px;
-            padding: 12px 16px;
-            background: #161927;
-            border: 1px solid #2e3452;
-            border-radius: 8px;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-            outline: none;
-        }
+        #key-input { width: 100%; max-width: 480px; padding: 12px 16px; background: #161927; border: 1px solid #2e3452; border-radius: 8px; color: #e2e8f0; font-size: 0.9rem; outline: none; }
         #key-input:focus { border-color: #6366f1; }
-        #load-btn {
-            padding: 12px 32px;
-            background: #6366f1;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            font-weight: 600;
-        }
+        #load-btn { padding: 12px 32px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 600; }
         #load-btn:hover { background: #4f46e5; }
 
         /* ── Dashboard ── */
         #dashboard { display: none; padding: 24px; max-width: 1280px; margin: 0 auto; }
-
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 28px;
-        }
+        header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
         header h1 { font-size: 1.5rem; color: #fff; }
         header .meta { font-size: 0.8rem; color: #4b5470; }
-
-        .header-actions { display: flex; gap: 10px; align-items: center; }
-        .btn-sm {
-            padding: 7px 16px;
-            border-radius: 6px;
-            border: 1px solid #2e3452;
-            background: #161927;
-            color: #8892a8;
-            font-size: 0.82rem;
-            cursor: pointer;
-        }
+        .header-actions { display: flex; gap: 10px; }
+        .btn-sm { padding: 7px 16px; border-radius: 6px; border: 1px solid #2e3452; background: #161927; color: #8892a8; font-size: 0.82rem; cursor: pointer; }
         .btn-sm:hover { border-color: #6366f1; color: #a5b4fc; }
 
-        /* ── KPI cards ── */
-        .kpi-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .kpi {
-            background: #161927;
-            border: 1px solid #1e2340;
-            border-radius: 12px;
-            padding: 20px;
-        }
-        .kpi .label { font-size: 0.75rem; color: #4b5470; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
-        .kpi .value { font-size: 2rem; font-weight: 700; color: #fff; }
-        .kpi .sub   { font-size: 0.78rem; color: #4b5470; margin-top: 4px; }
+        /* ── KPIs ── */
+        .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 24px; }
+        .kpi { background: #161927; border: 1px solid #1e2340; border-radius: 12px; padding: 20px; }
+        .kpi .label { font-size: 0.7rem; color: #4b5470; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+        .kpi .value { font-size: 1.7rem; font-weight: 700; color: #fff; }
+        .kpi .sub   { font-size: 0.74rem; color: #4b5470; margin-top: 4px; }
 
-        /* ── Chart grid ── */
-        .chart-row {
-            display: grid;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .chart-row.two   { grid-template-columns: 1fr 1fr; }
-        .chart-row.one   { grid-template-columns: 1fr; }
+        /* ── Grid ── */
+        .row { display: grid; gap: 16px; margin-bottom: 24px; }
+        .row.two { grid-template-columns: 1fr 1fr; }
+        .row.one { grid-template-columns: 1fr; }
+        .card { background: #161927; border: 1px solid #1e2340; border-radius: 12px; padding: 20px; }
+        .card h2 { font-size: 0.82rem; font-weight: 600; color: #8892a8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 16px; }
+        .chart-wrap { position: relative; }
 
-        .card {
-            background: #161927;
-            border: 1px solid #1e2340;
-            border-radius: 12px;
-            padding: 20px;
-        }
-        .card h2 {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #8892a8;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            margin-bottom: 16px;
-        }
-        .chart-wrap { position: relative; height: 240px; }
+        /* ── Tables ── */
+        .tbl { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .tbl th { text-align: left; padding: 8px 12px; color: #4b5470; font-weight: 500; border-bottom: 1px solid #1e2340; }
+        .tbl td { padding: 8px 12px; border-bottom: 1px solid #161d2e; color: #8892a8; }
+        .tbl tr:last-child td { border-bottom: none; }
+        .tbl tr:hover td { background: #1a1f30; }
 
-        /* ── Attempts table ── */
-        .attempts-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.82rem;
-        }
-        .attempts-table th {
-            text-align: left;
-            padding: 8px 12px;
-            color: #4b5470;
-            font-weight: 500;
-            border-bottom: 1px solid #1e2340;
-        }
-        .attempts-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #161d2e;
-        }
-        .attempts-table tr:last-child td { border-bottom: none; }
-        .attempts-table tr:hover td { background: #1a1f30; }
+        /* ── Badges ── */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .b-start    { background:#1e2f52;color:#60a5fa; }
+        .b-complete { background:#14291f;color:#4ade80; }
+        .b-fail     { background:#2d1a1a;color:#f87171; }
+        .b-attempt  { background:#2a1f2e;color:#c084fc; }
+        .b-hint     { background:#29220f;color:#fbbf24; }
+        .b-lesson   { background:#1e2a29;color:#34d399; }
+        .b-session  { background:#1e2340;color:#94a3b8; }
+        .b-tutorial { background:#1a2040;color:#818cf8; }
+        .b-section  { background:#1a2838;color:#38bdf8; }
 
-        .heat-cell {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 0.8rem;
-        }
+        .heat { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
+        .user-link { font-family: monospace; font-size: 0.75rem; color: #6366f1; cursor: pointer; text-decoration: underline dotted; }
+        .user-link:hover { color: #a5b4fc; }
 
-        /* ── Recent events ── */
-        .events-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-        }
-        .events-table th {
-            text-align: left;
-            padding: 8px 12px;
-            color: #4b5470;
-            font-weight: 500;
-            border-bottom: 1px solid #1e2340;
-        }
-        .events-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #161d2e;
-            color: #8892a8;
-        }
-        .events-table tr:last-child td { border-bottom: none; }
-        .events-table tr:hover td { background: #1a1f30; }
+        /* ── Section progress bar ── */
+        .prog-bar-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .prog-label { font-size: 0.78rem; color: #8892a8; width: 160px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .prog-bar-bg { flex: 1; background: #1e2340; border-radius: 4px; height: 8px; }
+        .prog-bar-fill { height: 8px; border-radius: 4px; transition: width 0.3s; }
+        .prog-pct { font-size: 0.75rem; color: #8892a8; width: 36px; text-align: right; flex-shrink: 0; }
 
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.72rem;
-            font-weight: 600;
-        }
-        .badge-start    { background: #1e2f52; color: #60a5fa; }
-        .badge-complete { background: #14291f; color: #4ade80; }
-        .badge-fail     { background: #2d1a1a; color: #f87171; }
-        .badge-attempt  { background: #2a1f2e; color: #c084fc; }
-        .badge-hint     { background: #29220f; color: #fbbf24; }
-        .badge-lesson   { background: #1e2a29; color: #34d399; }
-        .badge-session  { background: #1e2340; color: #94a3b8; }
+        /* ── Tutorial panel ── */
+        .tut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .tut-stat { text-align: center; }
+        .tut-stat .tut-val { font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+        .tut-stat .tut-lbl { font-size: 0.72rem; color: #4b5470; text-transform: uppercase; letter-spacing: .06em; }
 
-        .loading {
-            text-align: center;
-            padding: 48px;
-            color: #4b5470;
-            font-size: 0.9rem;
-        }
+        /* ── Retention ── */
+        .ret-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+        .ret-cell { text-align: center; padding: 14px; background: #1a1f30; border-radius: 8px; }
+        .ret-cell .rv { font-size: 1.5rem; font-weight: 700; }
+        .ret-cell .rl { font-size: 0.7rem; color: #4b5470; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+        .ret-cell .rs { font-size: 0.7rem; color: #4b5470; margin-top: 4px; }
 
-        @media (max-width: 768px) {
-            .kpi-row { grid-template-columns: repeat(2, 1fr); }
-            .chart-row.two { grid-template-columns: 1fr; }
+        /* ── Drill-down modal ── */
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+        #modal.open { display: flex; }
+        .modal-box { background: #161927; border: 1px solid #2e3452; border-radius: 16px; width: 100%; max-width: 720px; padding: 24px; }
+        .modal-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .modal-hdr h3 { font-size: 1rem; color: #fff; }
+        .modal-uid { font-family: monospace; font-size: 0.78rem; color: #4b5470; margin-top: 4px; word-break: break-all; }
+        .modal-close { background: none; border: 1px solid #2e3452; color: #8892a8; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 0.82rem; flex-shrink: 0; }
+        .modal-close:hover { border-color: #6366f1; color: #a5b4fc; }
+        .modal-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 20px; }
+        .ms { text-align: center; padding: 12px; background: #1a1f30; border-radius: 8px; }
+        .ms .mv { font-size: 1.3rem; font-weight: 700; color: #fff; }
+        .ms .ml { font-size: 0.68rem; color: #4b5470; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+
+        .loading { text-align: center; padding: 48px; color: #4b5470; font-size: 0.9rem; }
+
+        @media (max-width: 1000px) { .kpi-row { grid-template-columns: repeat(3,1fr); } }
+        @media (max-width: 700px) {
+            .kpi-row { grid-template-columns: repeat(2,1fr); }
+            .row.two { grid-template-columns: 1fr; }
+            .ret-grid { grid-template-columns: repeat(2,1fr); }
+            .tut-grid { grid-template-columns: 1fr; }
+            .modal-stats { grid-template-columns: repeat(3,1fr); }
         }
     </style>
 </head>
 <body>
 
-<!-- ── Auth ── -->
 <div id="auth-screen">
     <h1>Quiver Analytics</h1>
-    <p>Enter your Supabase <strong>service_role</strong> key to load the dashboard.<br>
-       Find it at: <a href="https://supabase.com/dashboard/project/gexeorwjxbznkimgeokk/settings/api" target="_blank">Project Settings → API → service_role</a></p>
-    <input type="password" id="key-input" placeholder="eyJ..." />
+    <p>Enter your Supabase <strong>service_role</strong> key.<br>
+       <a href="https://supabase.com/dashboard/project/gexeorwjxbznkimgeokk/settings/api" target="_blank">Project Settings → API → service_role</a></p>
+    <input type="password" id="key-input" placeholder="eyJ…" />
     <button id="load-btn" onclick="loadDashboard()">Load Dashboard</button>
     <p id="auth-error" style="color:#f87171;display:none">Failed to connect — check the key</p>
 </div>
 
-<!-- ── Dashboard ── -->
 <div id="dashboard">
     <header>
         <div>
@@ -219,25 +134,77 @@
             <button class="btn-sm" onclick="signOut()">Sign out</button>
         </div>
     </header>
-
     <div id="content"><div class="loading">Loading…</div></div>
 </div>
 
+<div id="modal">
+    <div class="modal-box">
+        <div class="modal-hdr">
+            <div><h3>User Journey</h3><div class="modal-uid" id="modal-uid"></div></div>
+            <button class="modal-close" onclick="closeModal()">✕ Close</button>
+        </div>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
 <script>
-const SUPABASE_URL  = 'https://gexeorwjxbznkimgeokk.supabase.co';
-const LS_KEY        = 'quiver_analytics_key';
+const SUPABASE_URL = 'https://gexeorwjxbznkimgeokk.supabase.co';
+const LS_KEY       = 'quiver_analytics_key';
 
-const STAGE_NAMES = [
-    'S0: Foundations', 'S1: Bell Pairs', 'S2: CZ Gate',
-    'S3: GHZ State',   'S4: SWAP Gate',  'S5: Swap Test',
-    'S6: Hadamard Test','S7: Phase Rot.', 'S8: QFT',
-    'S9: QFT Adder',   'S10: Phase Est.','S11: Grover'
+// Stage level counts (index = stage number)
+const STAGE_LEVELS = [6, 5, 1, 1, 3, 3, 3, 4, 3, 4, 2, 3];
+const STAGE_NAMES  = [
+    'S0: Foundations','S1: Bell Pairs','S2: CZ Gate','S3: GHZ State',
+    'S4: SWAP Gate','S5: Swap Test','S6: Hadamard Test','S7: Phase Rot.',
+    'S8: QFT','S9: QFT Adder','S10: Phase Est.','S11: Grover'
 ];
-
-const MODE_LABELS = { STAGE: 'Stage', RANDOM: 'Random', TIMED: 'Timed', DAILY: 'Daily' };
+const SECTIONS = [
+    { name: 'Foundations',        stages: [0,1],       color: '#6366f1' },
+    { name: 'Multi-Qubit Gates',  stages: [2,3,4],     color: '#22c55e' },
+    { name: 'Quantum Protocols',  stages: [5,6],        color: '#f59e0b' },
+    { name: 'Phase & QFT',        stages: [7,8,9,10],  color: '#ec4899' },
+    { name: 'Quantum Algorithms', stages: [11],         color: '#14b8a6' },
+];
+const ACHIEVEMENTS = [
+    { id:'hello_quantum',      name:'Hello, Quantum!' },
+    { id:'tutorial_graduate',  name:'Tutorial Graduate' },
+    { id:'superposition',      name:'Superposition' },
+    { id:'stage_0_complete',   name:'Quantum Foundations' },
+    { id:'stage_1_complete',   name:'Entangler' },
+    { id:'stage_2_complete',   name:'Phase Flip' },
+    { id:'stage_3_complete',   name:'Multipartite' },
+    { id:'stage_4_complete',   name:'Swap Artist' },
+    { id:'stage_5_complete',   name:'Test Pilot' },
+    { id:'stage_6_complete',   name:'Interference Lab' },
+    { id:'stage_7_complete',   name:'Phase Rotations' },
+    { id:'stage_8_complete',   name:'Fourier Transform' },
+    { id:'stage_9_complete',   name:'Draper Adder' },
+    { id:'stage_10_complete',  name:'Phase Estimator' },
+    { id:'stage_11_complete',  name:"Grover's Searcher" },
+    { id:'quantum_literate',   name:'Quantum Literate' },
+    { id:'algorithm_architect',name:'Algorithm Architect' },
+    { id:'phase_wizard',       name:'Phase Wizard' },
+    { id:'toffoli_triumph',    name:'Toffoli Triumph' },
+    { id:'gate_collector',     name:'Gate Collector' },
+    { id:'three_body',         name:'Three-Body Problem' },
+    { id:'first_try',          name:'First Try!' },
+    { id:'optimizer',          name:'Optimizer' },
+    { id:'compiler_genius',    name:'Compiler Genius' },
+    { id:'clutch',             name:'Clutch' },
+    { id:'on_a_roll',          name:'On a Roll' },
+    { id:'hot_streak',         name:'Hot Streak' },
+    { id:'daily_habit',        name:'Daily Habit' },
+    { id:'week_warrior',       name:'Week Warrior' },
+    { id:'monthly_master',     name:'Monthly Master' },
+    { id:'time_bender',        name:'Time Bender' },
+    { id:'clock_crusher',      name:'Clock Crusher' },
+];
+const MODE_LABELS = { STAGE:'Stage', RANDOM:'Random', TIMED:'Timed', DAILY:'Daily' };
 
 let serviceKey = null;
-let charts = {};
+let charts     = {};
+let allEvents  = [];
+let allProgress = [];
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -250,48 +217,51 @@ async function loadDashboard() {
     const input = document.getElementById('key-input').value.trim();
     if (!input) return;
     serviceKey = input;
-
-    // quick auth check
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/events?limit=1`, {
-        headers: headers()
-    });
-    if (!r.ok) {
-        document.getElementById('auth-error').style.display = '';
-        return;
-    }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/events?limit=1`, { headers: hdrs() });
+    if (!r.ok) { document.getElementById('auth-error').style.display = ''; return; }
     localStorage.setItem(LS_KEY, serviceKey);
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     await fetchAndRender();
 }
-
 function signOut() {
-    localStorage.removeItem(LS_KEY);
-    serviceKey = null;
+    localStorage.removeItem(LS_KEY); serviceKey = null;
     document.getElementById('auth-screen').style.display = '';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('key-input').value = '';
 }
-
 async function refresh() { await fetchAndRender(); }
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-function headers() {
-    return {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json'
-    };
+function hdrs() {
+    return { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
+}
+
+async function fetchRegisteredUserIds() {
+    try {
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=1000`, { headers: hdrs() });
+        if (!r.ok) return null;
+        const { users } = await r.json();
+        return new Set(users.filter(u => u.email).map(u => u.id));
+    } catch { return null; }
+}
+
+async function fetchProgress(registeredIds) {
+    const fields = 'user_id,completed_stages,completed_quizzes,total_points,highest_streak,tutorial_complete,achievements,updated_at';
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/progress?select=${fields}`, { headers: hdrs() });
+    if (!r.ok) throw new Error('Progress fetch failed');
+    const rows = await r.json();
+    return registeredIds ? rows.filter(p => registeredIds.has(p.user_id)) : rows;
 }
 
 async function fetchEvents() {
-    const fields = 'event_name,mode,stage,level,attempts_used,time_ms,session_id,created_at,success,section_name';
+    const fields = 'event_name,mode,stage,level,attempts_used,time_ms,session_id,user_id,created_at,success,section_name';
     const r = await fetch(
         `${SUPABASE_URL}/rest/v1/events?select=${fields}&order=created_at.desc&limit=10000`,
-        { headers: headers() }
+        { headers: hdrs() }
     );
-    if (!r.ok) throw new Error('Fetch failed');
+    if (!r.ok) throw new Error('Events fetch failed');
     return r.json();
 }
 
@@ -301,102 +271,240 @@ async function fetchAndRender() {
     document.getElementById('content').innerHTML = '<div class="loading">Loading…</div>';
     destroyCharts();
 
-    const events = await fetchEvents();
-    if (!events.length) {
-        document.getElementById('content').innerHTML = '<div class="loading">No events yet.</div>';
+    const [regIds, events] = await Promise.all([fetchRegisteredUserIds(), fetchEvents()]);
+    const progress = await fetchProgress(regIds);
+
+    allEvents   = events;
+    allProgress = progress;
+
+    if (!events.length && !progress.length) {
+        document.getElementById('content').innerHTML = '<div class="loading">No data yet.</div>';
         return;
     }
 
-    // date range label
     const oldest = events[events.length - 1]?.created_at?.slice(0, 10) ?? '';
     const newest = events[0]?.created_at?.slice(0, 10) ?? '';
-    document.getElementById('data-range').textContent = `${oldest} → ${newest} · ${events.length.toLocaleString()} events`;
+    document.getElementById('data-range').textContent =
+        `${oldest} → ${newest} · ${events.length.toLocaleString()} events · ${progress.length} registered users`;
 
-    const html = buildHTML();
-    document.getElementById('content').innerHTML = html;
+    document.getElementById('content').innerHTML = buildHTML();
 
-    renderKPIs(events);
+    renderKPIs(events, progress);
+    renderStageDropoff(progress);
+    renderSectionRates(progress);
+    renderTutorialPanel(events, progress);
     renderModeChart(events);
-    renderDailyChart(events);
-    renderStageChart(events);
-    renderTutorialStats(events);
-    renderSectionStats(events);
+    renderDAUChart(events);
+    renderAchievements(progress);
+    renderNewVsReturning(events);
+    renderRetention(events);
     renderAttemptsTable(events);
     renderRecentTable(events);
 }
 
 function buildHTML() {
     return `
+    <!-- KPIs -->
     <div class="kpi-row">
-        <div class="kpi"><div class="label">Unique Sessions</div><div class="value" id="kpi-sessions">—</div><div class="sub" id="kpi-sessions-sub"></div></div>
-        <div class="kpi"><div class="label">Games Started</div><div class="value" id="kpi-games">—</div><div class="sub" id="kpi-games-sub"></div></div>
-        <div class="kpi"><div class="label">Levels Completed</div><div class="value" id="kpi-completions">—</div><div class="sub" id="kpi-cr-sub"></div></div>
-        <div class="kpi"><div class="label">Avg Time to Complete</div><div class="value" id="kpi-time">—</div><div class="sub">seconds per level</div></div>
+        <div class="kpi"><div class="label">Registered Users</div><div class="value" id="k-users">—</div><div class="sub" id="k-users-s"></div></div>
+        <div class="kpi"><div class="label">Tutorial Completed</div><div class="value" id="k-tut">—</div><div class="sub" id="k-tut-s"></div></div>
+        <div class="kpi"><div class="label">Avg Stages Done</div><div class="value" id="k-stages">—</div><div class="sub">per user</div></div>
+        <div class="kpi"><div class="label">Avg Points</div><div class="value" id="k-pts">—</div><div class="sub">per user</div></div>
+        <div class="kpi"><div class="label">Reached Phase & QFT</div><div class="value" id="k-adv">—</div><div class="sub">completed Stage 7+</div></div>
+        <div class="kpi"><div class="label">Day-1 Retention</div><div class="value" id="k-ret">—</div><div class="sub">came back next day</div></div>
     </div>
 
-    <div class="chart-row two">
+    <!-- Stage drop-off -->
+    <div class="row one">
         <div class="card">
-            <h2>Mode Distribution</h2>
-            <div class="chart-wrap"><canvas id="chart-mode"></canvas></div>
-        </div>
-        <div class="card">
-            <h2>Daily Games (last 30 days)</h2>
-            <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
-        </div>
-    </div>
-
-    <div class="chart-row one">
-        <div class="card">
-            <h2>Stage Progress — Starts vs Completions</h2>
-            <div class="chart-wrap" style="height:260px"><canvas id="chart-stages"></canvas></div>
+            <h2>Learn Section — Stage Completion (% of all users)</h2>
+            <div id="stage-dropoff"></div>
         </div>
     </div>
 
-    <div class="chart-row two">
+    <!-- Section rates + Tutorial -->
+    <div class="row two">
+        <div class="card">
+            <h2>Section Completion Rates</h2>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-sections"></canvas></div>
+        </div>
         <div class="card">
             <h2>Tutorial</h2>
-            <div id="tutorial-container"></div>
-        </div>
-        <div class="card">
-            <h2>Section Completions</h2>
-            <div id="sections-container"></div>
+            <div id="tutorial-panel"></div>
         </div>
     </div>
 
-    <div class="chart-row two">
+    <!-- Mode + DAU -->
+    <div class="row two">
         <div class="card">
-            <h2>Avg Attempts per Level (Stage mode)</h2>
-            <div id="attempts-container"></div>
+            <h2>What Users Are Playing</h2>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-mode"></canvas></div>
+        </div>
+        <div class="card">
+            <h2>Daily Active Users — last 30 days</h2>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-dau"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Achievements + New vs Returning -->
+    <div class="row two">
+        <div class="card">
+            <h2>Achievement Unlock Rates</h2>
+            <div id="achievements-panel"></div>
+        </div>
+        <div class="card">
+            <h2>New vs Returning Users — last 30 days</h2>
+            <div class="chart-wrap" style="height:280px"><canvas id="chart-nvr"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Retention -->
+    <div class="row one">
+        <div class="card">
+            <h2>User Retention</h2>
+            <div id="retention-panel"></div>
+        </div>
+    </div>
+
+    <!-- Attempts + Recent events -->
+    <div class="row two">
+        <div class="card">
+            <h2>Avg Attempts per Level</h2>
+            <div id="attempts-panel"></div>
         </div>
         <div class="card">
             <h2>Recent Events</h2>
-            <div id="recent-container"></div>
+            <div id="recent-panel"></div>
         </div>
     </div>`;
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 
-function renderKPIs(events) {
-    const sessions    = new Set(events.map(e => e.session_id)).size;
-    const games       = events.filter(e => e.event_name === 'game_start').length;
-    const completions = events.filter(e => e.event_name === 'level_complete').length;
-    const fails       = events.filter(e => e.event_name === 'level_fail').length;
-    const cr          = games ? ((completions / games) * 100).toFixed(1) : 0;
+function renderKPIs(events, progress) {
+    const n = progress.length;
 
-    const timings = events
-        .filter(e => e.event_name === 'level_complete' && e.time_ms)
-        .map(e => e.time_ms);
-    const avgTime = timings.length
-        ? (timings.reduce((a, b) => a + b, 0) / timings.length / 1000).toFixed(1)
-        : '—';
+    const tutDone = progress.filter(p => p.tutorial_complete).length;
+    const tutPct  = n ? Math.round(tutDone / n * 100) : 0;
 
-    document.getElementById('kpi-sessions').textContent     = sessions.toLocaleString();
-    document.getElementById('kpi-games').textContent        = games.toLocaleString();
-    document.getElementById('kpi-completions').textContent  = completions.toLocaleString();
-    document.getElementById('kpi-time').textContent         = avgTime;
-    document.getElementById('kpi-games-sub').textContent    = `${fails} fails`;
-    document.getElementById('kpi-cr-sub').textContent       = `${cr}% completion rate`;
+    const totalStages = progress.reduce((s, p) => s + (p.completed_stages?.length ?? 0), 0);
+    const avgStages   = n ? (totalStages / n).toFixed(1) : '—';
+
+    const totalPts = progress.reduce((s, p) => s + (p.total_points ?? 0), 0);
+    const avgPts   = n ? Math.round(totalPts / n) : '—';
+
+    // "Reached advanced content" = completed at least one level of Stage 7
+    const advUsers = progress.filter(p =>
+        (p.completed_stages || []).some(cs => cs.startsWith('7-'))
+    ).length;
+    const advPct = n ? Math.round(advUsers / n * 100) : 0;
+
+    const d1 = calcRetentionRate(events, 1);
+
+    document.getElementById('k-users').textContent   = n.toLocaleString();
+    document.getElementById('k-users-s').textContent = `${new Set(events.filter(e=>e.user_id).map(e=>e.user_id)).size} in event log`;
+    document.getElementById('k-tut').textContent     = `${tutPct}%`;
+    document.getElementById('k-tut-s').textContent   = `${tutDone} of ${n} users`;
+    document.getElementById('k-stages').textContent  = avgStages;
+    document.getElementById('k-pts').textContent     = avgPts;
+    document.getElementById('k-adv').textContent     = `${advPct}%`;
+    document.getElementById('k-ret').textContent     = d1 !== null ? `${d1}%` : '—';
+}
+
+// ── Stage drop-off ────────────────────────────────────────────────────────────
+
+function renderStageDropoff(progress) {
+    const n = progress.length || 1;
+    const html = STAGE_LEVELS.map((levelCount, sIdx) => {
+        // stage complete = all levels present in completed_stages
+        const done = progress.filter(p => {
+            const cs = p.completed_stages || [];
+            for (let l = 0; l < levelCount; l++) {
+                if (!cs.includes(`${sIdx}-${l}`)) return false;
+            }
+            return true;
+        }).length;
+        const pct   = Math.round(done / n * 100);
+        const color = pct > 60 ? '#22c55e' : pct > 30 ? '#f59e0b' : '#6366f1';
+        return `<div class="prog-bar-wrap">
+            <div class="prog-label">${STAGE_NAMES[sIdx]}</div>
+            <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+            <div class="prog-pct">${pct}%</div>
+        </div>`;
+    }).join('');
+    document.getElementById('stage-dropoff').innerHTML = html;
+}
+
+// ── Section completion rates ──────────────────────────────────────────────────
+
+function renderSectionRates(progress) {
+    const n = progress.length || 1;
+    const rates = SECTIONS.map(sec => {
+        const done = progress.filter(p => {
+            const cs = p.completed_stages || [];
+            return sec.stages.every(sIdx => {
+                for (let l = 0; l < STAGE_LEVELS[sIdx]; l++) {
+                    if (!cs.includes(`${sIdx}-${l}`)) return false;
+                }
+                return true;
+            });
+        }).length;
+        return Math.round(done / n * 100);
+    });
+
+    charts.sections = new Chart(document.getElementById('chart-sections'), {
+        type: 'bar',
+        data: {
+            labels: SECTIONS.map(s => s.name),
+            datasets: [{ data: rates, backgroundColor: SECTIONS.map(s => s.color + '99'), borderColor: SECTIONS.map(s => s.color), borderWidth: 1, borderRadius: 4 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#4b5470', font: { size: 11 } }, grid: { color: '#1e2340' } },
+                y: { ticks: { color: '#4b5470', callback: v => v + '%' }, grid: { color: '#1e2340' }, beginAtZero: true, max: 100 }
+            }
+        }
+    });
+}
+
+// ── Tutorial panel ────────────────────────────────────────────────────────────
+
+function renderTutorialPanel(events, progress) {
+    const n        = progress.length;
+    const pDone    = progress.filter(p => p.tutorial_complete).length;
+    const pSkipped = n - pDone;
+    const eDone    = events.filter(e => e.event_name === 'tutorial_complete').length;
+    const eSkipped = events.filter(e => e.event_name === 'tutorial_skipped').length;
+
+    document.getElementById('tutorial-panel').innerHTML = `
+        <div style="margin-bottom:18px">
+            <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">From progress snapshot</div>
+            <div class="tut-grid">
+                <div class="tut-stat">
+                    <div class="tut-val" style="color:#4ade80">${pDone}</div>
+                    <div class="tut-lbl">Completed</div>
+                </div>
+                <div class="tut-stat">
+                    <div class="tut-val" style="color:#f87171">${pSkipped}</div>
+                    <div class="tut-lbl">Not completed</div>
+                </div>
+            </div>
+        </div>
+        <div style="border-top:1px solid #1e2340;padding-top:16px">
+            <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">From event log</div>
+            <div class="tut-grid">
+                <div class="tut-stat">
+                    <div class="tut-val" style="color:#4ade80;font-size:1.4rem">${eDone}</div>
+                    <div class="tut-lbl">Completed events</div>
+                </div>
+                <div class="tut-stat">
+                    <div class="tut-val" style="color:#f87171;font-size:1.4rem">${eSkipped}</div>
+                    <div class="tut-lbl">Skipped events</div>
+                </div>
+            </div>
+        </div>`;
 }
 
 // ── Mode chart ────────────────────────────────────────────────────────────────
@@ -407,50 +515,37 @@ function renderModeChart(events) {
         const m = e.mode || 'Unknown';
         counts[m] = (counts[m] || 0) + 1;
     });
-    const labels = Object.keys(counts).map(k => MODE_LABELS[k] || k);
-    const data   = Object.values(counts);
-    const colors = ['#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6'];
-
     charts.mode = new Chart(document.getElementById('chart-mode'), {
         type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+        data: {
+            labels: Object.keys(counts).map(k => MODE_LABELS[k] || k),
+            datasets: [{ data: Object.values(counts), backgroundColor: ['#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6'], borderWidth: 0 }]
+        },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { color: '#8892a8', boxWidth: 12, padding: 16 } }
-            }
+            plugins: { legend: { position: 'right', labels: { color: '#8892a8', boxWidth: 12, padding: 14 } } }
         }
     });
 }
 
-// ── Daily chart ───────────────────────────────────────────────────────────────
+// ── DAU chart ─────────────────────────────────────────────────────────────────
 
-function renderDailyChart(events) {
-    const games = events.filter(e => e.event_name === 'game_start');
-    const counts = {};
-    const today = new Date();
-
-    for (let i = 29; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        counts[d.toISOString().slice(0, 10)] = 0;
-    }
-    games.forEach(e => {
+function renderDAUChart(events) {
+    const buckets = dailyBuckets(30);
+    const byDay   = {};
+    events.filter(e => e.event_name === 'session_start').forEach(e => {
         const day = e.created_at?.slice(0, 10);
-        if (day in counts) counts[day]++;
+        if (!(day in buckets)) return;
+        if (!byDay[day]) byDay[day] = new Set();
+        byDay[day].add(e.user_id || e.session_id);
     });
+    const data = Object.keys(buckets).map(d => (byDay[d]?.size ?? 0));
 
-    const labels = Object.keys(counts).map(d => d.slice(5));
-    const data   = Object.values(counts);
-
-    charts.daily = new Chart(document.getElementById('chart-daily'), {
+    charts.dau = new Chart(document.getElementById('chart-dau'), {
         type: 'bar',
         data: {
-            labels,
-            datasets: [{
-                data, backgroundColor: '#6366f166', borderColor: '#6366f1',
-                borderWidth: 1, borderRadius: 3
-            }]
+            labels: Object.keys(buckets).map(d => d.slice(5)),
+            datasets: [{ data, backgroundColor: '#22c55e66', borderColor: '#22c55e', borderWidth: 1, borderRadius: 3 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -463,150 +558,125 @@ function renderDailyChart(events) {
     });
 }
 
-// ── Stage chart ───────────────────────────────────────────────────────────────
+// ── Achievement rates ─────────────────────────────────────────────────────────
 
-function renderStageChart(events) {
-    const stageEvents = events.filter(e => e.mode === 'STAGE');
-    const starts      = {};
-    const completions = {};
+function renderAchievements(progress) {
+    const n = progress.length || 1;
+    const rates = ACHIEVEMENTS.map(a => {
+        const count = progress.filter(p => (p.achievements || []).includes(a.id)).length;
+        return { name: a.name, count, pct: Math.round(count / n * 100) };
+    }).sort((a, b) => b.pct - a.pct).slice(0, 12);
 
-    stageEvents.filter(e => e.event_name === 'game_start').forEach(e => {
-        starts[e.stage] = (starts[e.stage] || 0) + 1;
+    const rows = rates.map(r => `<div class="prog-bar-wrap">
+        <div class="prog-label" title="${r.name}">${r.name}</div>
+        <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${r.pct}%;background:#6366f1"></div></div>
+        <div class="prog-pct">${r.pct}%</div>
+    </div>`).join('');
+    document.getElementById('achievements-panel').innerHTML = rows;
+}
+
+// ── New vs Returning ──────────────────────────────────────────────────────────
+
+function renderNewVsReturning(events) {
+    const firstSeen = {};
+    [...events].reverse().forEach(e => {
+        const uid = e.user_id || e.session_id;
+        if (uid) firstSeen[uid] = e.created_at?.slice(0, 10);
     });
-    stageEvents.filter(e => e.event_name === 'level_complete').forEach(e => {
-        completions[e.stage] = (completions[e.stage] || 0) + 1;
+    const newC = dailyBuckets(30), retC = dailyBuckets(30);
+    events.filter(e => e.event_name === 'session_start').forEach(e => {
+        const uid = e.user_id || e.session_id;
+        const day = e.created_at?.slice(0, 10);
+        if (!uid || !(day in newC)) return;
+        if (firstSeen[uid] === day) newC[day]++;
+        else retC[day]++;
     });
-
-    const allStages = [...new Set([...Object.keys(starts), ...Object.keys(completions)])]
-        .map(Number).sort((a, b) => a - b);
-
-    const labels  = allStages.map(s => STAGE_NAMES[s] || `Stage ${s}`);
-    const sData   = allStages.map(s => starts[s] || 0);
-    const cData   = allStages.map(s => completions[s] || 0);
-
-    charts.stages = new Chart(document.getElementById('chart-stages'), {
+    charts.nvr = new Chart(document.getElementById('chart-nvr'), {
         type: 'bar',
         data: {
-            labels,
+            labels: Object.keys(newC).map(d => d.slice(5)),
             datasets: [
-                { label: 'Started',   data: sData, backgroundColor: '#6366f166', borderColor: '#6366f1', borderWidth: 1, borderRadius: 3 },
-                { label: 'Completed', data: cData, backgroundColor: '#22c55e66', borderColor: '#22c55e', borderWidth: 1, borderRadius: 3 }
+                { label: 'New',       data: Object.values(newC), backgroundColor: '#6366f1cc', borderRadius: 3 },
+                { label: 'Returning', data: Object.values(retC), backgroundColor: '#22c55ecc', borderRadius: 3 }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { labels: { color: '#8892a8' } } },
             scales: {
-                x: { ticks: { color: '#4b5470' }, grid: { color: '#1e2340' } },
-                y: { ticks: { color: '#4b5470' }, grid: { color: '#1e2340' }, beginAtZero: true }
+                x: { stacked: true, ticks: { color: '#4b5470', maxTicksLimit: 10 }, grid: { color: '#1e2340' } },
+                y: { stacked: true, ticks: { color: '#4b5470' }, grid: { color: '#1e2340' }, beginAtZero: true }
             }
         }
     });
 }
 
-// ── Tutorial stats ────────────────────────────────────────────────────────────
+// ── Retention ─────────────────────────────────────────────────────────────────
 
-function renderTutorialStats(events) {
-    const completed = events.filter(e => e.event_name === 'tutorial_complete').length;
-    const skipped   = events.filter(e => e.event_name === 'tutorial_skipped').length;
-    const total     = completed + skipped;
-    const rate      = total ? ((completed / total) * 100).toFixed(0) : '—';
-
-    document.getElementById('tutorial-container').innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:8px 0">
-            <div>
-                <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Completed</div>
-                <div style="font-size:1.8rem;font-weight:700;color:#4ade80">${completed}</div>
-            </div>
-            <div>
-                <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Skipped</div>
-                <div style="font-size:1.8rem;font-weight:700;color:#f87171">${skipped}</div>
-            </div>
-            <div>
-                <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Completion Rate</div>
-                <div style="font-size:1.8rem;font-weight:700;color:#fff">${rate}${total ? '%' : ''}</div>
-            </div>
-        </div>
-        <div style="font-size:0.78rem;color:#4b5470;margin-top:8px">${total} users encountered the tutorial prompt</div>`;
-}
-
-// ── Section completions ───────────────────────────────────────────────────────
-
-function renderSectionStats(events) {
-    const sectionEvents = events.filter(e => e.event_name === 'section_complete' && e.section_name);
-    if (!sectionEvents.length) {
-        document.getElementById('sections-container').innerHTML =
-            '<div style="color:#4b5470;padding:16px;font-size:0.85rem;">No section completions yet.</div>';
-        return;
-    }
-
-    const counts = {};
-    sectionEvents.forEach(e => {
-        counts[e.section_name] = (counts[e.section_name] || 0) + 1;
+function calcRetentionRate(events, days) {
+    const firstDay = {}, actDays = {};
+    [...events].reverse().forEach(e => {
+        if (!e.user_id) return;
+        const day = e.created_at?.slice(0, 10);
+        if (!firstDay[e.user_id]) firstDay[e.user_id] = day;
+        if (!actDays[e.user_id]) actDays[e.user_id] = new Set();
+        actDays[e.user_id].add(day);
     });
-
-    const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    const max  = rows[0][1];
-
-    const trs = rows.map(([name, count]) => {
-        const pct = Math.round((count / max) * 100);
-        return `<tr>
-            <td>${name}</td>
-            <td>
-                <div style="display:flex;align-items:center;gap:8px">
-                    <div style="flex:1;background:#1e2340;border-radius:4px;height:6px">
-                        <div style="width:${pct}%;background:#6366f1;height:6px;border-radius:4px"></div>
-                    </div>
-                    <span style="color:#fff;font-weight:600;min-width:24px;text-align:right">${count}</span>
-                </div>
-            </td>
-        </tr>`;
-    }).join('');
-
-    document.getElementById('sections-container').innerHTML = `
-        <table class="attempts-table">
-            <thead><tr><th>Section</th><th>Completions</th></tr></thead>
-            <tbody>${trs}</tbody>
-        </table>`;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+    const eligible = Object.keys(firstDay).filter(uid => new Date(firstDay[uid]) <= cutoff);
+    if (!eligible.length) return null;
+    const retained = eligible.filter(uid => {
+        const fd = new Date(firstDay[uid]);
+        for (let d = 1; d <= days; d++) {
+            const check = new Date(fd); check.setDate(check.getDate() + d);
+            if (actDays[uid].has(check.toISOString().slice(0, 10))) return true;
+        }
+        return false;
+    });
+    return Math.round(retained.length / eligible.length * 100);
 }
 
-// ── Attempts table ────────────────────────────────────────────────────────────
+function renderRetention(events) {
+    const periods = [
+        { label:'Day 1',  days:1,  sub:'returned next day' },
+        { label:'Day 7',  days:7,  sub:'within a week' },
+        { label:'Day 14', days:14, sub:'within 2 weeks' },
+        { label:'Day 30', days:30, sub:'within a month' },
+    ];
+    const cells = periods.map(p => {
+        const r   = calcRetentionRate(events, p.days);
+        const col = r === null ? '#4b5470' : r >= 40 ? '#4ade80' : r >= 20 ? '#fbbf24' : '#f87171';
+        return `<div class="ret-cell">
+            <div class="rl">${p.label}</div>
+            <div class="rv" style="color:${col}">${r !== null ? r+'%' : '—'}</div>
+            <div class="rs">${p.sub}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('retention-panel').innerHTML = `<div class="ret-grid">${cells}</div>`;
+}
+
+// ── Avg attempts table ────────────────────────────────────────────────────────
 
 function renderAttemptsTable(events) {
-    const completions = events.filter(e => e.event_name === 'level_complete' && e.mode === 'STAGE');
     const map = {};
-
-    completions.forEach(e => {
-        const key = `${e.stage}-${e.level}`;
-        if (!map[key]) map[key] = { stage: e.stage, level: e.level, total: 0, count: 0 };
-        map[key].total += (e.attempts_used || 1);
-        map[key].count++;
+    events.filter(e => e.event_name === 'level_complete' && e.mode === 'STAGE').forEach(e => {
+        const k = `${e.stage}-${e.level}`;
+        if (!map[k]) map[k] = { stage: e.stage, level: e.level, total: 0, count: 0 };
+        map[k].total += (e.attempts_used || 1);
+        map[k].count++;
     });
-
-    const rows = Object.values(map).sort((a, b) => a.stage - b.stage || a.level - b.level);
-
-    if (!rows.length) {
-        document.getElementById('attempts-container').innerHTML = '<div style="color:#4b5470;padding:16px;font-size:0.85rem;">No stage completions yet.</div>';
-        return;
-    }
-
+    const rows = Object.values(map).sort((a,b) => a.stage - b.stage || a.level - b.level);
+    if (!rows.length) { document.getElementById('attempts-panel').innerHTML = '<div style="color:#4b5470;padding:16px;font-size:0.85rem">No stage completions yet.</div>'; return; }
     const maxAvg = Math.max(...rows.map(r => r.total / r.count));
-
     const trs = rows.map(r => {
-        const avg  = (r.total / r.count).toFixed(1);
-        const pct  = maxAvg > 0 ? (avg / maxAvg) : 0;
-        const bg   = pct < 0.33 ? '#14291f' : pct < 0.66 ? '#29220f' : '#2d1a1a';
-        const col  = pct < 0.33 ? '#4ade80' : pct < 0.66 ? '#fbbf24' : '#f87171';
-        return `<tr>
-            <td>${STAGE_NAMES[r.stage] || 'S' + r.stage}</td>
-            <td>Level ${r.level + 1}</td>
-            <td><span class="heat-cell" style="background:${bg};color:${col}">${avg}</span></td>
-            <td style="color:#4b5470">${r.count}</td>
-        </tr>`;
+        const avg = (r.total / r.count).toFixed(1);
+        const pct = maxAvg > 0 ? avg / maxAvg : 0;
+        const bg  = pct < .33 ? '#14291f' : pct < .66 ? '#29220f' : '#2d1a1a';
+        const col = pct < .33 ? '#4ade80' : pct < .66 ? '#fbbf24' : '#f87171';
+        return `<tr><td>${STAGE_NAMES[r.stage]||'S'+r.stage}</td><td>L${r.level+1}</td><td><span class="heat" style="background:${bg};color:${col}">${avg}</span></td><td style="color:#4b5470">${r.count}</td></tr>`;
     }).join('');
-
-    document.getElementById('attempts-container').innerHTML = `
-        <table class="attempts-table">
+    document.getElementById('attempts-panel').innerHTML = `
+        <table class="tbl">
             <thead><tr><th>Stage</th><th>Level</th><th>Avg Attempts</th><th>Completions</th></tr></thead>
             <tbody>${trs}</tbody>
         </table>`;
@@ -615,42 +685,107 @@ function renderAttemptsTable(events) {
 // ── Recent events ─────────────────────────────────────────────────────────────
 
 function renderRecentTable(events) {
-    const recent = events.slice(0, 30);
-
     const badgeClass = n => ({
-        game_start: 'badge-start', level_complete: 'badge-complete',
-        level_fail: 'badge-fail',  submit_attempt: 'badge-attempt',
-        hint_viewed: 'badge-hint', lesson_viewed: 'badge-lesson',
-        session_start: 'badge-session'
-    })[n] || 'badge-session';
+        game_start:'b-start', level_complete:'b-complete', level_fail:'b-fail',
+        submit_attempt:'b-attempt', hint_viewed:'b-hint', lesson_viewed:'b-lesson',
+        session_start:'b-session', tutorial_complete:'b-tutorial',
+        tutorial_skipped:'b-tutorial', section_complete:'b-section'
+    })[n] || 'b-session';
 
-    const locationStr = e => {
-        if (e.mode === 'STAGE' && e.stage != null)
-            return `${STAGE_NAMES[e.stage] || 'S' + e.stage} L${e.level + 1}`;
+    const loc = e => {
+        if (e.event_name === 'section_complete' && e.section_name) return e.section_name;
+        if (e.mode === 'STAGE' && e.stage != null) return `${STAGE_NAMES[e.stage]||'S'+e.stage} L${e.level+1}`;
         if (e.mode) return MODE_LABELS[e.mode] || e.mode;
         return '—';
     };
 
-    const trs = recent.map(e => `<tr>
-        <td style="color:#4b5470">${e.created_at?.slice(11,19) ?? ''}</td>
-        <td><span class="badge ${badgeClass(e.event_name)}">${e.event_name.replace('_', ' ')}</span></td>
-        <td>${locationStr(e)}</td>
-        <td style="color:#4b5470;font-family:monospace">${e.session_id?.slice(0, 8) ?? ''}</td>
-    </tr>`).join('');
+    const trs = events.slice(0, 40).map(e => {
+        const uid  = e.user_id || e.session_id;
+        const cell = uid
+            ? `<span class="user-link" onclick="showDrilldown('${e.user_id || ''}')">${uid.slice(0,8)}</span>`
+            : '—';
+        return `<tr>
+            <td style="color:#4b5470;white-space:nowrap">${e.created_at?.slice(11,19)??''}</td>
+            <td><span class="badge ${badgeClass(e.event_name)}">${e.event_name.replace(/_/g,' ')}</span></td>
+            <td>${loc(e)}</td>
+            <td>${cell}</td>
+        </tr>`;
+    }).join('');
 
-    document.getElementById('recent-container').innerHTML = `
-        <table class="events-table">
-            <thead><tr><th>Time</th><th>Event</th><th>Location</th><th>Session</th></tr></thead>
+    document.getElementById('recent-panel').innerHTML = `
+        <table class="tbl">
+            <thead><tr><th>Time</th><th>Event</th><th>Location</th><th>User</th></tr></thead>
             <tbody>${trs}</tbody>
         </table>`;
 }
 
+// ── User drill-down ───────────────────────────────────────────────────────────
+
+function showDrilldown(userId) {
+    if (!userId) return;
+    const ue = allEvents.filter(e => e.user_id === userId).sort((a,b) => a.created_at?.localeCompare(b.created_at));
+    const up = allProgress.find(p => p.user_id === userId);
+
+    document.getElementById('modal-uid').textContent = userId;
+
+    const sessions    = new Set(ue.map(e => e.session_id)).size;
+    const games       = ue.filter(e => e.event_name === 'game_start').length;
+    const completions = ue.filter(e => e.event_name === 'level_complete').length;
+    const points      = up?.total_points ?? '—';
+    const stagesDone  = up?.completed_stages?.length ?? '—';
+
+    const badgeClass = n => ({
+        game_start:'b-start', level_complete:'b-complete', level_fail:'b-fail',
+        submit_attempt:'b-attempt', hint_viewed:'b-hint', lesson_viewed:'b-lesson',
+        session_start:'b-session', tutorial_complete:'b-tutorial',
+        tutorial_skipped:'b-tutorial', section_complete:'b-section'
+    })[n] || 'b-session';
+
+    const loc = e => {
+        if (e.event_name === 'section_complete' && e.section_name) return e.section_name;
+        if (e.mode === 'STAGE' && e.stage != null) return `${STAGE_NAMES[e.stage]||'S'+e.stage} L${e.level+1}`;
+        if (e.mode) return MODE_LABELS[e.mode] || e.mode;
+        return '—';
+    };
+
+    const trs = ue.map(e => `<tr>
+        <td style="color:#4b5470;white-space:nowrap">${e.created_at?.slice(0,16).replace('T',' ')??''}</td>
+        <td><span class="badge ${badgeClass(e.event_name)}">${e.event_name.replace(/_/g,' ')}</span></td>
+        <td>${loc(e)}</td>
+    </tr>`).join('');
+
+    document.getElementById('modal-body').innerHTML = `
+        <div class="modal-stats">
+            <div class="ms"><div class="ml">Sessions</div><div class="mv">${sessions}</div></div>
+            <div class="ms"><div class="ml">Games</div><div class="mv">${games}</div></div>
+            <div class="ms"><div class="ml">Completions</div><div class="mv" style="color:#4ade80">${completions}</div></div>
+            <div class="ms"><div class="ml">Points</div><div class="mv" style="color:#f59e0b">${points}</div></div>
+            <div class="ms"><div class="ml">Stages Done</div><div class="mv" style="color:#818cf8">${stagesDone}</div></div>
+        </div>
+        <table class="tbl" style="font-size:0.8rem">
+            <thead><tr><th>Time</th><th>Event</th><th>Location</th></tr></thead>
+            <tbody>${trs}</tbody>
+        </table>`;
+
+    document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
+
 // ── Utils ─────────────────────────────────────────────────────────────────────
 
-function destroyCharts() {
-    Object.values(charts).forEach(c => c.destroy());
-    charts = {};
+function dailyBuckets(days) {
+    const out = {};
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        out[d.toISOString().slice(0, 10)] = 0;
+    }
+    return out;
 }
+
+function destroyCharts() { Object.values(charts).forEach(c => c.destroy()); charts = {}; }
 </script>
 </body>
 </html>

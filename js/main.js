@@ -1912,7 +1912,6 @@ document.getElementById('btn-replay-tutorial')?.addEventListener('click', () => 
 
 // --- Boot App ---
 buildMenu();
-trackSessionStart();
 
 // Handle duel challenge acceptance (fired by showDuelChallengeBanner in ui.js)
 document.addEventListener('duel-accept', (e) => {
@@ -1976,6 +1975,7 @@ if (_duelParam) {
 setSyncHook(schedulePush);
 (async () => {
     const session = await initSync(applyRemoteProgress);
+    trackSessionStart();
     if (session?.email) _showApp(session.email);
     const _bootHash = window.location.hash;
     if (_bootHash && _bootHash !== '#/' && _bootHash.startsWith('#/')) {

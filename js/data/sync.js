@@ -40,6 +40,7 @@ export async function signIn(email, password, applyRemote) {
     const { data, error } = await sb().auth.signInWithPassword({ email, password });
     if (error) throw error;
     _userId = data.user.id;
+    setAnalyticsUserId(_userId);
     await _push();
     const { data: remote } = await sb().from('progress').select('*').eq('user_id', _userId).maybeSingle();
     if (remote) applyRemote(remote);
@@ -54,6 +55,7 @@ export async function signUp(email, password) {
     // Session is present immediately only when email confirmation is disabled.
     if (data.session) {
         _userId = data.user.id;
+        setAnalyticsUserId(_userId);
         await _push();
     }
     return data;
