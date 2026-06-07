@@ -2,6 +2,9 @@ const SUPABASE_URL  = 'https://gexeorwjxbznkimgeokk.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_DkPdSor4LJfAHd1bHQwIIA_u4meT_mP';
 const ENDPOINT = `${SUPABASE_URL}/rest/v1/events`;
 
+let _userId = null;
+export function setAnalyticsUserId(id) { _userId = id; }
+
 function getSessionId() {
     const KEY = 'quiver_session_id';
     let id = localStorage.getItem(KEY);
@@ -19,7 +22,7 @@ async function _send(payload) {
                 'Authorization': `Bearer ${SUPABASE_ANON}`,
                 'Prefer':        'return=minimal'
             },
-            body: JSON.stringify({ session_id: getSessionId(), ...payload })
+            body: JSON.stringify({ session_id: getSessionId(), user_id: _userId, ...payload })
         });
     } catch (_) {}
 }

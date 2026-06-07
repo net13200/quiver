@@ -1,4 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { setAnalyticsUserId } from './analytics.js';
 
 const SUPABASE_URL = 'https://gexeorwjxbznkimgeokk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DkPdSor4LJfAHd1bHQwIIA_u4meT_mP';
@@ -21,6 +22,7 @@ export async function initSync(applyRemote) {
         const { data: { session } } = await withTimeout(sb().auth.getSession(), 5000);
         if (!session) return;
         _userId = session.user.id;
+        setAnalyticsUserId(_userId);
 
         const { data: remote } = await withTimeout(
             sb().from('progress').select('*').eq('user_id', _userId).maybeSingle(),
