@@ -1,4 +1,4 @@
-const CACHE = 'quiver-v4';
+const CACHE = 'quiver-v6';
 const BASE = '/quiver';
 const SHELL = [
   `${BASE}/`,
