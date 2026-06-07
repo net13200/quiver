@@ -22,7 +22,21 @@
 </head>
 <body>
 
-    <div id="main-menu">
+    <!-- ── LOGIN SCREEN (shown before auth) ──────────────────────────── -->
+    <div id="login-screen">
+        <img src="assets/logo.png" alt="Quiver - Quantum Game" class="app-logo login-logo">
+        <p class="login-subtitle">Level up in quantum computing</p>
+        <div class="login-form">
+            <h2 id="login-title">Sign In</h2>
+            <input type="email"    id="auth-email-input"    class="auth-input" placeholder="Email"    autocomplete="email" />
+            <input type="password" id="auth-password-input" class="auth-input" placeholder="Password" autocomplete="current-password" />
+            <div id="auth-error-msg" class="auth-error hidden"></div>
+            <button id="auth-submit-btn" class="btn btn-green" onclick="window.handleAuthSubmit()">Sign In</button>
+            <button id="auth-toggle-btn" class="auth-toggle-btn" onclick="window.toggleAuthMode()">No account yet? Sign Up</button>
+        </div>
+    </div>
+
+    <div id="main-menu" class="hidden">
 
         <!-- ── HOME SCREEN ─────────────────────────────────────────── -->
         <div id="menu-home">
@@ -32,6 +46,10 @@
             <div id="home-btns">
                 <button id="btn-go-learn" class="home-btn" onclick="window.showStagesPage()">Learn</button>
                 <button id="btn-go-play" class="home-btn" onclick="window.showPlayPage()">Play</button>
+            </div>
+            <div id="auth-status-bar">
+                <span id="auth-email-display"></span>
+                <button class="auth-link-btn" onclick="window.handleSignOut()">Sign out</button>
             </div>
         </div>
 

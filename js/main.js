@@ -1,6 +1,6 @@
 import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, setSyncHook, applyRemoteProgress } from './data/storage.js';
-import { initSync, schedulePush } from './data/sync.js';
+import { initSync, signIn, signUp, signOut, schedulePush } from './data/sync.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
@@ -1377,6 +1377,79 @@ window.qftLabGoBack = function() {
     initGame('STAGE', 8, state.qftLabFromP2);
 };
 
+// ── Auth UI ───────────────────────────────────────────────────────────────
+let _authMode = 'signin'; // 'signin' | 'signup'
+
+function _showApp(email) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-menu').classList.remove('hidden');
+    document.getElementById('auth-email-display').textContent = email;
+}
+
+function _showLoginScreen() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('auth-email-input').value = '';
+    document.getElementById('auth-password-input').value = '';
+    document.getElementById('auth-error-msg').classList.add('hidden');
+}
+
+window.toggleAuthMode = function() {
+    _authMode = _authMode === 'signin' ? 'signup' : 'signin';
+    const isSignIn = _authMode === 'signin';
+    document.getElementById('login-title').textContent       = isSignIn ? 'Sign In' : 'Create Account';
+    document.getElementById('auth-submit-btn').textContent   = isSignIn ? 'Sign In' : 'Create Account';
+    document.getElementById('auth-toggle-btn').textContent   = isSignIn ? 'No account yet? Sign Up' : 'Already have an account? Sign In';
+    document.getElementById('auth-error-msg').classList.add('hidden');
+};
+
+window.handleAuthSubmit = async function() {
+    const email     = document.getElementById('auth-email-input').value.trim();
+    const password  = document.getElementById('auth-password-input').value;
+    const errEl     = document.getElementById('auth-error-msg');
+    const submitBtn = document.getElementById('auth-submit-btn');
+
+    if (!email || !password) {
+        errEl.textContent = 'Please enter your email and password.';
+        errEl.style.color = '#f87171';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '…';
+    errEl.classList.add('hidden');
+
+    try {
+        if (_authMode === 'signin') {
+            const user = await signIn(email, password, applyRemoteProgress);
+            _showApp(user.email);
+        } else {
+            const { user, session } = await signUp(email, password);
+            if (session) {
+                _showApp(user.email);
+            } else {
+                errEl.textContent = 'Account created! Check your email to confirm, then sign in.';
+                errEl.style.color = '#22c55e';
+                errEl.classList.remove('hidden');
+            }
+        }
+    } catch (e) {
+        errEl.textContent = e.message || 'Something went wrong. Please try again.';
+        errEl.style.color = '#f87171';
+        errEl.classList.remove('hidden');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = _authMode === 'signin' ? 'Sign In' : 'Create Account';
+    }
+};
+
+window.handleSignOut = async function() {
+    await signOut();
+    _showLoginScreen();
+};
+// ─────────────────────────────────────────────────────────────────────────
+
 // --- Render Core ---
 
 const GATE_TIPS = {
@@ -1902,7 +1975,8 @@ if (_duelParam) {
 // Boot: sync remote progress then handle the initial route
 setSyncHook(schedulePush);
 (async () => {
-    await initSync(applyRemoteProgress);
+    const session = await initSync(applyRemoteProgress);
+    if (session?.email) _showApp(session.email);
     const _bootHash = window.location.hash;
     if (_bootHash && _bootHash !== '#/' && _bootHash.startsWith('#/')) {
         handleRoute(_bootHash);
