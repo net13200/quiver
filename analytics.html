@@ -533,11 +533,11 @@ function renderModeChart(events) {
 function renderDAUChart(events) {
     const buckets = dailyBuckets(30);
     const byDay   = {};
-    events.filter(e => e.event_name === 'session_start').forEach(e => {
+    events.filter(e => e.user_id && e.event_name === 'session_start').forEach(e => {
         const day = e.created_at?.slice(0, 10);
         if (!(day in buckets)) return;
         if (!byDay[day]) byDay[day] = new Set();
-        byDay[day].add(e.user_id || e.session_id);
+        byDay[day].add(e.user_id);
     });
     const data = Object.keys(buckets).map(d => (byDay[d]?.size ?? 0));
 
@@ -580,15 +580,13 @@ function renderAchievements(progress) {
 function renderNewVsReturning(events) {
     const firstSeen = {};
     [...events].reverse().forEach(e => {
-        const uid = e.user_id || e.session_id;
-        if (uid) firstSeen[uid] = e.created_at?.slice(0, 10);
+        if (e.user_id) firstSeen[e.user_id] = e.created_at?.slice(0, 10);
     });
     const newC = dailyBuckets(30), retC = dailyBuckets(30);
-    events.filter(e => e.event_name === 'session_start').forEach(e => {
-        const uid = e.user_id || e.session_id;
+    events.filter(e => e.user_id && e.event_name === 'session_start').forEach(e => {
         const day = e.created_at?.slice(0, 10);
-        if (!uid || !(day in newC)) return;
-        if (firstSeen[uid] === day) newC[day]++;
+        if (!(day in newC)) return;
+        if (firstSeen[e.user_id] === day) newC[day]++;
         else retC[day]++;
     });
     charts.nvr = new Chart(document.getElementById('chart-nvr'), {
