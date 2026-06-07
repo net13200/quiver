@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { setAnalyticsUserId } from './analytics.js';
+import { setAnalyticsUserId, trackSessionStart } from './analytics.js';
 
 const SUPABASE_URL = 'https://gexeorwjxbznkimgeokk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DkPdSor4LJfAHd1bHQwIIA_u4meT_mP';
@@ -45,6 +45,7 @@ export async function signIn(email, password, applyRemote) {
     _userId    = data.user.id;
     _userEmail = data.user.email;
     setAnalyticsUserId(_userId);
+    trackSessionStart();
     const { data: remote } = await sb().from('progress').select('*').eq('user_id', _userId).maybeSingle();
     if (remote) applyRemote(remote);
     await _push();
@@ -61,6 +62,7 @@ export async function signUp(email, password) {
         _userId    = data.user.id;
         _userEmail = data.user.email;
         setAnalyticsUserId(_userId);
+        trackSessionStart();
         await _push();
     }
     return data;
