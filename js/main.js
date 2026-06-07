@@ -1,5 +1,6 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, setSyncHook, applyRemoteProgress } from './data/storage.js';
+import { initSync, schedulePush } from './data/sync.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
@@ -642,6 +643,7 @@ function showQuizVictory() {
     const pool = getQuizStagePool(sIdx);
     [...new Set(pool.map(e => e.sIdx))].forEach(s => { if (!quizzes.includes(s)) quizzes.push(s); });
     localStorage.setItem('quarks_quizzes', JSON.stringify(quizzes));
+    schedulePush();
 
     // Detect section completion (all levels + all quizzes of the section done)
     state._sectionJustCompleted = false;
@@ -1894,9 +1896,13 @@ if (_duelParam) {
     }
 }
 
-// Boot: if a route hash is present, navigate directly to it
-const _bootHash = window.location.hash;
-if (_bootHash && _bootHash !== '#/' && _bootHash.startsWith('#/')) {
-    handleRoute(_bootHash);
-}
+// Boot: sync remote progress then handle the initial route
+setSyncHook(schedulePush);
+(async () => {
+    await initSync(applyRemoteProgress);
+    const _bootHash = window.location.hash;
+    if (_bootHash && _bootHash !== '#/' && _bootHash.startsWith('#/')) {
+        handleRoute(_bootHash);
+    }
+})();
 
