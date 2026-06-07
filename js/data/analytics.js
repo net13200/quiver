@@ -64,3 +64,12 @@ export function trackLessonViewed(mode, p1, p2, randomLvl) {
             stage: mode === 'STAGE' ? p1 : null, level: mode === 'STAGE' ? p2 : null,
             random_lvl: (mode === 'RANDOM' || mode === 'TIMED' || mode === 'DAILY') ? randomLvl : null });
 }
+export function trackTutorialComplete() {
+    _send({ event_name: 'tutorial_complete' });
+}
+export function trackTutorialSkipped() {
+    _send({ event_name: 'tutorial_skipped' });
+}
+export function trackSectionComplete(sectionName) {
+    _send({ event_name: 'section_complete', section_name: sectionName });
+}

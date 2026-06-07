@@ -7,7 +7,7 @@ import { computeStateVector, stateToString, statesMatch } from './quantum/engine
 import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
-import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed } from './data/analytics.js';
+import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed, trackTutorialSkipped, trackSectionComplete } from './data/analytics.js';
 
 export let gameStartTime = 0;
 let tutorialPromptShown = false;
@@ -627,6 +627,7 @@ function showSectionCompleteOverlay() {
 
     overlay.classList.remove('hidden');
 
+    trackSectionComplete(currentSec.name);
     fireSectionConfetti();
 }
 
@@ -668,6 +669,7 @@ function showQuizVictory() {
     if (againBtn) againBtn.classList.add('hidden');
 
     if (state._sectionJustCompleted) {
+        if (currentSec) trackSectionComplete(currentSec.name);
         fireSectionConfetti();
     }
 }
@@ -1302,7 +1304,7 @@ function initGame(mode, p1, p2) {
                     state.tutorialPhase = 'SELECT_GATE';
                     setGhostPointer('PALETTE_ANY');
                 },
-                () => { setTutorialComplete(); }
+                () => { setTutorialComplete(); trackTutorialSkipped(); }
             );
         }, 400);
     }
@@ -1817,6 +1819,7 @@ document.getElementById('tt-next').addEventListener('click', nextTourStep);
 document.getElementById('tt-skip').addEventListener('click', () => {
     endTour();
     setTutorialComplete();
+    trackTutorialSkipped();
     state.isTutorial = false;
     state.tutorialPhase = 'NONE';
 });

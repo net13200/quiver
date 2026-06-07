@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiver Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0b0d14;
+            color: #c9d1e0;
+            min-height: 100vh;
+        }
+
+        /* ── Auth screen ── */
+        #auth-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 16px;
+            padding: 24px;
+        }
+        #auth-screen h1 { font-size: 1.8rem; color: #fff; }
+        #auth-screen p  { color: #7c8a9e; font-size: 0.9rem; }
+        #auth-screen a  { color: #818cf8; }
+        #key-input {
+            width: 100%;
+            max-width: 480px;
+            padding: 12px 16px;
+            background: #161927;
+            border: 1px solid #2e3452;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        #key-input:focus { border-color: #6366f1; }
+        #load-btn {
+            padding: 12px 32px;
+            background: #6366f1;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #load-btn:hover { background: #4f46e5; }
+
+        /* ── Dashboard ── */
+        #dashboard { display: none; padding: 24px; max-width: 1280px; margin: 0 auto; }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+        header h1 { font-size: 1.5rem; color: #fff; }
+        header .meta { font-size: 0.8rem; color: #4b5470; }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        .btn-sm {
+            padding: 7px 16px;
+            border-radius: 6px;
+            border: 1px solid #2e3452;
+            background: #161927;
+            color: #8892a8;
+            font-size: 0.82rem;
+            cursor: pointer;
+        }
+        .btn-sm:hover { border-color: #6366f1; color: #a5b4fc; }
+
+        /* ── KPI cards ── */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi {
+            background: #161927;
+            border: 1px solid #1e2340;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .kpi .label { font-size: 0.75rem; color: #4b5470; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+        .kpi .value { font-size: 2rem; font-weight: 700; color: #fff; }
+        .kpi .sub   { font-size: 0.78rem; color: #4b5470; margin-top: 4px; }
+
+        /* ── Chart grid ── */
+        .chart-row {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .chart-row.two   { grid-template-columns: 1fr 1fr; }
+        .chart-row.one   { grid-template-columns: 1fr; }
+
+        .card {
+            background: #161927;
+            border: 1px solid #1e2340;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .card h2 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8892a8;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 16px;
+        }
+        .chart-wrap { position: relative; height: 240px; }
+
+        /* ── Attempts table ── */
+        .attempts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .attempts-table th {
+            text-align: left;
+            padding: 8px 12px;
+            color: #4b5470;
+            font-weight: 500;
+            border-bottom: 1px solid #1e2340;
+        }
+        .attempts-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #161d2e;
+        }
+        .attempts-table tr:last-child td { border-bottom: none; }
+        .attempts-table tr:hover td { background: #1a1f30; }
+
+        .heat-cell {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        /* ── Recent events ── */
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .events-table th {
+            text-align: left;
+            padding: 8px 12px;
+            color: #4b5470;
+            font-weight: 500;
+            border-bottom: 1px solid #1e2340;
+        }
+        .events-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #161d2e;
+            color: #8892a8;
+        }
+        .events-table tr:last-child td { border-bottom: none; }
+        .events-table tr:hover td { background: #1a1f30; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .badge-start    { background: #1e2f52; color: #60a5fa; }
+        .badge-complete { background: #14291f; color: #4ade80; }
+        .badge-fail     { background: #2d1a1a; color: #f87171; }
+        .badge-attempt  { background: #2a1f2e; color: #c084fc; }
+        .badge-hint     { background: #29220f; color: #fbbf24; }
+        .badge-lesson   { background: #1e2a29; color: #34d399; }
+        .badge-session  { background: #1e2340; color: #94a3b8; }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: #4b5470;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
+            .chart-row.two { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Auth ── -->
+<div id="auth-screen">
+    <h1>Quiver Analytics</h1>
+    <p>Enter your Supabase <strong>service_role</strong> key to load the dashboard.<br>
+       Find it at: <a href="https://supabase.com/dashboard/project/gexeorwjxbznkimgeokk/settings/api" target="_blank">Project Settings → API → service_role</a></p>
+    <input type="password" id="key-input" placeholder="eyJ..." />
+    <button id="load-btn" onclick="loadDashboard()">Load Dashboard</button>
+    <p id="auth-error" style="color:#f87171;display:none">Failed to connect — check the key</p>
+</div>
+
+<!-- ── Dashboard ── -->
+<div id="dashboard">
+    <header>
+        <div>
+            <h1>Quiver Analytics</h1>
+            <div class="meta" id="data-range"></div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-sm" onclick="refresh()">↺ Refresh</button>
+            <button class="btn-sm" onclick="signOut()">Sign out</button>
+        </div>
+    </header>
+
+    <div id="content"><div class="loading">Loading…</div></div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://gexeorwjxbznkimgeokk.supabase.co';
+const LS_KEY        = 'quiver_analytics_key';
+
+const STAGE_NAMES = [
+    'S0: Foundations', 'S1: Bell Pairs', 'S2: CZ Gate',
+    'S3: GHZ State',   'S4: SWAP Gate',  'S5: Swap Test',
+    'S6: Hadamard Test','S7: Phase Rot.', 'S8: QFT',
+    'S9: QFT Adder',   'S10: Phase Est.','S11: Grover'
+];
+
+const MODE_LABELS = { STAGE: 'Stage', RANDOM: 'Random', TIMED: 'Timed', DAILY: 'Daily' };
+
+let serviceKey = null;
+let charts = {};
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+window.onload = () => {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) { document.getElementById('key-input').value = saved; loadDashboard(); }
+};
+
+async function loadDashboard() {
+    const input = document.getElementById('key-input').value.trim();
+    if (!input) return;
+    serviceKey = input;
+
+    // quick auth check
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/events?limit=1`, {
+        headers: headers()
+    });
+    if (!r.ok) {
+        document.getElementById('auth-error').style.display = '';
+        return;
+    }
+    localStorage.setItem(LS_KEY, serviceKey);
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    await fetchAndRender();
+}
+
+function signOut() {
+    localStorage.removeItem(LS_KEY);
+    serviceKey = null;
+    document.getElementById('auth-screen').style.display = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('key-input').value = '';
+}
+
+async function refresh() { await fetchAndRender(); }
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+
+function headers() {
+    return {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json'
+    };
+}
+
+async function fetchEvents() {
+    const fields = 'event_name,mode,stage,level,attempts_used,time_ms,session_id,created_at,success,section_name';
+    const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/events?select=${fields}&order=created_at.desc&limit=10000`,
+        { headers: headers() }
+    );
+    if (!r.ok) throw new Error('Fetch failed');
+    return r.json();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+async function fetchAndRender() {
+    document.getElementById('content').innerHTML = '<div class="loading">Loading…</div>';
+    destroyCharts();
+
+    const events = await fetchEvents();
+    if (!events.length) {
+        document.getElementById('content').innerHTML = '<div class="loading">No events yet.</div>';
+        return;
+    }
+
+    // date range label
+    const oldest = events[events.length - 1]?.created_at?.slice(0, 10) ?? '';
+    const newest = events[0]?.created_at?.slice(0, 10) ?? '';
+    document.getElementById('data-range').textContent = `${oldest} → ${newest} · ${events.length.toLocaleString()} events`;
+
+    const html = buildHTML();
+    document.getElementById('content').innerHTML = html;
+
+    renderKPIs(events);
+    renderModeChart(events);
+    renderDailyChart(events);
+    renderStageChart(events);
+    renderTutorialStats(events);
+    renderSectionStats(events);
+    renderAttemptsTable(events);
+    renderRecentTable(events);
+}
+
+function buildHTML() {
+    return `
+    <div class="kpi-row">
+        <div class="kpi"><div class="label">Unique Sessions</div><div class="value" id="kpi-sessions">—</div><div class="sub" id="kpi-sessions-sub"></div></div>
+        <div class="kpi"><div class="label">Games Started</div><div class="value" id="kpi-games">—</div><div class="sub" id="kpi-games-sub"></div></div>
+        <div class="kpi"><div class="label">Levels Completed</div><div class="value" id="kpi-completions">—</div><div class="sub" id="kpi-cr-sub"></div></div>
+        <div class="kpi"><div class="label">Avg Time to Complete</div><div class="value" id="kpi-time">—</div><div class="sub">seconds per level</div></div>
+    </div>
+
+    <div class="chart-row two">
+        <div class="card">
+            <h2>Mode Distribution</h2>
+            <div class="chart-wrap"><canvas id="chart-mode"></canvas></div>
+        </div>
+        <div class="card">
+            <h2>Daily Games (last 30 days)</h2>
+            <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
+        </div>
+    </div>
+
+    <div class="chart-row one">
+        <div class="card">
+            <h2>Stage Progress — Starts vs Completions</h2>
+            <div class="chart-wrap" style="height:260px"><canvas id="chart-stages"></canvas></div>
+        </div>
+    </div>
+
+    <div class="chart-row two">
+        <div class="card">
+            <h2>Tutorial</h2>
+            <div id="tutorial-container"></div>
+        </div>
+        <div class="card">
+            <h2>Section Completions</h2>
+            <div id="sections-container"></div>
+        </div>
+    </div>
+
+    <div class="chart-row two">
+        <div class="card">
+            <h2>Avg Attempts per Level (Stage mode)</h2>
+            <div id="attempts-container"></div>
+        </div>
+        <div class="card">
+            <h2>Recent Events</h2>
+            <div id="recent-container"></div>
+        </div>
+    </div>`;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+
+function renderKPIs(events) {
+    const sessions    = new Set(events.map(e => e.session_id)).size;
+    const games       = events.filter(e => e.event_name === 'game_start').length;
+    const completions = events.filter(e => e.event_name === 'level_complete').length;
+    const fails       = events.filter(e => e.event_name === 'level_fail').length;
+    const cr          = games ? ((completions / games) * 100).toFixed(1) : 0;
+
+    const timings = events
+        .filter(e => e.event_name === 'level_complete' && e.time_ms)
+        .map(e => e.time_ms);
+    const avgTime = timings.length
+        ? (timings.reduce((a, b) => a + b, 0) / timings.length / 1000).toFixed(1)
+        : '—';
+
+    document.getElementById('kpi-sessions').textContent     = sessions.toLocaleString();
+    document.getElementById('kpi-games').textContent        = games.toLocaleString();
+    document.getElementById('kpi-completions').textContent  = completions.toLocaleString();
+    document.getElementById('kpi-time').textContent         = avgTime;
+    document.getElementById('kpi-games-sub').textContent    = `${fails} fails`;
+    document.getElementById('kpi-cr-sub').textContent       = `${cr}% completion rate`;
+}
+
+// ── Mode chart ────────────────────────────────────────────────────────────────
+
+function renderModeChart(events) {
+    const counts = {};
+    events.filter(e => e.event_name === 'game_start').forEach(e => {
+        const m = e.mode || 'Unknown';
+        counts[m] = (counts[m] || 0) + 1;
+    });
+    const labels = Object.keys(counts).map(k => MODE_LABELS[k] || k);
+    const data   = Object.values(counts);
+    const colors = ['#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6'];
+
+    charts.mode = new Chart(document.getElementById('chart-mode'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { color: '#8892a8', boxWidth: 12, padding: 16 } }
+            }
+        }
+    });
+}
+
+// ── Daily chart ───────────────────────────────────────────────────────────────
+
+function renderDailyChart(events) {
+    const games = events.filter(e => e.event_name === 'game_start');
+    const counts = {};
+    const today = new Date();
+
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        counts[d.toISOString().slice(0, 10)] = 0;
+    }
+    games.forEach(e => {
+        const day = e.created_at?.slice(0, 10);
+        if (day in counts) counts[day]++;
+    });
+
+    const labels = Object.keys(counts).map(d => d.slice(5));
+    const data   = Object.values(counts);
+
+    charts.daily = new Chart(document.getElementById('chart-daily'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data, backgroundColor: '#6366f166', borderColor: '#6366f1',
+                borderWidth: 1, borderRadius: 3
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#4b5470', maxTicksLimit: 10 }, grid: { color: '#1e2340' } },
+                y: { ticks: { color: '#4b5470' }, grid: { color: '#1e2340' }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ── Stage chart ───────────────────────────────────────────────────────────────
+
+function renderStageChart(events) {
+    const stageEvents = events.filter(e => e.mode === 'STAGE');
+    const starts      = {};
+    const completions = {};
+
+    stageEvents.filter(e => e.event_name === 'game_start').forEach(e => {
+        starts[e.stage] = (starts[e.stage] || 0) + 1;
+    });
+    stageEvents.filter(e => e.event_name === 'level_complete').forEach(e => {
+        completions[e.stage] = (completions[e.stage] || 0) + 1;
+    });
+
+    const allStages = [...new Set([...Object.keys(starts), ...Object.keys(completions)])]
+        .map(Number).sort((a, b) => a - b);
+
+    const labels  = allStages.map(s => STAGE_NAMES[s] || `Stage ${s}`);
+    const sData   = allStages.map(s => starts[s] || 0);
+    const cData   = allStages.map(s => completions[s] || 0);
+
+    charts.stages = new Chart(document.getElementById('chart-stages'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Started',   data: sData, backgroundColor: '#6366f166', borderColor: '#6366f1', borderWidth: 1, borderRadius: 3 },
+                { label: 'Completed', data: cData, backgroundColor: '#22c55e66', borderColor: '#22c55e', borderWidth: 1, borderRadius: 3 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#8892a8' } } },
+            scales: {
+                x: { ticks: { color: '#4b5470' }, grid: { color: '#1e2340' } },
+                y: { ticks: { color: '#4b5470' }, grid: { color: '#1e2340' }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ── Tutorial stats ────────────────────────────────────────────────────────────
+
+function renderTutorialStats(events) {
+    const completed = events.filter(e => e.event_name === 'tutorial_complete').length;
+    const skipped   = events.filter(e => e.event_name === 'tutorial_skipped').length;
+    const total     = completed + skipped;
+    const rate      = total ? ((completed / total) * 100).toFixed(0) : '—';
+
+    document.getElementById('tutorial-container').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:8px 0">
+            <div>
+                <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Completed</div>
+                <div style="font-size:1.8rem;font-weight:700;color:#4ade80">${completed}</div>
+            </div>
+            <div>
+                <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Skipped</div>
+                <div style="font-size:1.8rem;font-weight:700;color:#f87171">${skipped}</div>
+            </div>
+            <div>
+                <div style="font-size:0.72rem;color:#4b5470;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Completion Rate</div>
+                <div style="font-size:1.8rem;font-weight:700;color:#fff">${rate}${total ? '%' : ''}</div>
+            </div>
+        </div>
+        <div style="font-size:0.78rem;color:#4b5470;margin-top:8px">${total} users encountered the tutorial prompt</div>`;
+}
+
+// ── Section completions ───────────────────────────────────────────────────────
+
+function renderSectionStats(events) {
+    const sectionEvents = events.filter(e => e.event_name === 'section_complete' && e.section_name);
+    if (!sectionEvents.length) {
+        document.getElementById('sections-container').innerHTML =
+            '<div style="color:#4b5470;padding:16px;font-size:0.85rem;">No section completions yet.</div>';
+        return;
+    }
+
+    const counts = {};
+    sectionEvents.forEach(e => {
+        counts[e.section_name] = (counts[e.section_name] || 0) + 1;
+    });
+
+    const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const max  = rows[0][1];
+
+    const trs = rows.map(([name, count]) => {
+        const pct = Math.round((count / max) * 100);
+        return `<tr>
+            <td>${name}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div style="flex:1;background:#1e2340;border-radius:4px;height:6px">
+                        <div style="width:${pct}%;background:#6366f1;height:6px;border-radius:4px"></div>
+                    </div>
+                    <span style="color:#fff;font-weight:600;min-width:24px;text-align:right">${count}</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('sections-container').innerHTML = `
+        <table class="attempts-table">
+            <thead><tr><th>Section</th><th>Completions</th></tr></thead>
+            <tbody>${trs}</tbody>
+        </table>`;
+}
+
+// ── Attempts table ────────────────────────────────────────────────────────────
+
+function renderAttemptsTable(events) {
+    const completions = events.filter(e => e.event_name === 'level_complete' && e.mode === 'STAGE');
+    const map = {};
+
+    completions.forEach(e => {
+        const key = `${e.stage}-${e.level}`;
+        if (!map[key]) map[key] = { stage: e.stage, level: e.level, total: 0, count: 0 };
+        map[key].total += (e.attempts_used || 1);
+        map[key].count++;
+    });
+
+    const rows = Object.values(map).sort((a, b) => a.stage - b.stage || a.level - b.level);
+
+    if (!rows.length) {
+        document.getElementById('attempts-container').innerHTML = '<div style="color:#4b5470;padding:16px;font-size:0.85rem;">No stage completions yet.</div>';
+        return;
+    }
+
+    const maxAvg = Math.max(...rows.map(r => r.total / r.count));
+
+    const trs = rows.map(r => {
+        const avg  = (r.total / r.count).toFixed(1);
+        const pct  = maxAvg > 0 ? (avg / maxAvg) : 0;
+        const bg   = pct < 0.33 ? '#14291f' : pct < 0.66 ? '#29220f' : '#2d1a1a';
+        const col  = pct < 0.33 ? '#4ade80' : pct < 0.66 ? '#fbbf24' : '#f87171';
+        return `<tr>
+            <td>${STAGE_NAMES[r.stage] || 'S' + r.stage}</td>
+            <td>Level ${r.level + 1}</td>
+            <td><span class="heat-cell" style="background:${bg};color:${col}">${avg}</span></td>
+            <td style="color:#4b5470">${r.count}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('attempts-container').innerHTML = `
+        <table class="attempts-table">
+            <thead><tr><th>Stage</th><th>Level</th><th>Avg Attempts</th><th>Completions</th></tr></thead>
+            <tbody>${trs}</tbody>
+        </table>`;
+}
+
+// ── Recent events ─────────────────────────────────────────────────────────────
+
+function renderRecentTable(events) {
+    const recent = events.slice(0, 30);
+
+    const badgeClass = n => ({
+        game_start: 'badge-start', level_complete: 'badge-complete',
+        level_fail: 'badge-fail',  submit_attempt: 'badge-attempt',
+        hint_viewed: 'badge-hint', lesson_viewed: 'badge-lesson',
+        session_start: 'badge-session'
+    })[n] || 'badge-session';
+
+    const locationStr = e => {
+        if (e.mode === 'STAGE' && e.stage != null)
+            return `${STAGE_NAMES[e.stage] || 'S' + e.stage} L${e.level + 1}`;
+        if (e.mode) return MODE_LABELS[e.mode] || e.mode;
+        return '—';
+    };
+
+    const trs = recent.map(e => `<tr>
+        <td style="color:#4b5470">${e.created_at?.slice(11,19) ?? ''}</td>
+        <td><span class="badge ${badgeClass(e.event_name)}">${e.event_name.replace('_', ' ')}</span></td>
+        <td>${locationStr(e)}</td>
+        <td style="color:#4b5470;font-family:monospace">${e.session_id?.slice(0, 8) ?? ''}</td>
+    </tr>`).join('');
+
+    document.getElementById('recent-container').innerHTML = `
+        <table class="events-table">
+            <thead><tr><th>Time</th><th>Event</th><th>Location</th><th>Session</th></tr></thead>
+            <tbody>${trs}</tbody>
+        </table>`;
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+
+function destroyCharts() {
+    Object.values(charts).forEach(c => c.destroy());
+    charts = {};
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, normalizeGate, GATE_MATRICES } from '../quantum/gates.js';
-import { trackSubmitAttempt, trackLevelComplete, trackLevelFail } from '../data/analytics.js';
+import { trackSubmitAttempt, trackLevelComplete, trackLevelFail, trackTutorialComplete } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
 import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, hideVictoryModal, clearGhostPointer, setGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
@@ -224,6 +224,7 @@ export function submitGuess(state, renderBoardCallback) {
             state.tutorialJustCompleted = true;
             setTutorialComplete();
             clearGhostPointer();
+            trackTutorialComplete();
         }
         
         if (isStrict && matchedMultiset && !matchedCircuit) {
