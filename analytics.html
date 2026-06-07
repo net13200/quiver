@@ -274,7 +274,13 @@ async function fetchAndRender() {
     const [regIds, events] = await Promise.all([fetchRegisteredUserIds(), fetchEvents()]);
     const progress = await fetchProgress(regIds);
 
-    allEvents   = events;
+    // Events with a user_id are filtered to registered users only; events without
+    // a user_id (anonymous behaviour) are kept for aggregate charts like mode distribution.
+    const regEvents = regIds
+        ? events.filter(e => !e.user_id || regIds.has(e.user_id))
+        : events;
+
+    allEvents   = regEvents;
     allProgress = progress;
 
     if (!events.length && !progress.length) {
@@ -289,17 +295,17 @@ async function fetchAndRender() {
 
     document.getElementById('content').innerHTML = buildHTML();
 
-    renderKPIs(events, progress);
+    renderKPIs(regEvents, progress);
     renderStageDropoff(progress);
     renderSectionRates(progress);
-    renderTutorialPanel(events, progress);
-    renderModeChart(events);
-    renderDAUChart(events);
+    renderTutorialPanel(regEvents, progress);
+    renderModeChart(regEvents);
+    renderDAUChart(regEvents);
     renderAchievements(progress);
-    renderNewVsReturning(events);
-    renderRetention(events);
-    renderAttemptsTable(events);
-    renderRecentTable(events);
+    renderNewVsReturning(regEvents);
+    renderRetention(regEvents);
+    renderAttemptsTable(regEvents);
+    renderRecentTable(regEvents);
 }
 
 function buildHTML() {
