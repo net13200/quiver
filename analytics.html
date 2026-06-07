@@ -291,7 +291,7 @@ async function fetchAndRender() {
     const oldest = events[events.length - 1]?.created_at?.slice(0, 10) ?? '';
     const newest = events[0]?.created_at?.slice(0, 10) ?? '';
     document.getElementById('data-range').textContent =
-        `${oldest} → ${newest} · ${events.length.toLocaleString()} events · ${progress.length} registered users`;
+        `${oldest} → ${newest} · ${events.length.toLocaleString()} events · ${progress.length} registered users · ${regIds ? regIds.size + ' auth users' : 'admin API failed'}`;
 
     document.getElementById('content').innerHTML = buildHTML();
 
