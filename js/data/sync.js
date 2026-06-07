@@ -35,15 +35,15 @@ export async function initSync(applyRemote) {
     }
 }
 
-// Sign in — merges local progress with the server row.
+// Sign in — fetches remote progress first, merges into local, then pushes merged result.
 export async function signIn(email, password, applyRemote) {
     const { data, error } = await sb().auth.signInWithPassword({ email, password });
     if (error) throw error;
     _userId = data.user.id;
     setAnalyticsUserId(_userId);
-    await _push();
     const { data: remote } = await sb().from('progress').select('*').eq('user_id', _userId).maybeSingle();
     if (remote) applyRemote(remote);
+    await _push();
     return data.user;
 }
 
