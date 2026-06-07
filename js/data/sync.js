@@ -6,6 +6,7 @@ const SUPABASE_KEY = 'sb_publishable_DkPdSor4LJfAHd1bHQwIIA_u4meT_mP';
 
 let _sb = null;
 let _userId = null;
+let _userEmail = null;
 let _pushTimer = null;
 
 function sb() {
@@ -21,7 +22,8 @@ export async function initSync(applyRemote) {
     try {
         const { data: { session } } = await withTimeout(sb().auth.getSession(), 5000);
         if (!session) return;
-        _userId = session.user.id;
+        _userId    = session.user.id;
+        _userEmail = session.user.email;
         setAnalyticsUserId(_userId);
 
         const { data: remote } = await withTimeout(
@@ -29,6 +31,7 @@ export async function initSync(applyRemote) {
             5000
         );
         if (remote) applyRemote(remote);
+        else await _push(); // first session on this account — create the progress row
         return { email: session.user.email };
     } catch (e) {
         console.info('Sync unavailable:', e.message);
@@ -39,7 +42,8 @@ export async function initSync(applyRemote) {
 export async function signIn(email, password, applyRemote) {
     const { data, error } = await sb().auth.signInWithPassword({ email, password });
     if (error) throw error;
-    _userId = data.user.id;
+    _userId    = data.user.id;
+    _userEmail = data.user.email;
     setAnalyticsUserId(_userId);
     const { data: remote } = await sb().from('progress').select('*').eq('user_id', _userId).maybeSingle();
     if (remote) applyRemote(remote);
@@ -54,7 +58,8 @@ export async function signUp(email, password) {
     if (error) throw error;
     // Session is present immediately only when email confirmation is disabled.
     if (data.session) {
-        _userId = data.user.id;
+        _userId    = data.user.id;
+        _userEmail = data.user.email;
         setAnalyticsUserId(_userId);
         await _push();
     }
@@ -63,7 +68,8 @@ export async function signUp(email, password) {
 
 export async function signOut() {
     await sb().auth.signOut();
-    _userId = null;
+    _userId    = null;
+    _userEmail = null;
 }
 
 export function isSignedIn() { return !!_userId; }
@@ -75,9 +81,10 @@ export function schedulePush() {
 }
 
 async function _push() {
-    if (!_userId) return;
+    if (!_userId || !_userEmail) return;
     try {
-        await sb().from('progress').upsert({
+        const { error } = await sb().from('progress').upsert({
+            email:                _userEmail,
             user_id:              _userId,
             completed_stages:     JSON.parse(localStorage.getItem('quarks_completed')    || '[]'),
             completed_quizzes:    JSON.parse(localStorage.getItem('quarks_quizzes')      || '[]'),
@@ -90,8 +97,9 @@ async function _push() {
             achievements:         JSON.parse(localStorage.getItem('quiver_achievements') || '[]'),
             achievement_progress: JSON.parse(localStorage.getItem('quiver_ach_progress') || '{}'),
             updated_at:           new Date().toISOString(),
-        }, { onConflict: 'user_id' });
+        }, { onConflict: 'email' });
+        if (error) console.error('Sync push failed:', error.message, '| code:', error.code);
     } catch (e) {
-        console.warn('Sync push failed:', e.message);
+        console.error('Sync push failed (network):', e.message);
     }
 }
