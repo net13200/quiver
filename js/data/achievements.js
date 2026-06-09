@@ -55,3 +55,6 @@ export const ACHIEVEMENTS = [
 export const ACHIEVEMENT_MAP = Object.fromEntries(ACHIEVEMENTS.map(a => [a.id, a]));
 
 export const ACHIEVEMENT_CATEGORIES = [...new Set(ACHIEVEMENTS.map(a => a.category))];
+
+export const LEARN_CATEGORIES = ['Getting Started', 'Learning'];
+export const PLAY_CATEGORIES  = ACHIEVEMENT_CATEGORIES.filter(c => !LEARN_CATEGORIES.includes(c));

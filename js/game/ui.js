@@ -1,7 +1,7 @@
 import { drawBlochSphere, calcBlochVector } from '../quantum/bloch.js';
 import { stateToString, computeStateVector } from '../quantum/engine.js';
 import { GATE_MATRICES, getOccupiedQubits } from '../quantum/gates.js';
-import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES } from '../data/achievements.js';
+import { ACHIEVEMENTS, LEARN_CATEGORIES, PLAY_CATEGORIES } from '../data/achievements.js';
 
 export function parseMarkdownAndMath(text) {
     if (!text) return '';
@@ -813,18 +813,17 @@ export function showAchievementToast(name, icon) {
     }, 3500);
 }
 
-export function renderAchievementsPanel(unlockedSet, progress) {
-    const container = document.getElementById('achievements-container');
-    if (!container) return;
-
-    const total = ACHIEVEMENTS.length;
-    const unlocked = ACHIEVEMENTS.filter(a => unlockedSet.has(a.id)).length;
+function _buildAchievementsHtml(unlockedSet, progress, categories) {
+    const subset = ACHIEVEMENTS.filter(a => categories.includes(a.category));
+    const total    = subset.length;
+    const unlocked = subset.filter(a => unlockedSet.has(a.id)).length;
     const pct = total > 0 ? Math.round((unlocked / total) * 100) : 0;
 
     let html = `<div class="ach-header"><span class="ach-header-count">${unlocked} / ${total} Achievements</span><div class="ach-total-bar"><div class="ach-total-fill" style="width:${pct}%"></div></div></div>`;
 
-    ACHIEVEMENT_CATEGORIES.forEach(cat => {
+    categories.forEach(cat => {
         const catAchs = ACHIEVEMENTS.filter(a => a.category === cat);
+        if (!catAchs.length) return;
         html += `<div class="ach-category"><div class="ach-category-title">${cat}</div><div class="ach-grid">`;
 
         catAchs.forEach(ach => {
@@ -859,6 +858,17 @@ export function renderAchievementsPanel(unlockedSet, progress) {
 
         html += `</div></div>`;
     });
+    return html;
+}
 
-    container.innerHTML = html;
+export function renderAchievementsPanel(unlockedSet, progress) {
+    const container = document.getElementById('achievements-container');
+    if (!container) return;
+    container.innerHTML = _buildAchievementsHtml(unlockedSet, progress, PLAY_CATEGORIES);
+}
+
+export function renderLearnAchievements(unlockedSet, progress) {
+    const container = document.getElementById('learn-achievements-container');
+    if (!container) return;
+    container.innerHTML = _buildAchievementsHtml(unlockedSet, progress, LEARN_CATEGORIES);
 }

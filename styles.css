@@ -754,6 +754,7 @@ body:has(#menu-home:not(.hidden)) {
 .ach-toast-name { font-size: 0.95rem; color: #f8fafc; font-weight: bold; }
 
 /* === Achievements Panel === */
+.learn-ach-section-title { font-size: 1.15rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; margin: 32px 0 12px; padding-top: 24px; border-top: 1px solid #1e293b; }
 .ach-header { margin-bottom: 20px; }
 .ach-header-count { font-size: 1.05rem; color: #eab308; font-weight: bold; }
 .ach-total-bar { height: 6px; background: #1e293b; border-radius: 3px; margin-top: 8px; overflow: hidden; }

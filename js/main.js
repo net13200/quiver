@@ -4,7 +4,7 @@ import { initSync, signIn, signUp, signOut, schedulePush } from './data/sync.js'
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, renderLearnAchievements, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed, trackTutorialSkipped, trackSectionComplete } from './data/analytics.js';
@@ -294,6 +294,7 @@ function showStagesPage() {
     state.isDuelMode = false;
     buildMenu();
     buildSectionsOverview();
+    renderLearnAchievements(unlockedAchievements, achievementProgress);
     document.getElementById('menu-home').classList.add('hidden');
     document.getElementById('menu-stages').classList.remove('hidden');
     document.getElementById('menu-play-page').classList.add('hidden');
