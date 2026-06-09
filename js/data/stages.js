@@ -393,8 +393,8 @@ export const STAGES = [
                 name: "5.1: Swap Test: Same",
                 quizDesc: "Run the Swap Test comparing q1 = |+⟩ against q2 = |+⟩.",
                 circuits: getStage6Circuits('H1', 'H2'),
-                hint: "Prepare q1 = |+⟩ and q2 = |+⟩ with two Hadamards. Superpose the ancilla (q2) with H, apply the CSWAP, then close with another H on q2.",
-                lesson: "<b>The Mechanism:</b> The Swap Test measures how similar two quantum states are. Superpose an ancilla (q2), use it to CSWAP the two target states (q1, q2), then interfere q2 with a final Hadamard. The probability of measuring q2 as |0⟩ is P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Here q1 = q2 = |+⟩, so |⟨ψ|φ⟩|² = 1 and q2 deterministically returns to |0⟩.<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test computes the inner product of two quantum states with a single ancilla measurement, offering a potential exponential speedup for Quantum AI."
+                hint: "Prepare q1 = |+⟩ and q2 = |+⟩ with two Hadamards. Superpose the ancilla (q0) with H, apply the CSWAP, then close with another H on q0.",
+                lesson: "<b>The Mechanism:</b> The Swap Test measures how similar two quantum states are. Superpose an ancilla (q0), use it to CSWAP the two target states (q1, q2), then interfere q0 with a final Hadamard. The probability of measuring q0 as |0⟩ is P(0) = 0.5 + 0.5|⟨ψ|φ⟩|². Here q1 = q2 = |+⟩, so |⟨ψ|φ⟩|² = 1 and q0 deterministically returns to |0⟩.<br><br><b>Why it matters:</b> Comparing massive vectors is the core of classical machine learning (like checking if an image is a cat or a dog). The Swap Test computes the inner product of two quantum states with a single ancilla measurement, offering a potential exponential speedup for Quantum AI."
             },
             {
                 name: "5.2: Swap Test: Orthogonal",
