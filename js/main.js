@@ -107,6 +107,7 @@ function pushRoute(hash) {
 function handleRoute(hash) {
     _routerNavigating = true;
     window.stopLabPlay?.();
+    document.getElementById('back-to-results-btn')?.classList.add('hidden');
     const parts = (hash || '#/').replace(/^#\//, '').split('/');
     const seg = parts[0] || '';
     const p1  = parseInt(parts[1] ?? '0');
