@@ -1,4 +1,4 @@
-const CACHE = 'quiver-v18';
+const CACHE = 'quiver-v19';
 const BASE = '';
 const SHELL = [
   `${BASE}/`,
@@ -17,7 +17,7 @@ const SHELL = [
   `${BASE}/js/quantum/bloch.js`,
   `${BASE}/js/quantum/engine.js`,
   `${BASE}/js/quantum/gates.js`,
-  `${BASE}/assets/logo.jpg`,
+  `${BASE}/assets/logo.png`,
   `${BASE}/assets/icon.png`,
   `${BASE}/assets/apple-touch-icon.png`,
   `${BASE}/assets/icon-192.png`,
