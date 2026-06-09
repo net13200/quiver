@@ -834,7 +834,9 @@ function _buildAchievementsHtml(unlockedSet, progress, categories) {
             if (!isUnlocked && ach.type === 'count') {
                 const cur = ach.progressKey === 'daily_streak'
                     ? parseInt(localStorage.getItem('quiver_daily_streak') || '0')
-                    : (progress[ach.progressKey] || 0);
+                    : ach.progressKey === 'learn_streak'
+                        ? parseInt(localStorage.getItem('quiver_learn_streak') || '0')
+                        : (progress[ach.progressKey] || 0);
                 const barPct = Math.min(100, Math.round((cur / ach.target) * 100));
                 progressHtml = `<div class="ach-progress"><span class="ach-progress-text">${cur} / ${ach.target}</span><div class="ach-progress-bar"><div class="ach-progress-fill" style="width:${barPct}%"></div></div></div>`;
             } else if (!isUnlocked && ach.type === 'collection') {

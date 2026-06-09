@@ -1,7 +1,7 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, setSyncHook, applyRemoteProgress } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, learnStreak, setSyncHook, applyRemoteProgress } from './data/storage.js';
 import { initSync, signIn, signUp, signOut, schedulePush } from './data/sync.js';
-import { ACHIEVEMENTS, ACHIEVEMENT_MAP } from './data/achievements.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_MAP, PLAY_CATEGORIES } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
 import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, renderLearnAchievements, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti } from './game/ui.js';
@@ -295,6 +295,24 @@ function showStagesPage() {
     buildMenu();
     buildSectionsOverview();
     renderLearnAchievements(unlockedAchievements, achievementProgress);
+
+    // Update learn streak banner
+    const _lsBanner = document.getElementById('learn-streak-banner');
+    if (_lsBanner) {
+        if (learnStreak > 0) {
+            _lsBanner.textContent = `🔥 ${learnStreak}-day learning streak`;
+            _lsBanner.classList.remove('hidden');
+        } else {
+            _lsBanner.classList.add('hidden');
+        }
+    }
+
+    // Update learn achievements count in summary
+    const _learnAchs = ACHIEVEMENTS.filter(a => ['Getting Started', 'Learning'].includes(a.category));
+    const _learnUnlocked = _learnAchs.filter(a => unlockedAchievements.has(a.id)).length;
+    const _learnCount = document.getElementById('learn-ach-count');
+    if (_learnCount) _learnCount.textContent = `${_learnUnlocked} / ${_learnAchs.length}`;
+
     document.getElementById('menu-home').classList.add('hidden');
     document.getElementById('menu-stages').classList.remove('hidden');
     document.getElementById('menu-play-page').classList.add('hidden');
@@ -781,10 +799,11 @@ function buildMenu() {
         }
     });
 
-    // Update achievements card description
-    const _achUnlocked = unlockedAchievements.size;
+    // Update achievements card description — play achievements only
+    const _playAchs = ACHIEVEMENTS.filter(a => PLAY_CATEGORIES.includes(a.category));
+    const _playUnlocked = _playAchs.filter(a => unlockedAchievements.has(a.id)).length;
     const _achCard = document.getElementById('ach-card-desc');
-    if (_achCard) _achCard.innerText = `${_achUnlocked} / ${ACHIEVEMENTS.length} unlocked`;
+    if (_achCard) _achCard.innerText = `${_playUnlocked} / ${_playAchs.length} play achievements unlocked`;
 }
 
 const GATE_MASK_ORDER = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX'];

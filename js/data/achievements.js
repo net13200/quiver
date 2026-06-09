@@ -21,6 +21,8 @@ export const ACHIEVEMENTS = [
     { id: 'stage_11_complete',  name: "Grover's Searcher",    icon: '🔍', desc: "Complete Stage 11: Grover's Algorithm",     category: 'Learning' },
     { id: 'quantum_literate',   name: 'Quantum Literate',     icon: '📖', desc: 'Complete all Learn stages',                category: 'Learning' },
     { id: 'algorithm_architect',name: 'Algorithm Architect',  icon: '🏗️', desc: 'Complete a stage involving the Quantum Fourier Transform', category: 'Learning' },
+    { id: 'learn_streak_7',     name: 'Study Habit',          icon: '📆', desc: 'Complete a learn stage 7 days in a row',   type: 'count', target: 7,  progressKey: 'learn_streak', category: 'Learning' },
+    { id: 'learn_streak_30',    name: 'Quantum Scholar',      icon: '🎓', desc: 'Complete a learn stage 30 days in a row',  type: 'count', target: 30, progressKey: 'learn_streak', category: 'Learning' },
 
     // Gates
     { id: 'phase_wizard',       name: 'Phase Wizard',         icon: '🌀', desc: 'Solve a puzzle using an RZ or CP gate',                                    category: 'Gates' },
@@ -33,10 +35,6 @@ export const ACHIEVEMENTS = [
     { id: 'optimizer',          name: 'Optimizer',            icon: '⚡', desc: 'Solve a puzzle using fewer gates than the target circuit',                 category: 'Skill' },
     { id: 'compiler_genius',    name: 'Compiler Genius',      icon: '🧠', desc: 'Achieve the optimizer bonus 5 times', type: 'count',     target: 5,   progressKey: 'optimizer_count', category: 'Skill' },
     { id: 'clutch',             name: 'Clutch',               icon: '😤', desc: 'Solve a puzzle on the very last attempt (6th)',                            category: 'Skill' },
-
-    // Streaks
-    { id: 'on_a_roll',          name: 'On a Roll',            icon: '🔥', desc: 'Reach a solve streak of 5',                                                category: 'Streaks' },
-    { id: 'hot_streak',         name: 'Hot Streak',           icon: '🌋', desc: 'Reach a solve streak of 15',                                               category: 'Streaks' },
 
     // Daily
     { id: 'daily_habit',        name: 'Daily Habit',          icon: '📅', desc: 'Complete a daily puzzle',                                                  category: 'Daily' },

@@ -754,7 +754,13 @@ body:has(#menu-home:not(.hidden)) {
 .ach-toast-name { font-size: 0.95rem; color: #f8fafc; font-weight: bold; }
 
 /* === Achievements Panel === */
-.learn-ach-section-title { font-size: 1.15rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; margin: 32px 0 12px; padding-top: 24px; border-top: 1px solid #1e293b; }
+.learn-streak-banner { background: linear-gradient(90deg, #431407, #1c0a02); border: 1px solid #ea580c; border-radius: 10px; color: #fdba74; font-weight: 700; font-size: 0.95rem; padding: 10px 16px; margin-bottom: 16px; text-align: center; }
+.learn-ach-details { margin-top: 28px; border-top: 1px solid #1e293b; padding-top: 4px; }
+.learn-ach-summary { font-size: 1rem; font-weight: 700; color: #94a3b8; cursor: pointer; padding: 14px 4px; list-style: none; display: flex; align-items: center; gap: 8px; user-select: none; }
+.learn-ach-summary::-webkit-details-marker { display: none; }
+.learn-ach-summary::before { content: '▶'; font-size: 0.65rem; color: #475569; transition: transform 0.2s; }
+details[open] .learn-ach-summary::before { transform: rotate(90deg); }
+.learn-ach-count { margin-left: auto; font-size: 0.8rem; color: #eab308; font-weight: 600; }
 .ach-header { margin-bottom: 20px; }
 .ach-header-count { font-size: 1.05rem; color: #eab308; font-weight: bold; }
 .ach-total-bar { height: 6px; background: #1e293b; border-radius: 3px; margin-top: 8px; overflow: hidden; }

@@ -3,7 +3,7 @@ import { getGateMultiset, normalizeGate, GATE_MATRICES } from '../quantum/gates.
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail, trackTutorialComplete } from '../data/analytics.js';
 import { gameStartTime } from '../main.js';
 import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, hideVictoryModal, clearGhostPointer, setGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
-import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
+import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, updateLearnStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
 import { ACHIEVEMENT_MAP } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
 import { updateActiveRow } from './dragdrop.js';
@@ -244,6 +244,7 @@ export function submitGuess(state, renderBoardCallback) {
 
         if (state.currentMode === 'STAGE') {
             markStageCompleted(state.currentP1, state.currentP2);
+            updateLearnStreak();
             
             let totalLevels = 0;
             STAGES.forEach(s => totalLevels += s.levels.length);
@@ -343,6 +344,9 @@ export function submitGuess(state, renderBoardCallback) {
                 STAGES.forEach((s, sIdx) => s.levels.forEach((_, lIdx) => allStageIds.push(`${sIdx}-${lIdx}`)));
                 if (allStageIds.every(id => completedStages.includes(id))) tryUnlock('quantum_literate');
                 if (state.activeSet.some(g => g.startsWith('QFT'))) tryUnlock('algorithm_architect');
+                const ls = parseInt(localStorage.getItem('quiver_learn_streak') || '0');
+                if (ls >= 7)  tryUnlock('learn_streak_7');
+                if (ls >= 30) tryUnlock('learn_streak_30');
             }
 
             // Gate-based (all modes)
@@ -374,8 +378,6 @@ export function submitGuess(state, renderBoardCallback) {
                     setAchievementProgress('optimizer_count', n);
                     if (n >= 5) tryUnlock('compiler_genius');
                 }
-                if (state.currentStreak >= 5)  tryUnlock('on_a_roll');
-                if (state.currentStreak >= 15) tryUnlock('hot_streak');
                 if (state.currentMode === 'DAILY') {
                     tryUnlock('daily_habit');
                     const ds = parseInt(localStorage.getItem('quiver_daily_streak') || '0');
