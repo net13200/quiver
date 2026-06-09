@@ -49,6 +49,7 @@
             </div>
             <div id="auth-status-bar">
                 <span id="auth-email-display"></span>
+                <button class="feedback-home-btn" onclick="window.showFeedbackModal('menu')">💬 Feedback</button>
                 <button class="auth-link-btn" onclick="window.handleSignOut()">Sign out</button>
             </div>
         </div>
@@ -337,5 +338,26 @@
         navigator.serviceWorker.register('sw.js');
       }
     </script>
+
+    <!-- ── FEEDBACK MODAL ────────────────────────────────────────────── -->
+    <div id="feedback-modal" class="feedback-overlay hidden">
+        <div class="feedback-box">
+            <button class="feedback-close" onclick="window.hideFeedbackModal()">×</button>
+            <div id="feedback-form">
+                <h3 class="feedback-title">How's it going?</h3>
+                <p id="feedback-subtitle" class="feedback-subtitle hidden"></p>
+                <div id="feedback-stars" class="feedback-stars">
+                    <span class="star" data-value="1">★</span>
+                    <span class="star" data-value="2">★</span>
+                    <span class="star" data-value="3">★</span>
+                    <span class="star" data-value="4">★</span>
+                    <span class="star" data-value="5">★</span>
+                </div>
+                <textarea id="feedback-text" class="feedback-textarea" placeholder="Tell us what you think..."></textarea>
+                <button class="btn btn-green feedback-submit-btn" onclick="window.handleFeedbackSubmit()">Send</button>
+            </div>
+            <div id="feedback-thanks" class="hidden feedback-thanks">💙 Thanks for your feedback!</div>
+        </div>
+    </div>
 </body>
 </html>

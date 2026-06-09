@@ -76,6 +76,21 @@ export async function signOut() {
 
 export function isSignedIn() { return !!_userId; }
 
+export async function submitFeedback(message, context, rating) {
+    if (!_userId) return;
+    try {
+        const { error } = await sb().from('feedback').insert({
+            user_id: _userId,
+            message,
+            context: context || null,
+            rating:  rating  || null,
+        });
+        if (error) console.error('Feedback submit failed:', error.message);
+    } catch (e) {
+        console.error('Feedback submit failed (network):', e.message);
+    }
+}
+
 // Debounced — called after every local write; fires 1.5 s after the last call.
 export function schedulePush() {
     clearTimeout(_pushTimer);

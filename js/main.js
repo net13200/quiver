@@ -1,6 +1,6 @@
 import { LEVELS, STAGES } from './data/stages.js';
 import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, learnStreak, setSyncHook, applyRemoteProgress } from './data/storage.js';
-import { initSync, signIn, signUp, signOut, schedulePush } from './data/sync.js';
+import { initSync, signIn, signUp, signOut, schedulePush, submitFeedback } from './data/sync.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, PLAY_CATEGORIES } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
@@ -610,11 +610,17 @@ function showCurrentSection() {
 }
 window.showCurrentSection = showCurrentSection;
 
+let _promptFeedbackOnOverlayDismiss = false;
+
 function showSectionCompleteOverlay() {
     const groups = computeSectionGroups();
     const currentSec = groups.find(g => g.stages.some(({ sIdx }) => sIdx === state.currentP1));
     if (!currentSec) { showCurrentSection(); return; }
     const nextSec = groups[groups.indexOf(currentSec) + 1] || null;
+
+    if (groups.indexOf(currentSec) === 0 && !localStorage.getItem('quiver_feedback_prompted')) {
+        _promptFeedbackOnOverlayDismiss = true;
+    }
 
     const overlay = document.getElementById('section-complete-overlay');
     overlay.style.setProperty('--sco-color', currentSec.style.color);
@@ -652,6 +658,11 @@ function showSectionCompleteOverlay() {
 
 function hideSectionCompleteOverlay() {
     document.getElementById('section-complete-overlay').classList.add('hidden');
+    if (_promptFeedbackOnOverlayDismiss) {
+        _promptFeedbackOnOverlayDismiss = false;
+        localStorage.setItem('quiver_feedback_prompted', '1');
+        setTimeout(() => window.showFeedbackModal('after_section_1'), 300);
+    }
 }
 
 // ── Quiz Helpers ─────────────────────────────────────────────────────────────
@@ -1467,6 +1478,56 @@ window.handleAuthSubmit = async function() {
 window.handleSignOut = async function() {
     await signOut();
     _showLoginScreen();
+};
+
+// ── Feedback ──────────────────────────────────────────────────────────────
+let _feedbackRating = 0;
+
+function _updateStars(hovered) {
+    const val = hovered ?? _feedbackRating;
+    document.querySelectorAll('#feedback-stars .star').forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.value) <= val);
+    });
+}
+
+window.showFeedbackModal = function(context) {
+    const modal = document.getElementById('feedback-modal');
+    _feedbackRating = 0;
+    document.getElementById('feedback-form').classList.remove('hidden');
+    document.getElementById('feedback-thanks').classList.add('hidden');
+    document.getElementById('feedback-text').value = '';
+    _updateStars(0);
+
+    const subtitle = document.getElementById('feedback-subtitle');
+    if (context === 'after_section_1') {
+        subtitle.textContent = "How's your experience so far? Let us know how to improve.";
+        subtitle.classList.remove('hidden');
+    } else {
+        subtitle.classList.add('hidden');
+    }
+
+    const starsEl = document.getElementById('feedback-stars');
+    starsEl.onmouseleave = () => _updateStars(null);
+    starsEl.querySelectorAll('.star').forEach(s => {
+        s.onmouseenter = () => _updateStars(parseInt(s.dataset.value));
+        s.onclick = () => { _feedbackRating = parseInt(s.dataset.value); _updateStars(null); };
+    });
+
+    modal.dataset.context = context || '';
+    modal.classList.remove('hidden');
+    setTimeout(() => document.getElementById('feedback-text').focus(), 50);
+};
+window.hideFeedbackModal = function() {
+    document.getElementById('feedback-modal').classList.add('hidden');
+};
+window.handleFeedbackSubmit = async function() {
+    const text = document.getElementById('feedback-text').value.trim();
+    if (!text && !_feedbackRating) return;
+    const context = document.getElementById('feedback-modal').dataset.context;
+    await submitFeedback(text, context, _feedbackRating || null);
+    document.getElementById('feedback-form').classList.add('hidden');
+    document.getElementById('feedback-thanks').classList.remove('hidden');
+    setTimeout(window.hideFeedbackModal, 2000);
 };
 // ─────────────────────────────────────────────────────────────────────────
 
