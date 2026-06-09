@@ -1,5 +1,5 @@
-const CACHE = 'quiver-v16';
-const BASE = '/quiver';
+const CACHE = 'quiver-v17';
+const BASE = '';
 const SHELL = [
   `${BASE}/`,
   `${BASE}/index.html`,
