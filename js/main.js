@@ -1902,6 +1902,7 @@ if (rzSelect) {
 function goToMainMenu() {
     state.currentStreak = 0;
     if (state._timerIntervalId) { clearInterval(state._timerIntervalId); state._timerIntervalId = null; }
+    document.getElementById('back-to-results-btn').classList.add('hidden');
     showMainMenu();
 }
 document.getElementById('game-menu-btn').addEventListener('click', goToMainMenu);
