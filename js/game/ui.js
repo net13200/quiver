@@ -490,7 +490,8 @@ On real quantum hardware, <strong>fewer gates = less noise</strong>. Every gate 
 export function hideVictoryModal() {
     const overlay = document.getElementById('victory-modal');
     overlay.classList.remove('show');
-    setTimeout(() => overlay.classList.add('hidden'), 400); 
+    setTimeout(() => overlay.classList.add('hidden'), 400);
+    document.getElementById('back-to-results-btn')?.classList.add('hidden');
 }
 
 export function showInfoModal() {

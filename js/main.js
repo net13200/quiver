@@ -1967,6 +1967,14 @@ document.getElementById('modal-menu-btn').addEventListener('click', () => {
 
 document.getElementById('modal-view-solution-btn').addEventListener('click', () => {
     hideVictoryModal();
+    document.getElementById('back-to-results-btn').classList.remove('hidden');
+});
+
+document.getElementById('back-to-results-btn').addEventListener('click', () => {
+    document.getElementById('back-to-results-btn').classList.add('hidden');
+    const overlay = document.getElementById('victory-modal');
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.add('show'), 10);
 });
 
 document.getElementById('tt-next').addEventListener('click', nextTourStep);
