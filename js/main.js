@@ -1426,6 +1426,14 @@ function _showLoginScreen() {
     document.getElementById('auth-error-msg').classList.add('hidden');
 }
 
+window.togglePasswordVisibility = function() {
+    const input = document.getElementById('auth-password-input');
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    document.getElementById('eye-icon-show').classList.toggle('hidden', isHidden);
+    document.getElementById('eye-icon-hide').classList.toggle('hidden', !isHidden);
+};
+
 window.toggleAuthMode = function() {
     _authMode = _authMode === 'signin' ? 'signup' : 'signin';
     const isSignIn = _authMode === 'signin';

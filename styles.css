@@ -254,6 +254,10 @@ body:has(#menu-home:not(.hidden)) {
     padding: 11px 13px; color: #f8fafc; font-size: 0.95rem;
 }
 .auth-input:focus { outline: none; border-color: #38bdf8; }
+.auth-password-wrap { position: relative; }
+.auth-password-wrap .auth-input { padding-right: 42px; }
+.auth-eye-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; line-height: 0; }
+.auth-eye-btn:hover { color: #94a3b8; }
 #auth-submit-btn { width: 100%; padding: 12px; font-size: 1rem; }
 .auth-toggle-btn { background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; text-align: center; text-decoration: underline; }
 .auth-toggle-btn:hover { color: #94a3b8; }
