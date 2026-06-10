@@ -157,7 +157,13 @@ export function submitGuess(state, renderBoardCallback) {
     const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
     let hasWon = statesMatch(userState, state.targetState, state.numQubits);
     
-    let isStrict = ((state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') && state.currentP1 >= 4);
+    let isStrict = false;
+    if (state.currentMode === 'STAGE') {
+        isStrict = state.currentP1 >= 4;
+    } else if (state.currentMode === 'QUIZ') {
+        const _strictSrc = state.currentP1 === -1 ? (state._quizCurrentSIdx ?? 0) : state.currentP1;
+        isStrict = _strictSrc >= 4;
+    }
     if (isStrict && hasWon && !matchedMultiset) {
         hasWon = false; 
         let msg = document.getElementById('message');
