@@ -1,5 +1,5 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, learnStreak, setSyncHook, applyRemoteProgress } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, learnStreak, updateLearnStreak, updateDailyStreak, setSyncHook, applyRemoteProgress } from './data/storage.js';
 import { initSync, signIn, signUp, signOut, schedulePush, submitFeedback } from './data/sync.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, PLAY_CATEGORIES } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
@@ -542,6 +542,9 @@ function buildSectionsOverview() {
     const groups = computeSectionGroups();
     const isNodeUnlocked = makeIsNodeUnlocked();
 
+    const _gqCard = document.getElementById('global-quiz-card');
+    if (_gqCard) _gqCard.classList.toggle('hidden', completedStages.length === 0);
+
     groups.forEach(sec => {
         const { sIdx: firstSIdx } = sec.stages[0];
         const locked = !completedStages.some(cs => cs.startsWith(`${firstSIdx}-`)) && !isNodeUnlocked(firstSIdx, 0);
@@ -667,8 +670,26 @@ function hideSectionCompleteOverlay() {
 }
 
 // ── Quiz Helpers ─────────────────────────────────────────────────────────────
+window.startGlobalQuiz = function() {
+    state._quizContinuing = false;
+    initGame('QUIZ', -1);
+};
+
 function showQuizVictory() {
     const sIdx = state._quizSIdx;
+
+    if (sIdx === -1) {
+        updateLearnStreak();
+        updateDailyStreak();
+        showVictoryModal('Review Complete! ★', `${state.quizScore} / ${state.quizTotal} correct`, null, false, null);
+        const menuBtn = document.getElementById('modal-menu-btn');
+        if (menuBtn) menuBtn.textContent = 'Back to Sections';
+        const nextBtn = document.getElementById('modal-next-btn');
+        if (nextBtn) nextBtn.classList.add('hidden');
+        const againBtn = document.getElementById('modal-again-btn');
+        if (againBtn) againBtn.classList.add('hidden');
+        return;
+    }
 
     // Persist completion — also mark any absorbed single-level stages as quiz-done
     const quizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
@@ -1130,11 +1151,11 @@ function initGame(mode, p1, p2) {
     } else if (mode === 'QUIZ') {
         clearBtn.classList.add('hidden');
         stageNav.classList.add('hidden');
-        const quizStage = STAGES[p1];
+        const isGlobal = (p1 === -1);
+        const quizStage = isGlobal ? null : STAGES[p1];
         state._quizSIdx = p1;
         state.currentP1 = p1;
 
-        const isStrictQuiz = state._quizSIdx >= 4;
         const _isContinuing = state._quizContinuing;
 
         if (!_isContinuing) {
@@ -1143,7 +1164,9 @@ function initGame(mode, p1, p2) {
             state.quizLives = 3;
             state._quizSessionSeed = Math.floor(Math.random() * 900000) + 100000;
 
-            const pool = getQuizStagePool(p1);
+            const pool = isGlobal
+                ? completedStages.map(id => { const [s, l] = id.split('-').map(Number); return { sIdx: s, lIdx: l }; })
+                : getQuizStagePool(p1);
             state.quizTotal = Math.min(5, pool.length);
             const shuffleRng = getSeededRandom(state._quizSessionSeed);
             const shuffled = shuffleArray(pool.map((_, i) => i), shuffleRng).slice(0, state.quizTotal);
@@ -1201,7 +1224,7 @@ function initGame(mode, p1, p2) {
         if (attemptsCounter) attemptsCounter.innerText = '';
 
         instructions.innerHTML = `
-            <div class="stage-breadcrumb">${quizStage.title} · Quiz</div>
+            <div class="stage-breadcrumb">${isGlobal ? 'Review Quiz' : quizStage.title + ' · Quiz'}</div>
             <div class="quiz-header">
                 <div class="quiz-progress-dots">${dotsHTML}</div>
                 <div class="quiz-lives">${livesHTML}</div>
