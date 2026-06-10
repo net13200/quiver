@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { setAnalyticsUserId, trackSessionStart } from './analytics.js';
+import { setAnalyticsUserId, setAnalyticsUserEmail, trackSessionStart } from './analytics.js';
 
 const SUPABASE_URL = 'https://gexeorwjxbznkimgeokk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DkPdSor4LJfAHd1bHQwIIA_u4meT_mP';
@@ -25,6 +25,7 @@ export async function initSync(applyRemote) {
         _userId    = session.user.id;
         _userEmail = session.user.email;
         setAnalyticsUserId(_userId);
+        setAnalyticsUserEmail(_userEmail);
 
         const { data: remote } = await withTimeout(
             sb().from('progress').select('*').eq('user_id', _userId).maybeSingle(),
@@ -45,6 +46,7 @@ export async function signIn(email, password, applyRemote) {
     _userId    = data.user.id;
     _userEmail = data.user.email;
     setAnalyticsUserId(_userId);
+    setAnalyticsUserEmail(_userEmail);
     trackSessionStart();
     const { data: remote } = await sb().from('progress').select('*').eq('user_id', _userId).maybeSingle();
     if (remote) applyRemote(remote);
@@ -62,6 +64,7 @@ export async function signUp(email, password) {
         _userId    = data.user.id;
         _userEmail = data.user.email;
         setAnalyticsUserId(_userId);
+        setAnalyticsUserEmail(_userEmail);
         trackSessionStart();
         await _push();
     }
@@ -72,6 +75,8 @@ export async function signOut() {
     await sb().auth.signOut();
     _userId    = null;
     _userEmail = null;
+    setAnalyticsUserId(null);
+    setAnalyticsUserEmail(null);
 }
 
 export function isSignedIn() { return !!_userId; }

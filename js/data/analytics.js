@@ -3,7 +3,9 @@ const SUPABASE_ANON = 'sb_publishable_DkPdSor4LJfAHd1bHQwIIA_u4meT_mP';
 const ENDPOINT = `${SUPABASE_URL}/rest/v1/events`;
 
 let _userId = null;
+let _userEmail = null;
 export function setAnalyticsUserId(id) { _userId = id; }
+export function setAnalyticsUserEmail(email) { _userEmail = email; }
 
 function getSessionId() {
     const KEY = 'quiver_session_id';
@@ -22,7 +24,7 @@ async function _send(payload) {
                 'Authorization': `Bearer ${SUPABASE_ANON}`,
                 'Prefer':        'return=minimal'
             },
-            body: JSON.stringify({ session_id: getSessionId(), user_id: _userId, ...payload })
+            body: JSON.stringify({ session_id: getSessionId(), user_id: _userId, user_email: _userEmail, ...payload })
         });
     } catch (_) {}
 }
