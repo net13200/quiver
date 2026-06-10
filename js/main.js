@@ -1211,7 +1211,8 @@ function initGame(mode, p1, p2) {
             generateMatrices(state.numQubits);
 
             state.secretCircuits = chosenLevel.circuits;
-            taskHTML = `<div class="quiz-task"><div class="quiz-task-label">Your task:</div><div class="quiz-task-desc">${chosenLevel.quizDesc || chosenLevel.name}</div></div>`;
+            const contextHTML = isGlobal ? `<div class="quiz-context">${currentQuizStage.title} · ${chosenLevel.name.replace(/^[\d\.]+[\.:]?\s*/, '')}</div>` : '';
+            taskHTML = `${contextHTML}<div class="quiz-task"><div class="quiz-task-label">Your task:</div><div class="quiz-task-desc">${chosenLevel.quizDesc || chosenLevel.name}</div></div>`;
             if (questionSIdx >= 4) strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
         }
         const dotsHTML = Array(state.quizTotal).fill(0).map((_, i) => {
