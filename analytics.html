@@ -63,8 +63,11 @@
         .b-section  { background:#1a2838;color:#38bdf8; }
 
         .heat { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
-        .user-link { font-family: monospace; font-size: 0.75rem; color: #6366f1; cursor: pointer; text-decoration: underline dotted; }
+        .user-link { font-size: 0.78rem; color: #6366f1; cursor: pointer; text-decoration: underline dotted; }
         .user-link:hover { color: #a5b4fc; }
+        #user-filter { padding: 7px 12px; background: #161927; border: 1px solid #2e3452; border-radius: 6px; color: #c9d1e0; font-size: 0.82rem; width: 220px; outline: none; }
+        #user-filter:focus { border-color: #6366f1; }
+        #user-filter::placeholder { color: #4b5470; }
 
         /* ── Section progress bar ── */
         .prog-bar-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -130,6 +133,7 @@
             <div class="meta" id="data-range"></div>
         </div>
         <div class="header-actions">
+            <input id="user-filter" type="text" placeholder="Filter by email…" oninput="applyUserFilter()" />
             <button class="btn-sm" onclick="refresh()">↺ Refresh</button>
             <button class="btn-sm" onclick="signOut()">Sign out</button>
         </div>
@@ -201,10 +205,11 @@ const ACHIEVEMENTS = [
 ];
 const MODE_LABELS = { STAGE:'Stage', RANDOM:'Random', TIMED:'Timed', DAILY:'Daily' };
 
-let serviceKey = null;
-let charts     = {};
-let allEvents  = [];
+let serviceKey  = null;
+let charts      = {};
+let allEvents   = [];
 let allProgress = [];
+let emailMap    = {};   // user_id → email
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -238,25 +243,27 @@ function hdrs() {
     return { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
 }
 
-async function fetchRegisteredUserIds() {
+async function fetchRegisteredUsers() {
     try {
         const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=1000`, { headers: hdrs() });
         if (!r.ok) return null;
         const { users } = await r.json();
-        return new Set(users.filter(u => u.email).map(u => u.id));
+        const map = {};
+        users.filter(u => u.email).forEach(u => { map[u.id] = u.email; });
+        return map;
     } catch { return null; }
 }
 
-async function fetchProgress(registeredIds) {
-    const fields = 'user_id,completed_stages,completed_quizzes,total_points,highest_streak,tutorial_complete,achievements,updated_at';
+async function fetchProgress(registeredMap) {
+    const fields = 'user_id,email,completed_stages,completed_quizzes,total_points,highest_streak,tutorial_complete,achievements,updated_at';
     const r = await fetch(`${SUPABASE_URL}/rest/v1/progress?select=${fields}`, { headers: hdrs() });
     if (!r.ok) throw new Error('Progress fetch failed');
     const rows = await r.json();
-    return registeredIds ? rows.filter(p => registeredIds.has(p.user_id)) : rows;
+    return registeredMap ? rows.filter(p => p.user_id in registeredMap) : rows;
 }
 
 async function fetchEvents() {
-    const fields = 'event_name,mode,stage,level,attempts_used,time_ms,session_id,user_id,created_at,success,section_name';
+    const fields = 'event_name,mode,stage,level,attempts_used,time_ms,session_id,user_id,user_email,created_at,success,section_name';
     const r = await fetch(
         `${SUPABASE_URL}/rest/v1/events?select=${fields}&order=created_at.desc&limit=10000`,
         { headers: hdrs() }
@@ -271,8 +278,15 @@ async function fetchAndRender() {
     document.getElementById('content').innerHTML = '<div class="loading">Loading…</div>';
     destroyCharts();
 
-    const [regIds, events] = await Promise.all([fetchRegisteredUserIds(), fetchEvents()]);
-    const progress = await fetchProgress(regIds);
+    const [regUsers, events] = await Promise.all([fetchRegisteredUsers(), fetchEvents()]);
+    const progress = await fetchProgress(regUsers);
+
+    // Build emailMap from: auth API, progress rows, and event user_email field
+    emailMap = Object.assign({}, regUsers || {});
+    progress.forEach(p => { if (p.user_id && p.email) emailMap[p.user_id] = p.email; });
+    events.forEach(e => { if (e.user_id && e.user_email) emailMap[e.user_id] = e.user_email; });
+
+    const regIds = regUsers ? new Set(Object.keys(regUsers)) : null;
 
     // Events with a user_id are filtered to registered users only; events without
     // a user_id (anonymous behaviour) are kept for aggregate charts like mode distribution.
@@ -291,7 +305,7 @@ async function fetchAndRender() {
     const oldest = events[events.length - 1]?.created_at?.slice(0, 10) ?? '';
     const newest = events[0]?.created_at?.slice(0, 10) ?? '';
     document.getElementById('data-range').textContent =
-        `${oldest} → ${newest} · ${events.length.toLocaleString()} events · ${progress.length} registered users · ${regIds ? regIds.size + ' auth users' : 'admin API failed'}`;
+        `${oldest} → ${newest} · ${events.length.toLocaleString()} events · ${progress.length} registered users · ${regUsers ? Object.keys(regUsers).length + ' auth users' : 'admin API failed'}`;
 
     document.getElementById('content').innerHTML = buildHTML();
 
@@ -688,30 +702,30 @@ function renderAttemptsTable(events) {
 
 // ── Recent events ─────────────────────────────────────────────────────────────
 
+const badgeClass = n => ({
+    game_start:'b-start', level_complete:'b-complete', level_fail:'b-fail',
+    submit_attempt:'b-attempt', hint_viewed:'b-hint', lesson_viewed:'b-lesson',
+    session_start:'b-session', tutorial_complete:'b-tutorial',
+    tutorial_skipped:'b-tutorial', section_complete:'b-section'
+})[n] || 'b-session';
+
+const locLabel = e => {
+    if (e.event_name === 'section_complete' && e.section_name) return e.section_name;
+    if (e.mode === 'STAGE' && e.stage != null) return `${STAGE_NAMES[e.stage]||'S'+e.stage} L${e.level+1}`;
+    if (e.mode) return MODE_LABELS[e.mode] || e.mode;
+    return '—';
+};
+
 function renderRecentTable(events) {
-    const badgeClass = n => ({
-        game_start:'b-start', level_complete:'b-complete', level_fail:'b-fail',
-        submit_attempt:'b-attempt', hint_viewed:'b-hint', lesson_viewed:'b-lesson',
-        session_start:'b-session', tutorial_complete:'b-tutorial',
-        tutorial_skipped:'b-tutorial', section_complete:'b-section'
-    })[n] || 'b-session';
-
-    const loc = e => {
-        if (e.event_name === 'section_complete' && e.section_name) return e.section_name;
-        if (e.mode === 'STAGE' && e.stage != null) return `${STAGE_NAMES[e.stage]||'S'+e.stage} L${e.level+1}`;
-        if (e.mode) return MODE_LABELS[e.mode] || e.mode;
-        return '—';
-    };
-
-    const trs = events.slice(0, 40).map(e => {
-        const uid  = e.user_id || e.session_id;
-        const cell = uid
-            ? `<span class="user-link" onclick="showDrilldown('${e.user_id || ''}')">${uid.slice(0,8)}</span>`
+    const trs = events.slice(0, 60).map(e => {
+        const email = (e.user_id && emailMap[e.user_id]) || e.user_email || null;
+        const cell  = e.user_id
+            ? `<span class="user-link" onclick="showDrilldown('${e.user_id}')">${email || e.user_id.slice(0,8)}</span>`
             : '—';
         return `<tr>
             <td style="color:#4b5470;white-space:nowrap">${e.created_at?.slice(11,19)??''}</td>
             <td><span class="badge ${badgeClass(e.event_name)}">${e.event_name.replace(/_/g,' ')}</span></td>
-            <td>${loc(e)}</td>
+            <td>${locLabel(e)}</td>
             <td>${cell}</td>
         </tr>`;
     }).join('');
@@ -723,6 +737,20 @@ function renderRecentTable(events) {
         </table>`;
 }
 
+function applyUserFilter() {
+    const q = (document.getElementById('user-filter')?.value || '').trim().toLowerCase();
+    if (!q) { renderRecentTable(allEvents); return; }
+
+    // Find all user_ids whose email matches the filter
+    const matchIds = new Set(
+        Object.entries(emailMap)
+            .filter(([, email]) => email.toLowerCase().includes(q))
+            .map(([id]) => id)
+    );
+    const filtered = allEvents.filter(e => e.user_id && matchIds.has(e.user_id));
+    renderRecentTable(filtered);
+}
+
 // ── User drill-down ───────────────────────────────────────────────────────────
 
 function showDrilldown(userId) {
@@ -730,7 +758,8 @@ function showDrilldown(userId) {
     const ue = allEvents.filter(e => e.user_id === userId).sort((a,b) => a.created_at?.localeCompare(b.created_at));
     const up = allProgress.find(p => p.user_id === userId);
 
-    document.getElementById('modal-uid').textContent = userId;
+    const userEmail = emailMap[userId] || null;
+    document.getElementById('modal-uid').textContent = userEmail ? `${userEmail} · ${userId}` : userId;
 
     const sessions    = new Set(ue.map(e => e.session_id)).size;
     const games       = ue.filter(e => e.event_name === 'game_start').length;
@@ -738,24 +767,10 @@ function showDrilldown(userId) {
     const points      = up?.total_points ?? '—';
     const stagesDone  = up?.completed_stages?.length ?? '—';
 
-    const badgeClass = n => ({
-        game_start:'b-start', level_complete:'b-complete', level_fail:'b-fail',
-        submit_attempt:'b-attempt', hint_viewed:'b-hint', lesson_viewed:'b-lesson',
-        session_start:'b-session', tutorial_complete:'b-tutorial',
-        tutorial_skipped:'b-tutorial', section_complete:'b-section'
-    })[n] || 'b-session';
-
-    const loc = e => {
-        if (e.event_name === 'section_complete' && e.section_name) return e.section_name;
-        if (e.mode === 'STAGE' && e.stage != null) return `${STAGE_NAMES[e.stage]||'S'+e.stage} L${e.level+1}`;
-        if (e.mode) return MODE_LABELS[e.mode] || e.mode;
-        return '—';
-    };
-
     const trs = ue.map(e => `<tr>
         <td style="color:#4b5470;white-space:nowrap">${e.created_at?.slice(0,16).replace('T',' ')??''}</td>
         <td><span class="badge ${badgeClass(e.event_name)}">${e.event_name.replace(/_/g,' ')}</span></td>
-        <td>${loc(e)}</td>
+        <td>${locLabel(e)}</td>
     </tr>`).join('');
 
     document.getElementById('modal-body').innerHTML = `
