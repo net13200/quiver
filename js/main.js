@@ -18,6 +18,7 @@ import {
 
 export let gameStartTime = 0;
 let tutorialPromptShown = false;
+let _isSignedIn = false;
 
 // --- Global Application State ---
 export const state = {
@@ -1167,7 +1168,7 @@ function initGame(mode, p1, p2) {
     renderBoard();
     updateBlochSpheres(state.currentGuess, state.numQubits);
 
-    if (!tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB' && mode !== 'QFT_LAB') {
+    if (_isSignedIn && !tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB' && mode !== 'QFT_LAB') {
         tutorialPromptShown = true;
         setTimeout(() => {
             if (state.gameOver) return;
@@ -1203,6 +1204,7 @@ window.selectQftInput    = n => selectQftInput(n, state, renderBoard);
 let _authMode = 'signin'; // 'signin' | 'signup'
 
 function _showApp(email) {
+    _isSignedIn = true;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-menu').classList.remove('hidden');
     document.getElementById('auth-email-display').textContent = email;
@@ -1275,6 +1277,7 @@ window.handleAuthSubmit = async function() {
 };
 
 window.handleSignOut = async function() {
+    _isSignedIn = false;
     await signOut();
     _showLoginScreen();
 };
