@@ -1,12 +1,10 @@
 import { computeStateVector, stateToString, statesMatch } from '../quantum/engine.js';
 import { getGateMultiset, normalizeGate, GATE_MATRICES } from '../quantum/gates.js';
 import { trackSubmitAttempt, trackLevelComplete, trackLevelFail, trackTutorialComplete } from '../data/analytics.js';
-import { gameStartTime } from '../main.js';
-import { getColumnHTML, showRevealCircuit, fireQuantumConfetti, showVictoryModal, hideVictoryModal, clearGhostPointer, setGhostPointer, parseMarkdownAndMath, updateTimedStatusBar, showAchievementToast } from './ui.js';
+import { parseMarkdownAndMath } from './ui.js';
 import { markStageCompleted, completedStages, updateStats, setTutorialComplete, updateDailyStreak, updateLearnStreak, unlockAchievement, setAchievementProgress, achievementProgress } from '../data/storage.js';
 import { ACHIEVEMENT_MAP } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
-import { updateActiveRow } from './dragdrop.js';
 
 // Returns the minimum number of gate insertions/deletions needed to turn
 // the user's circuit into any of the valid circuits (multiset edit distance).
@@ -30,82 +28,56 @@ function minGateEditDistance(guess, secretCircuits) {
     return minDist;
 }
 
-// NEW: Accept the renderBoardCallback from main.js
-export function submitGuess(state, renderBoardCallback) {
-    if (state.gameOver) return;
-    
+// Returns a result object describing what UI to show; all DOM work is done by
+// applySubmitResult() in main.js. State mutations and analytics stay here.
+export function submitGuess(state, renderBoardCallback, gameStartTime) {
+    if (state.gameOver) return null;
+
+    // --- FREEPLAY: snapshot only ---
     if (state.currentMode === 'FREEPLAY') {
         const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
-        const wrap = document.getElementById('row-active');
-        
-        // NEW: Clear old snapshots before printing a new one so they don't pile up
-        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
-
-        const ampResult = document.createElement('div');
-        ampResult.className = 'amplitudes-result';
-        ampResult.innerText = "↳ Snapshot |ψ⟩ = " + parseMarkdownAndMath(stateToString(userState, state.numQubits));
-        wrap.appendChild(ampResult);
-        return;
+        return {
+            type: 'FREEPLAY_SNAPSHOT',
+            ampText: "↳ Snapshot |ψ⟩ = " + parseMarkdownAndMath(stateToString(userState, state.numQubits)),
+        };
     }
 
+    // --- LAB ---
     if (state.currentMode === 'LAB') {
-        const wrap = document.getElementById('row-active');
-        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
         const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
         const hasWon = statesMatch(userState, state.targetState, state.numQubits);
-        const ampResult = document.createElement('div');
-        ampResult.className = 'amplitudes-result';
-        ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
-        wrap.appendChild(ampResult);
+        const ampText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
         if (hasWon) {
+            // DOM read before any mutation — needed for confetti origin
             const submitBtnEl = document.getElementById('submit-btn');
             const btnRect = submitBtnEl.getBoundingClientRect();
             state.gameOver = true;
-            submitBtnEl.classList.add('hidden');
-            wrap.classList.remove('active');
-            fireQuantumConfetti(btnRect.left + btnRect.width / 2, btnRect.top);
-            setTimeout(() => {
-                const n = state.labTargetN;
-                showVictoryModal('Fourier Encoded!', `|0⟩ → |${n}⟩ — you encoded +${n} in the Fourier basis!`, null, false, null);
-                const controls = document.querySelector('#victory-modal .victory-controls');
-                if (controls && !document.getElementById('modal-lab-next-btn')) {
-                    const tryBtn = document.createElement('button');
-                    tryBtn.id = 'modal-lab-next-btn';
-                    tryBtn.className = 'btn';
-                    tryBtn.style.background = '#f59e0b';
-                    tryBtn.innerText = 'Try Another Number';
-                    tryBtn.addEventListener('click', () => hideVictoryModal());
-                    controls.insertBefore(tryBtn, controls.firstChild);
-                }
-            }, 500);
-        } else {
-            wrap.classList.add('wrong-attempt');
-            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
-            const msg = document.getElementById('message');
-            msg.style.color = '#eab308';
-            msg.innerText = `Not |${state.labTargetN}⟩ yet — check the state vector and adjust the phases!`;
-            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 3000);
+            return {
+                type: 'LAB_WIN',
+                ampText,
+                labTargetN: state.labTargetN,
+                btnRect: { left: btnRect.left, top: btnRect.top, width: btnRect.width },
+            };
         }
-        return;
+        return { type: 'LAB_LOSE', ampText, labTargetN: state.labTargetN };
     }
 
+    // --- QFT_LAB ---
     if (state.currentMode === 'QFT_LAB') {
-        const wrap = document.getElementById('row-active');
-        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
         const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
-        const ampResult = document.createElement('div');
-        ampResult.className = 'amplitudes-result';
-        ampResult.innerText = "↳ QFT|" + state.labTargetN + "⟩ = " + stateToString(userState, state.numQubits);
-        wrap.appendChild(ampResult);
-        return;
+        return {
+            type: 'QFT_LAB_SNAPSHOT',
+            ampText: "↳ QFT|" + state.labTargetN + "⟩ = " + stateToString(userState, state.numQubits),
+        };
     }
 
-    const wrap = document.getElementById('row-active');
+    // --- Main path ---
+    if (!state.secretCircuits || state.secretCircuits.length === 0) return null;
 
     let userMultiset = getGateMultiset(state.currentGuess);
     let validMultisets = state.secretCircuits.map(c => getGateMultiset(c));
     let matchedMultiset = validMultisets.includes(userMultiset);
-    
+
     let matchedCircuit = null;
     let bestMatchScore = -1;
     let bestMatchCircuit = state.secretCircuits[0];
@@ -116,14 +88,12 @@ export function submitGuess(state, renderBoardCallback) {
         for (let c = 0; c < state.numCols; c++) {
             let guessStr = [...state.currentGuess[c]].map(normalizeGate).sort().join(',');
             let secretStr = possibleCircuit[c] ? [...possibleCircuit[c]].map(normalizeGate).sort().join(',') : "";
-            if (guessStr !== secretStr) {
-                allMatch = false;
-            }
+            if (guessStr !== secretStr) allMatch = false;
             let targetGates = possibleCircuit[c] || [];
             state.currentGuess[c].forEach(g => {
                 if (targetGates.includes(g)) score += 1;
             });
-            if (guessStr === secretStr) score += 0.5; 
+            if (guessStr === secretStr) score += 0.5;
         }
         if (score > bestMatchScore) {
             bestMatchScore = score;
@@ -136,27 +106,20 @@ export function submitGuess(state, renderBoardCallback) {
     }
 
     let compareCircuit = matchedCircuit || bestMatchCircuit;
-    
+
+    // Build column status maps (DOM coloring applied by applySubmitResult)
+    const colStatusMaps = [];
     for (let c = 0; c < state.numCols; c++) {
-        const slot = document.getElementById(`slot-active-${c}`);
         let guessGates = state.currentGuess[c] || [];
         let targetGates = compareCircuit[c] || [];
-        
         let gateStatusMap = {};
-        guessGates.forEach(g => {
-            if (targetGates.includes(g)) {
-                gateStatusMap[g] = 'correct';
-            } else {
-                gateStatusMap[g] = 'absent';
-            }
-        });
-        
-        slot.innerHTML = getColumnHTML(guessGates, state.numQubits, gateStatusMap);
+        guessGates.forEach(g => { gateStatusMap[g] = targetGates.includes(g) ? 'correct' : 'absent'; });
+        colStatusMaps.push({ guessGates: [...guessGates], gateStatusMap });
     }
-    
+
     const userState = computeStateVector(state.currentGuess, state.numQubits, GATE_MATRICES);
     let hasWon = statesMatch(userState, state.targetState, state.numQubits);
-    
+
     let isStrict = false;
     if (state.currentMode === 'STAGE') {
         isStrict = state.currentP1 >= 4;
@@ -164,105 +127,88 @@ export function submitGuess(state, renderBoardCallback) {
         const _strictSrc = state.currentP1 === -1 ? (state._quizCurrentSIdx ?? 0) : state.currentP1;
         isStrict = _strictSrc >= 4;
     }
+
+    let strictMsg = null;
     if (isStrict && hasWon && !matchedMultiset) {
-        hasWon = false; 
-        let msg = document.getElementById('message');
-        msg.innerText = "Correct quantum state, but this stage requires a specific gate sequence!";
-        msg.style.color = "#eab308";
-        setTimeout(() => { if(!state.gameOver) msg.innerText = ""; }, 2500);
+        hasWon = false;
+        strictMsg = "Correct quantum state, but this stage requires a specific gate sequence!";
     }
-    
-    const ampResult = document.createElement('div');
-    ampResult.className = 'amplitudes-result';
-    ampResult.innerText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
-    wrap.appendChild(ampResult);
-    
+
+    const ampText = "↳ |ψ⟩ = " + stateToString(userState, state.numQubits);
+
     if (hasWon) {
+        // DOM read before any mutation — needed for confetti origin
         const submitBtn = document.getElementById('submit-btn');
         const rect = submitBtn.getBoundingClientRect();
-        const startX = rect.left + (rect.width / 2);
-        const startY = rect.top;
+        const confettiOrigin = { x: rect.left + rect.width / 2, y: rect.top };
 
         trackSubmitAttempt(state.currentMode, state.currentP1, state.currentP2, state.currentLvl, state.attempts + 1, true, state.currentGuess);
         trackLevelComplete(state.currentMode, state.currentP1, state.currentP2, state.currentLvl, state.attempts, gameStartTime, state.currentGuess);
         state.gameOver = true;
-        submitBtn.classList.add('hidden');
-        wrap.classList.remove('active');
 
-        fireQuantumConfetti(startX, startY);
-
-        // --- TIMED MODE: skip modal, auto-advance ---
+        // --- TIMED WIN ---
         if (state.currentMode === 'TIMED') {
             const timeBonus = state.currentLvl === 3 ? 30 : 20;
             state.timerRemaining = Math.min(state.timerRemaining + timeBonus, 60);
             state.timedScore += state.currentLvl;
             state.timedCircuitsSolved++;
             state.timedCircuitIndex++;
-            updateTimedStatusBar(state);
-
-            const msg = document.getElementById('message');
-            msg.innerText = `Solved! +${timeBonus}s`;
-            msg.style.color = '#22c55e';
-            setTimeout(() => {
-                msg.innerText = '';
-                state.timedNextPuzzle && state.timedNextPuzzle();
-            }, 1500);
-            return;
+            return { type: 'WIN', winMode: 'TIMED', colStatusMaps, ampText, confettiOrigin, timeBonus };
         }
 
-        // --- QUIZ MODE: correct answer → advance or declare victory ---
+        // --- QUIZ WIN ---
         if (state.currentMode === 'QUIZ') {
             state.quizScore++;
-            const msg = document.getElementById('message');
-            msg.innerText = '✓ Correct!';
-            msg.style.color = '#22c55e';
-            if (state.quizScore >= state.quizTotal) {
-                setTimeout(() => { msg.innerText = ''; window.showQuizVictory?.(); }, 900);
-            } else {
-                setTimeout(() => { msg.innerText = ''; window.quizNextQuestion?.(); }, 900);
-            }
-            return;
+            return {
+                type: 'WIN',
+                winMode: 'QUIZ',
+                colStatusMaps,
+                ampText,
+                confettiOrigin,
+                quizFinal: state.quizScore >= state.quizTotal,
+            };
         }
 
+        // --- STAGE / RANDOM / DAILY WIN ---
         const wasTutorial = state.isTutorial;
         if (state.isTutorial) {
             state.isTutorial = false;
             state.tutorialJustCompleted = true;
             setTutorialComplete();
-            clearGhostPointer();
             trackTutorialComplete();
         }
-        
+
+        // Strict color-fix: user matched multiset but not exact circuit → show all green
+        let strictColorFixMaps = null;
         if (isStrict && matchedMultiset && !matchedCircuit) {
-            for (let c = 0; c < state.numCols; c++) {
-                const slot = document.getElementById(`slot-active-${c}`);
-                let gateStatusMap = {};
-                state.currentGuess[c].forEach(g => gateStatusMap[g] = 'correct');
-                slot.innerHTML = getColumnHTML(state.currentGuess[c], state.numQubits, gateStatusMap);
-            }
+            strictColorFixMaps = state.currentGuess.map(col => {
+                const gateStatusMap = {};
+                col.forEach(g => { gateStatusMap[g] = 'correct'; });
+                return { guessGates: [...col], gateStatusMap };
+            });
         }
-        
+
         let mainTitle = "Stage Cleared!";
         let subTitle = matchedCircuit ? "Perfect Match!" : "Valid Circuit Found!";
         let statsText = null;
         let showNextBtn = false;
-        let revealObj = null; 
+        let revealObj = null;
 
         if (state.currentMode === 'STAGE') {
             markStageCompleted(state.currentP1, state.currentP2);
             updateLearnStreak();
-            
+
             let totalLevels = 0;
             STAGES.forEach(s => totalLevels += s.levels.length);
             let allCompleted = (completedStages.length >= totalLevels);
-            
+
             if (state.currentP1 + 1 < STAGES.length || state.currentP2 + 1 < STAGES[state.currentP1].levels.length) {
                 showNextBtn = true;
-            } 
-            
+            }
+
             if (allCompleted) subTitle = "🎉 All Stages Cleared! 🎉";
             else if (state.currentP1 === STAGES.length - 1 && state.currentP2 === STAGES[state.currentP1].levels.length - 1) subTitle = "Final Stage Complete!";
-            
+
             if (!matchedMultiset && !matchedCircuit) {
                 revealObj = { revealTitle: "One Valid Circuit Is:", color: "#3b82f6", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits };
             }
@@ -273,14 +219,11 @@ export function submitGuess(state, renderBoardCallback) {
             } else {
                 mainTitle = state.currentMode === 'DAILY' ? "Daily Solved!" : "Puzzle Solved!";
             }
-            
-            // --- NEW: Save Daily Completion ---
+
             if (state.currentMode === 'DAILY') {
                 const now = new Date();
                 const today = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
                 let dailyStatus = JSON.parse(localStorage.getItem('quiver_daily') || '{"date":"","completed":[]}');
-                
-                // Double check the date, then save the completed level
                 if (dailyStatus.date !== today) dailyStatus = { date: today, completed: [] };
                 if (!dailyStatus.completed.includes(state.currentLvl)) {
                     dailyStatus.completed.push(state.currentLvl);
@@ -291,9 +234,9 @@ export function submitGuess(state, renderBoardCallback) {
 
             let userGateCount = state.currentGuess.reduce((sum, col) => sum + col.length, 0);
             let secretGateCount = compareCircuit.reduce((sum, col) => sum + col.length, 0);
-            
+
             let base = 10;
-            let penalty = state.attempts; 
+            let penalty = state.attempts;
             let bonus = 0;
             let complimentHtml = "";
 
@@ -314,7 +257,7 @@ export function submitGuess(state, renderBoardCallback) {
             let multi = state.currentLvl === 1 ? 1 : (state.currentLvl === 2 ? 1.5 : 2);
             let pointsEarned = (base - penalty + bonus) * multi;
             state.currentStreak++;
-            
+
             updateStats(pointsEarned, state.currentStreak);
             statsText = `+${pointsEarned} Points! <br><span style="font-size: 1rem; color: #cbd5e1;">🔥 Streak: ${state.currentStreak} &nbsp;&nbsp;|&nbsp;&nbsp; Gates Used: ${userGateCount} / ${secretGateCount}</span>${complimentHtml}`;
 
@@ -323,9 +266,9 @@ export function submitGuess(state, renderBoardCallback) {
             }
         }
 
-        // --- Achievement Checks ---
+        // Achievement checks
+        const achToasts = [];
         {
-            const achToasts = [];
             const tryUnlock = (id) => {
                 if (unlockAchievement(id)) {
                     const a = ACHIEVEMENT_MAP[id];
@@ -333,11 +276,9 @@ export function submitGuess(state, renderBoardCallback) {
                 }
             };
 
-            // Universal
             tryUnlock('hello_quantum');
             if (wasTutorial) tryUnlock('tutorial_graduate');
 
-            // STAGE-specific
             if (state.currentMode === 'STAGE') {
                 tryUnlock('superposition');
                 const stageIdx = state.currentP1;
@@ -355,7 +296,6 @@ export function submitGuess(state, renderBoardCallback) {
                 if (ls >= 30) tryUnlock('learn_streak_30');
             }
 
-            // Gate-based (all modes)
             const GATE_PREFIXES = ['IQFT','QFT','CCX','SWAP','RZ','CP','CX','SX','X','Y','Z','H'];
             const usedBases = new Set();
             state.currentGuess.flat().forEach(g => {
@@ -369,15 +309,13 @@ export function submitGuess(state, renderBoardCallback) {
             const COLLECTOR_GATES = ['X','Y','Z','H','SX','RZ','CX','CP','SWAP','CCX'];
             if (COLLECTOR_GATES.every(g => collected.has(g))) tryUnlock('gate_collector');
 
-            // Skill
             if (state.numQubits === 3) tryUnlock('three_body');
             if (state.attempts === 0) tryUnlock('first_try');
             if (state.attempts === 5) tryUnlock('clutch');
 
-            // RANDOM/DAILY-specific
             if (state.currentMode === 'RANDOM' || state.currentMode === 'DAILY') {
-                const achUser = state.currentGuess.reduce((s,c) => s+c.length, 0);
-                const achSecret = compareCircuit.reduce((s,c) => s+c.length, 0);
+                const achUser = state.currentGuess.reduce((s, c) => s + c.length, 0);
+                const achSecret = compareCircuit.reduce((s, c) => s + c.length, 0);
                 if (achUser < achSecret) {
                     tryUnlock('optimizer');
                     const n = (achievementProgress['optimizer_count'] || 0) + 1;
@@ -392,16 +330,12 @@ export function submitGuess(state, renderBoardCallback) {
                     if (ds >= 30) tryUnlock('monthly_master');
                 }
             }
-
-            // Staggered toasts
-            achToasts.forEach((t, i) => setTimeout(() => showAchievementToast(t.name, t.icon), 900 + i * 1700));
         }
 
         const isFinalSubstage = state.currentMode === 'STAGE' &&
             state.currentP2 === STAGES[state.currentP1].levels.length - 1 &&
             (() => {
                 const completedQuizzes = JSON.parse(localStorage.getItem('quarks_quizzes') || '[]');
-                // Find the stage that owns the quiz for currentP1 (single-level stages fold forward)
                 let ownerIdx = state.currentP1;
                 while (ownerIdx + 1 < STAGES.length &&
                        STAGES[ownerIdx].levels.length === 1 &&
@@ -411,158 +345,58 @@ export function submitGuess(state, renderBoardCallback) {
                 return !completedQuizzes.includes(ownerIdx);
             })();
 
-        setTimeout(() => {
-            showVictoryModal(mainTitle, subTitle, statsText, showNextBtn, revealObj);
-            const _menuBtn = document.getElementById('modal-menu-btn');
-            if (_menuBtn) _menuBtn.textContent = (state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') ? 'Back to Section' : 'Main Menu';
-            if (isFinalSubstage) {
-                const controls = document.querySelector('#victory-modal .victory-controls');
-                if (controls && !document.getElementById('modal-test-yourself-btn')) {
-                    const testBtn = document.createElement('button');
-                    testBtn.id = 'modal-test-yourself-btn';
-                    testBtn.className = 'btn';
-                    testBtn.style.background = '#f59e0b';
-                    testBtn.style.color = '#0f172a';
-                    testBtn.style.fontWeight = '700';
-                    testBtn.innerText = 'Test Yourself ★';
-                    testBtn.addEventListener('click', () => {
-                        hideVictoryModal();
-                        window.initGame?.('QUIZ', state.currentP1);
-                    });
-                    controls.insertBefore(testBtn, controls.firstChild);
-                }
-            }
-            if (state.currentMode === 'RANDOM') {
-                const controls = document.querySelector('#victory-modal .victory-controls');
-                if (controls && !document.getElementById('modal-restart-btn')) {
-                    const retryBtn = document.createElement('button');
-                    retryBtn.id = 'modal-restart-btn';
-                    retryBtn.className = 'btn';
-                    retryBtn.style.background = '#3b82f6';
-                    retryBtn.innerText = 'Retry Same Circuit';
-                    retryBtn.addEventListener('click', () => {
-                        document.dispatchEvent(new CustomEvent('restart-circuit'));
-                    });
-                    controls.insertBefore(retryBtn, controls.firstChild);
-                }
-                if (controls && !document.getElementById('modal-play-challenge-btn')) {
-                    const challengeBtn = document.createElement('button');
-                    challengeBtn.id = 'modal-play-challenge-btn';
-                    challengeBtn.className = 'btn';
-                    challengeBtn.style.background = '#7c3aed';
-                    challengeBtn.innerText = '⚔️ Challenge a Friend';
-                    challengeBtn.addEventListener('click', () => {
-                        if (unlockAchievement('challenge_friend')) {
-                            const _a = ACHIEVEMENT_MAP['challenge_friend'];
-                            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
-                        }
-                        const url = `${window.location.origin}${window.location.pathname}?play-challenge=${state.currentLvl}-${state.randomSeed}-${state.randomGateMask}`;
-                        navigator.clipboard.writeText(url).then(() => {
-                            challengeBtn.innerText = 'Link Copied! ✓';
-                            challengeBtn.style.background = '#059669';
-                            setTimeout(() => {
-                                challengeBtn.innerText = '⚔️ Challenge a Friend';
-                                challengeBtn.style.background = '#7c3aed';
-                            }, 2500);
-                        });
-                    });
-                    controls.insertBefore(challengeBtn, controls.firstChild);
-                }
-            } else if (state.currentMode === 'DAILY') {
-                const controls = document.querySelector('#victory-modal .victory-controls');
-                if (controls && !document.getElementById('modal-daily-next-btn') && state.currentLvl < 3) {
-                    const nextLvlName = state.currentLvl === 1 ? 'Medium' : 'Hard';
-                    const nextBtn = document.createElement('button');
-                    nextBtn.id = 'modal-daily-next-btn';
-                    nextBtn.className = 'btn';
-                    nextBtn.style.background = '#0ea5e9';
-                    nextBtn.innerText = `Next: ${nextLvlName} →`;
-                    nextBtn.addEventListener('click', () => {
-                        hideVictoryModal();
-                        window.initDailyGame(state.currentLvl + 1);
-                    });
-                    controls.insertBefore(nextBtn, controls.firstChild);
-                }
-                if (controls && !document.getElementById('modal-daily-challenge-btn')) {
-                    const challengeBtn = document.createElement('button');
-                    challengeBtn.id = 'modal-daily-challenge-btn';
-                    challengeBtn.className = 'btn';
-                    challengeBtn.style.background = '#059669';
-                    challengeBtn.innerText = '📅 Challenge a Friend';
-                    challengeBtn.addEventListener('click', () => {
-                        if (unlockAchievement('challenge_friend')) {
-                            const _a = ACHIEVEMENT_MAP['challenge_friend'];
-                            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
-                        }
-                        const url = `${window.location.origin}${window.location.pathname}?daily-challenge=${state.currentLvl}`;
-                        navigator.clipboard.writeText(url).then(() => {
-                            challengeBtn.innerText = 'Link Copied! ✓';
-                            challengeBtn.style.background = '#7c3aed';
-                            setTimeout(() => {
-                                challengeBtn.innerText = '📅 Challenge a Friend';
-                                challengeBtn.style.background = '#059669';
-                            }, 2500);
-                        });
-                    });
-                    controls.insertBefore(challengeBtn, controls.firstChild);
-                }
-            }
-        }, 500);
+        return {
+            type: 'WIN',
+            winMode: 'STAGE_RANDOM_DAILY',
+            colStatusMaps,
+            ampText,
+            confettiOrigin,
+            strictColorFixMaps,
+            mainTitle,
+            subTitle,
+            statsText,
+            showNextBtn,
+            revealObj,
+            menuBtnLabel: (state.currentMode === 'STAGE' || state.currentMode === 'QUIZ') ? 'Back to Section' : 'Main Menu',
+            isFinalSubstage,
+            currentMode: state.currentMode,
+            currentP1: state.currentP1,
+            currentLvl: state.currentLvl,
+            randomSeed: state.randomSeed,
+            randomGateMask: state.randomGateMask,
+            wasTutorial,
+            achToasts,
+        };
 
     } else {
+        // --- LOSE path ---
         state.attempts++;
         trackSubmitAttempt(state.currentMode, state.currentP1, state.currentP2, state.currentLvl, state.attempts, false, state.currentGuess);
 
-        // --- TIMED MODE: 3-attempt limit, -5s penalty, auto-advance ---
+        // --- TIMED LOSE ---
         if (state.currentMode === 'TIMED') {
-            wrap.classList.add('wrong-attempt');
-            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
-
             state.timerRemaining = Math.max(0, state.timerRemaining - 5);
-            updateTimedStatusBar(state);
 
             if (state.timerRemaining <= 0) {
                 state.timedEndSession && state.timedEndSession();
-                return;
+                return { type: 'TIMED_EXPIRED', colStatusMaps, ampText };
             }
 
             if (state.attempts >= 3) {
                 state.gameOver = true;
                 state.timedCircuitIndex++;
-                wrap.classList.remove('active');
-                document.getElementById('submit-btn').classList.add('hidden');
-                const msg = document.getElementById('message');
-                msg.innerText = 'Out of attempts! Loading next...';
-                msg.style.color = '#ef4444';
-                setTimeout(() => {
-                    msg.innerText = '';
-                    state.timedNextPuzzle && state.timedNextPuzzle();
-                }, 1500);
-                return;
+                return { type: 'LOSE', loseMode: 'TIMED_OUT_OF_ATTEMPTS', colStatusMaps, ampText };
             }
 
             const attemptsLeft = 3 - state.attempts;
-            const msg = document.getElementById('message');
-            msg.innerText = `−5s penalty! ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} left.`;
-            msg.style.color = '#eab308';
-            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
 
-            // Save amplitude history before the board is rebuilt
+            // DOM read: capture amplitude history BEFORE board reset
+            const wrap = document.getElementById('row-active');
             const prevAmps = Array.from(wrap.querySelectorAll('.amplitudes-result')).map(el => el.innerText);
 
             state.currentGuess = Array(state.numCols).fill().map(() => []);
-            updateActiveRow(state, renderBoardCallback);
 
-            // Re-attach saved amplitudes so the player can see all previous attempts
-            const newWrap = document.getElementById('row-active');
-            prevAmps.forEach(text => {
-                const el = document.createElement('div');
-                el.className = 'amplitudes-result';
-                el.innerText = text;
-                newWrap.appendChild(el);
-            });
-
-            // After 2nd failure: reveal the first gate as a hint
+            let hintText = null;
             if (state.attempts === 2) {
                 let hintGates = [];
                 for (let c = 0; c < state.numCols; c++) {
@@ -571,125 +405,104 @@ export function submitGuess(state, renderBoardCallback) {
                 }
                 if (hintGates.length > 0) {
                     const gateNames = hintGates.map(g => g.replace(/[\d_].*/, '')).join(' + ');
-                    const hintEl = document.createElement('div');
-                    hintEl.className = 'amplitudes-result';
-                    hintEl.style.color = '#38bdf8';
-                    hintEl.innerText = `💡 Hint: First gate — ${gateNames}`;
-                    newWrap.appendChild(hintEl);
+                    hintText = `💡 Hint: First gate — ${gateNames}`;
                 }
             }
-            return;
+
+            return {
+                type: 'LOSE',
+                loseMode: 'TIMED',
+                colStatusMaps,
+                ampText,
+                timedPenaltyMsg: `−5s penalty! ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} left.`,
+                prevAmps,
+                hintText,
+            };
         }
 
+        // --- TUTORIAL LOSE ---
         if (state.isTutorial) {
-            wrap.classList.add('wrong-attempt');
-            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
             state.currentGuess = Array(state.numCols).fill(null).map((_, c) => [...(state.secretCircuits[0][c] || [])]);
-            updateActiveRow(state, renderBoardCallback);
-            clearGhostPointer();
             state.tutorialPhase = 'EVALUATE';
-            setGhostPointer('EVALUATE');
-            const msg = document.getElementById('message');
-            msg.style.color = '#38bdf8';
-            msg.innerText = "Here's the correct circuit — hit Evaluate to complete the tutorial!";
-            return;
+            return { type: 'LOSE', loseMode: 'TUTORIAL', colStatusMaps, ampText };
         }
 
-        // --- QUIZ MODE: 3 attempts per question; 3 total lives ---
+        // --- QUIZ LOSE ---
         if (state.currentMode === 'QUIZ') {
-            wrap.classList.add('wrong-attempt');
-            wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
-            const msg = document.getElementById('message');
-
             if (state.attempts >= 3) {
-                // Question failed
                 state.quizLives--;
                 state.gameOver = true;
-                document.getElementById('submit-btn').classList.add('hidden');
-                wrap.classList.remove('active');
 
                 const _almostDist = minGateEditDistance(state.currentGuess, state.secretCircuits);
                 if (state.quizLives <= 0) {
                     const _almostSuffix = _almostDist === 1 ? ' So close — just 1 gate off!' : '';
-                    msg.innerText = `💔 Out of lives — quiz failed!${_almostSuffix}`;
-                    msg.style.color = '#ef4444';
-                    setTimeout(() => { msg.innerText = ''; window.showQuizResult?.(); }, 1600);
+                    return {
+                        type: 'LOSE',
+                        loseMode: 'QUIZ_OUT_OF_LIVES',
+                        colStatusMaps,
+                        ampText,
+                        quizMsg: `💔 Out of lives — quiz failed!${_almostSuffix}`,
+                    };
                 } else {
                     const l = state.quizLives;
                     const _almostPrefix = _almostDist === 1 ? 'So close! Just 1 gate off. ' : '';
-                    msg.innerText = `${_almostPrefix}Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining.`;
-                    msg.style.color = _almostDist === 1 ? '#22c55e' : '#eab308';
-
                     const sIdx = state._quizCurrentSIdx ?? state._quizSIdx;
                     const lIdx = state._quizCurrentLevelIdx ?? 0;
-                    const levelLabel = `${sIdx}.${lIdx + 1}`;
-                    const failActions = document.getElementById('quiz-fail-actions');
-                    const reviewBtn  = document.getElementById('quiz-fail-review-btn');
-                    if (failActions && reviewBtn) {
-                        reviewBtn.textContent = `Review ${levelLabel}`;
-                        failActions.classList.remove('hidden');
-                    }
+                    return {
+                        type: 'LOSE',
+                        loseMode: 'QUIZ_QUESTION_FAILED_LIVES_REMAIN',
+                        colStatusMaps,
+                        ampText,
+                        quizMsg: `${_almostPrefix}Circuit failed! ${l} ${l === 1 ? 'life' : 'lives'} remaining.`,
+                        quizMsgColor: _almostDist === 1 ? '#22c55e' : '#eab308',
+                        quizFailLevelLabel: `${sIdx}.${lIdx + 1}`,
+                    };
                 }
-                return;
             }
 
             const left = 3 - state.attempts;
             const dist = minGateEditDistance(state.currentGuess, state.secretCircuits);
-            if (dist === 1) {
-                msg.innerText = `So close! You're just 1 gate away!`;
-                msg.style.color = '#22c55e';
-            } else {
-                msg.innerText = `Not quite — ${left} attempt${left !== 1 ? 's' : ''} left.`;
-                msg.style.color = '#eab308';
-            }
-            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
             state.currentGuess = Array(state.numCols).fill().map(() => []);
-            updateActiveRow(state, renderBoardCallback);
-            return;
+
+            return {
+                type: 'LOSE',
+                loseMode: 'QUIZ_PARTIAL',
+                colStatusMaps,
+                ampText,
+                quizMsg: dist === 1 ? `So close! You're just 1 gate away!` : `Not quite — ${left} attempt${left !== 1 ? 's' : ''} left.`,
+                quizMsgColor: dist === 1 ? '#22c55e' : '#eab308',
+            };
         }
 
-        document.getElementById('attempts-counter').innerText = `Attempts Remaining: ${6 - state.attempts}`;
-
-        wrap.classList.add('wrong-attempt');
-        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
-
-        const historyWrap = wrap.cloneNode(true);
-        historyWrap.removeAttribute('id');
-        historyWrap.classList.remove('active', 'wrong-attempt');
-        const clonedSlots = historyWrap.querySelectorAll('.slot');
-        clonedSlots.forEach(s => s.removeAttribute('id'));
-        document.getElementById('history-board').appendChild(historyWrap);
+        // --- STAGE / RANDOM / DAILY LOSE ---
+        const attemptsRemaining = 6 - state.attempts;
 
         if (state.attempts === 6) {
             state.gameOver = true;
             trackLevelFail(state.currentMode, state.currentP1, state.currentP2, state.currentLvl);
-            state.currentStreak = 0; 
-            
-            wrap.classList.remove('active');
-            document.getElementById('submit-btn').classList.add('hidden');
-            document.getElementById('message').innerText = "Measurement collapsed! Game Over.";
-            document.getElementById('message').style.color = "#ef4444";
-            
-            if (state.currentMode === 'STAGE') {
-                showRevealCircuit("The Target Circuit Was:", "#ef4444", state.secretCircuits[0], state.numQubits);
-                document.getElementById('again-btn').innerText = "Retry Stage";
-                document.getElementById('again-btn').classList.remove('hidden');
-            } else {
-                showRevealCircuit("The Target Circuit Was:", "#ef4444", state.secretCircuits[0], state.numQubits);
-                document.getElementById('again-btn').innerText = "Play Again";
-                document.getElementById('again-btn').classList.remove('hidden');
-                if (state.currentMode === 'RANDOM') {
-                    document.getElementById('restart-btn').classList.remove('hidden');
-                }
-            }
+            state.currentStreak = 0;
+            return {
+                type: 'LOSE',
+                loseMode: 'STAGE_GAME_OVER',
+                colStatusMaps,
+                ampText,
+                attemptsRemaining,
+                gameOverMode: state.currentMode,
+                againBtnLabel: state.currentMode === 'STAGE' ? 'Retry Stage' : 'Play Again',
+                showRestartBtn: state.currentMode === 'RANDOM',
+                revealCircuit: { color: "#ef4444", targetCircuit: state.secretCircuits[0], numQubits: state.numQubits },
+                strictMsg,
+            };
         } else {
             state.currentGuess = Array(state.numCols).fill().map(() => []);
-            
-            // FIXED: Pass the callback here to correctly rebuild the visual grid!
-            updateActiveRow(state, renderBoardCallback); 
-            
-            const activeAmpResult = wrap.querySelector('.amplitudes-result');
-            if (activeAmpResult) activeAmpResult.remove();
+            return {
+                type: 'LOSE',
+                loseMode: 'STAGE_WRONG',
+                colStatusMaps,
+                ampText,
+                attemptsRemaining,
+                strictMsg,
+            };
         }
     }
 }

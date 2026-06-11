@@ -4,7 +4,7 @@ import { initSync, signIn, signUp, signOut, schedulePush, submitFeedback } from 
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, PLAY_CATEGORIES } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
 import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, renderLearnAchievements, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti } from './game/ui.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, renderLearnAchievements, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti, showRevealCircuit } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed, trackTutorialSkipped, trackSectionComplete } from './data/analytics.js';
@@ -1184,6 +1184,7 @@ function initGame(mode, p1, p2) {
 }
 
 window.initGame = initGame;
+window._state = state;
 window.initLabGame       = n => initGame('LAB', n);
 window.initDailyGame     = n => initGame('DAILY', n);
 window.initQftLab        = n => initGame('QFT_LAB', n);
@@ -1593,6 +1594,353 @@ function showModeCards() {
     document.getElementById('mode-cards').classList.remove('hidden');
     document.querySelectorAll('.mode-panel').forEach(p => p.classList.add('hidden'));
 }
+
+// Applies the result object returned by submitGuess() — all DOM work lives here.
+function applySubmitResult(result, state, renderBoard) {
+    // --- Snapshot modes (FREEPLAY, QFT_LAB) ---
+    if (result.type === 'FREEPLAY_SNAPSHOT' || result.type === 'QFT_LAB_SNAPSHOT') {
+        const wrap = document.getElementById('row-active');
+        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+        const ampDiv = document.createElement('div');
+        ampDiv.className = 'amplitudes-result';
+        ampDiv.innerText = result.ampText;
+        wrap.appendChild(ampDiv);
+        return;
+    }
+
+    if (result.type === 'LAB_WIN') {
+        const wrap = document.getElementById('row-active');
+        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+        const ampDiv = document.createElement('div');
+        ampDiv.className = 'amplitudes-result';
+        ampDiv.innerText = result.ampText;
+        wrap.appendChild(ampDiv);
+        const submitBtnEl = document.getElementById('submit-btn');
+        submitBtnEl.classList.add('hidden');
+        wrap.classList.remove('active');
+        fireQuantumConfetti(result.btnRect.left + result.btnRect.width / 2, result.btnRect.top);
+        setTimeout(() => {
+            showVictoryModal('Fourier Encoded!', `|0⟩ → |${result.labTargetN}⟩ — you encoded +${result.labTargetN} in the Fourier basis!`, null, false, null);
+            const controls = document.querySelector('#victory-modal .victory-controls');
+            if (controls && !document.getElementById('modal-lab-next-btn')) {
+                const tryBtn = document.createElement('button');
+                tryBtn.id = 'modal-lab-next-btn';
+                tryBtn.className = 'btn';
+                tryBtn.style.background = '#f59e0b';
+                tryBtn.innerText = 'Try Another Number';
+                tryBtn.addEventListener('click', () => hideVictoryModal());
+                controls.insertBefore(tryBtn, controls.firstChild);
+            }
+        }, 500);
+        return;
+    }
+
+    if (result.type === 'LAB_LOSE') {
+        const wrap = document.getElementById('row-active');
+        wrap.querySelectorAll('.amplitudes-result').forEach(el => el.remove());
+        const ampDiv = document.createElement('div');
+        ampDiv.className = 'amplitudes-result';
+        ampDiv.innerText = result.ampText;
+        wrap.appendChild(ampDiv);
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        const msg = document.getElementById('message');
+        msg.style.color = '#eab308';
+        msg.innerText = `Not |${result.labTargetN}⟩ yet — check the state vector and adjust the phases!`;
+        setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 3000);
+        return;
+    }
+
+    // TIMED_EXPIRED: timer hit zero mid-guess — just update the status bar visual
+    if (result.type === 'TIMED_EXPIRED') {
+        const wrap = document.getElementById('row-active');
+        for (let c = 0; c < result.colStatusMaps.length; c++) {
+            const slot = document.getElementById(`slot-active-${c}`);
+            if (slot) {
+                const { guessGates, gateStatusMap } = result.colStatusMaps[c];
+                slot.innerHTML = getColumnHTML(guessGates, state.numQubits, gateStatusMap);
+            }
+        }
+        const ampDiv = document.createElement('div');
+        ampDiv.className = 'amplitudes-result';
+        ampDiv.innerText = result.ampText;
+        wrap.appendChild(ampDiv);
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        updateTimedStatusBar(state);
+        return;
+    }
+
+    // --- Main path: apply column colors (common to WIN and LOSE) ---
+    const wrap = document.getElementById('row-active');
+    for (let c = 0; c < result.colStatusMaps.length; c++) {
+        const slot = document.getElementById(`slot-active-${c}`);
+        if (slot) {
+            const { guessGates, gateStatusMap } = result.colStatusMaps[c];
+            slot.innerHTML = getColumnHTML(guessGates, state.numQubits, gateStatusMap);
+        }
+    }
+    const ampDiv = document.createElement('div');
+    ampDiv.className = 'amplitudes-result';
+    ampDiv.innerText = result.ampText;
+    wrap.appendChild(ampDiv);
+
+    if (result.type === 'WIN') {
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.classList.add('hidden');
+        wrap.classList.remove('active');
+        fireQuantumConfetti(result.confettiOrigin.x, result.confettiOrigin.y);
+
+        if (result.winMode === 'TIMED') {
+            updateTimedStatusBar(state);
+            const msg = document.getElementById('message');
+            msg.innerText = `Solved! +${result.timeBonus}s`;
+            msg.style.color = '#22c55e';
+            setTimeout(() => { msg.innerText = ''; state.timedNextPuzzle && state.timedNextPuzzle(); }, 1500);
+            return;
+        }
+
+        if (result.winMode === 'QUIZ') {
+            const msg = document.getElementById('message');
+            msg.innerText = '✓ Correct!';
+            msg.style.color = '#22c55e';
+            setTimeout(() => {
+                msg.innerText = '';
+                if (result.quizFinal) window.showQuizVictory?.();
+                else window.quizNextQuestion?.();
+            }, 900);
+            return;
+        }
+
+        // STAGE_RANDOM_DAILY
+        if (result.wasTutorial) clearGhostPointer();
+
+        if (result.strictColorFixMaps) {
+            for (let c = 0; c < result.strictColorFixMaps.length; c++) {
+                const slot = document.getElementById(`slot-active-${c}`);
+                if (slot) {
+                    const { guessGates, gateStatusMap } = result.strictColorFixMaps[c];
+                    slot.innerHTML = getColumnHTML(guessGates, state.numQubits, gateStatusMap);
+                }
+            }
+        }
+
+        result.achToasts.forEach((t, i) => setTimeout(() => showAchievementToast(t.name, t.icon), 900 + i * 1700));
+
+        setTimeout(() => {
+            showVictoryModal(result.mainTitle, result.subTitle, result.statsText, result.showNextBtn, result.revealObj);
+            const _menuBtn = document.getElementById('modal-menu-btn');
+            if (_menuBtn) _menuBtn.textContent = result.menuBtnLabel;
+
+            if (result.isFinalSubstage) {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-test-yourself-btn')) {
+                    const testBtn = document.createElement('button');
+                    testBtn.id = 'modal-test-yourself-btn';
+                    testBtn.className = 'btn';
+                    testBtn.style.background = '#f59e0b';
+                    testBtn.style.color = '#0f172a';
+                    testBtn.style.fontWeight = '700';
+                    testBtn.innerText = 'Test Yourself ★';
+                    testBtn.addEventListener('click', () => { hideVictoryModal(); initGame('QUIZ', result.currentP1); });
+                    controls.insertBefore(testBtn, controls.firstChild);
+                }
+            }
+
+            if (result.currentMode === 'RANDOM') {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-restart-btn')) {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.id = 'modal-restart-btn';
+                    retryBtn.className = 'btn';
+                    retryBtn.style.background = '#3b82f6';
+                    retryBtn.innerText = 'Retry Same Circuit';
+                    retryBtn.addEventListener('click', () => { document.dispatchEvent(new CustomEvent('restart-circuit')); });
+                    controls.insertBefore(retryBtn, controls.firstChild);
+                }
+                if (controls && !document.getElementById('modal-play-challenge-btn')) {
+                    const challengeBtn = document.createElement('button');
+                    challengeBtn.id = 'modal-play-challenge-btn';
+                    challengeBtn.className = 'btn';
+                    challengeBtn.style.background = '#7c3aed';
+                    challengeBtn.innerText = '⚔️ Challenge a Friend';
+                    challengeBtn.addEventListener('click', () => {
+                        if (unlockAchievement('challenge_friend')) {
+                            const _a = ACHIEVEMENT_MAP['challenge_friend'];
+                            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
+                        }
+                        const url = `${window.location.origin}${window.location.pathname}?play-challenge=${result.currentLvl}-${result.randomSeed}-${result.randomGateMask}`;
+                        navigator.clipboard.writeText(url).then(() => {
+                            challengeBtn.innerText = 'Link Copied! ✓';
+                            challengeBtn.style.background = '#059669';
+                            setTimeout(() => { challengeBtn.innerText = '⚔️ Challenge a Friend'; challengeBtn.style.background = '#7c3aed'; }, 2500);
+                        });
+                    });
+                    controls.insertBefore(challengeBtn, controls.firstChild);
+                }
+            } else if (result.currentMode === 'DAILY') {
+                const controls = document.querySelector('#victory-modal .victory-controls');
+                if (controls && !document.getElementById('modal-daily-next-btn') && result.currentLvl < 3) {
+                    const nextLvlName = result.currentLvl === 1 ? 'Medium' : 'Hard';
+                    const nextBtn = document.createElement('button');
+                    nextBtn.id = 'modal-daily-next-btn';
+                    nextBtn.className = 'btn';
+                    nextBtn.style.background = '#0ea5e9';
+                    nextBtn.innerText = `Next: ${nextLvlName} →`;
+                    nextBtn.addEventListener('click', () => { hideVictoryModal(); window.initDailyGame(result.currentLvl + 1); });
+                    controls.insertBefore(nextBtn, controls.firstChild);
+                }
+                if (controls && !document.getElementById('modal-daily-challenge-btn')) {
+                    const challengeBtn = document.createElement('button');
+                    challengeBtn.id = 'modal-daily-challenge-btn';
+                    challengeBtn.className = 'btn';
+                    challengeBtn.style.background = '#059669';
+                    challengeBtn.innerText = '📅 Challenge a Friend';
+                    challengeBtn.addEventListener('click', () => {
+                        if (unlockAchievement('challenge_friend')) {
+                            const _a = ACHIEVEMENT_MAP['challenge_friend'];
+                            if (_a) setTimeout(() => showAchievementToast(_a.name, _a.icon), 200);
+                        }
+                        const url = `${window.location.origin}${window.location.pathname}?daily-challenge=${result.currentLvl}`;
+                        navigator.clipboard.writeText(url).then(() => {
+                            challengeBtn.innerText = 'Link Copied! ✓';
+                            challengeBtn.style.background = '#7c3aed';
+                            setTimeout(() => { challengeBtn.innerText = '📅 Challenge a Friend'; challengeBtn.style.background = '#059669'; }, 2500);
+                        });
+                    });
+                    controls.insertBefore(challengeBtn, controls.firstChild);
+                }
+            }
+        }, 500);
+        return;
+    }
+
+    // --- LOSE path ---
+    if (result.loseMode === 'TIMED_OUT_OF_ATTEMPTS') {
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        wrap.classList.remove('active');
+        document.getElementById('submit-btn').classList.add('hidden');
+        updateTimedStatusBar(state);
+        const msg = document.getElementById('message');
+        msg.innerText = 'Out of attempts! Loading next...';
+        msg.style.color = '#ef4444';
+        setTimeout(() => { msg.innerText = ''; state.timedNextPuzzle && state.timedNextPuzzle(); }, 1500);
+        return;
+    }
+
+    if (result.loseMode === 'TIMED') {
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        updateTimedStatusBar(state);
+        const msg = document.getElementById('message');
+        msg.innerText = result.timedPenaltyMsg;
+        msg.style.color = '#eab308';
+        setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
+        updateActiveRow(state, renderBoard);
+        const newWrap = document.getElementById('row-active');
+        result.prevAmps.forEach(text => {
+            const el = document.createElement('div');
+            el.className = 'amplitudes-result';
+            el.innerText = text;
+            newWrap.appendChild(el);
+        });
+        if (result.hintText) {
+            const hintEl = document.createElement('div');
+            hintEl.className = 'amplitudes-result';
+            hintEl.style.color = '#38bdf8';
+            hintEl.innerText = result.hintText;
+            newWrap.appendChild(hintEl);
+        }
+        return;
+    }
+
+    if (result.loseMode === 'TUTORIAL') {
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        updateActiveRow(state, renderBoard);
+        clearGhostPointer();
+        setGhostPointer('EVALUATE');
+        const msg = document.getElementById('message');
+        msg.style.color = '#38bdf8';
+        msg.innerText = "Here's the correct circuit — hit Evaluate to complete the tutorial!";
+        return;
+    }
+
+    if (result.loseMode === 'QUIZ_OUT_OF_LIVES') {
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        document.getElementById('submit-btn').classList.add('hidden');
+        wrap.classList.remove('active');
+        const msg = document.getElementById('message');
+        msg.innerText = result.quizMsg;
+        msg.style.color = '#ef4444';
+        setTimeout(() => { msg.innerText = ''; window.showQuizResult?.(); }, 1600);
+        return;
+    }
+
+    if (result.loseMode === 'QUIZ_QUESTION_FAILED_LIVES_REMAIN') {
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        document.getElementById('submit-btn').classList.add('hidden');
+        wrap.classList.remove('active');
+        const msg = document.getElementById('message');
+        msg.innerText = result.quizMsg;
+        msg.style.color = result.quizMsgColor;
+        const failActions = document.getElementById('quiz-fail-actions');
+        const reviewBtn = document.getElementById('quiz-fail-review-btn');
+        if (failActions && reviewBtn) {
+            reviewBtn.textContent = `Review ${result.quizFailLevelLabel}`;
+            failActions.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (result.loseMode === 'QUIZ_PARTIAL') {
+        wrap.classList.add('wrong-attempt');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+        const msg = document.getElementById('message');
+        msg.innerText = result.quizMsg;
+        msg.style.color = result.quizMsgColor;
+        setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2000);
+        updateActiveRow(state, renderBoard);
+        return;
+    }
+
+    // STAGE_WRONG / STAGE_GAME_OVER
+    document.getElementById('attempts-counter').innerText = `Attempts Remaining: ${result.attemptsRemaining}`;
+    wrap.classList.add('wrong-attempt');
+    wrap.addEventListener('animationend', () => wrap.classList.remove('wrong-attempt'), { once: true });
+
+    // Clone the colored row to history BEFORE resetting the board
+    const historyWrap = wrap.cloneNode(true);
+    historyWrap.removeAttribute('id');
+    historyWrap.classList.remove('active', 'wrong-attempt');
+    historyWrap.querySelectorAll('.slot').forEach(s => s.removeAttribute('id'));
+    document.getElementById('history-board').appendChild(historyWrap);
+
+    if (result.loseMode === 'STAGE_GAME_OVER') {
+        wrap.classList.remove('active');
+        document.getElementById('submit-btn').classList.add('hidden');
+        document.getElementById('message').innerText = "Measurement collapsed! Game Over.";
+        document.getElementById('message').style.color = "#ef4444";
+        showRevealCircuit("The Target Circuit Was:", result.revealCircuit.color, result.revealCircuit.targetCircuit, result.revealCircuit.numQubits);
+        document.getElementById('again-btn').innerText = result.againBtnLabel;
+        document.getElementById('again-btn').classList.remove('hidden');
+        if (result.showRestartBtn) document.getElementById('restart-btn').classList.remove('hidden');
+    } else {
+        // STAGE_WRONG: show strict message if present, rebuild the active row
+        if (result.strictMsg) {
+            const msg = document.getElementById('message');
+            msg.innerText = result.strictMsg;
+            msg.style.color = '#eab308';
+            setTimeout(() => { if (!state.gameOver) msg.innerText = ''; }, 2500);
+        }
+        updateActiveRow(state, renderBoard);
+        const activeAmpResult = wrap.querySelector('.amplitudes-result');
+        if (activeAmpResult) activeAmpResult.remove();
+    }
+}
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', () => showModePanel(card.dataset.mode));
 });
@@ -1624,7 +1972,10 @@ document.getElementById('btn-free-2').addEventListener('click', () => initGame('
 document.getElementById('btn-free-3').addEventListener('click', () => initGame('FREEPLAY', 3));
 
 // 4. Game Controls
-document.getElementById('submit-btn').addEventListener('click', () => submitGuess(state, renderBoard));
+document.getElementById('submit-btn').addEventListener('click', () => {
+    const result = submitGuess(state, renderBoard, gameStartTime);
+    if (result) applySubmitResult(result, state, renderBoard);
+});
 document.getElementById('clear-btn').addEventListener('click', () => {
     if (state.gameOver || state.currentMode !== 'FREEPLAY') return;
     state.currentGuess = Array(state.numCols).fill().map(() => []);
