@@ -115,6 +115,8 @@ async function _push() {
             timed_best:           JSON.parse(localStorage.getItem('quiver_timed_best')   || '[0,0,0]'),
             daily_streak:         parseInt(localStorage.getItem('quiver_daily_streak')   || '0'),
             last_daily_date:      localStorage.getItem('quiver_last_daily_date')         || '',
+            learn_streak:         parseInt(localStorage.getItem('quiver_learn_streak')   || '0'),
+            last_learn_date:      localStorage.getItem('quiver_last_learn_date')         || '',
             tutorial_complete:    JSON.parse(localStorage.getItem('quiver_tutorial')     || 'false'),
             achievements:         JSON.parse(localStorage.getItem('quiver_achievements') || '[]'),
             achievement_progress: JSON.parse(localStorage.getItem('quiver_ach_progress') || '{}'),

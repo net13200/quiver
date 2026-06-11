@@ -134,6 +134,16 @@ export function applyRemoteProgress(remote) {
         localStorage.setItem('quiver_last_daily_date', lastDailyDate);
     }
 
+    // learn streak: same logic
+    const remoteLearnDate = remote.last_learn_date || '';
+    if (remoteLearnDate > lastLearnDate ||
+        (remoteLearnDate === lastLearnDate && (remote.learn_streak || 0) > learnStreak)) {
+        learnStreak    = remote.learn_streak || 0;
+        lastLearnDate  = remoteLearnDate;
+        localStorage.setItem('quiver_learn_streak',    String(learnStreak));
+        localStorage.setItem('quiver_last_learn_date', lastLearnDate);
+    }
+
     // tutorial: OR
     if (!tutorialComplete && remote.tutorial_complete) {
         tutorialComplete = true;
