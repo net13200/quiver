@@ -274,7 +274,9 @@ function getQuizStagePool(sIdx) {
         i--;
     }
     const pool = [];
-    chain.forEach(s => STAGES[s].levels.forEach((_, l) => pool.push({ sIdx: s, lIdx: l })));
+    chain.forEach(s => STAGES[s].levels.forEach((lev, l) => {
+        if (!lev.variational) pool.push({ sIdx: s, lIdx: l });
+    }));
     return pool;
 }
 
@@ -1071,7 +1073,9 @@ function initGame(mode, p1, p2) {
             state._quizSessionSeed = Math.floor(Math.random() * 900000) + 100000;
 
             const pool = isGlobal
-                ? completedStages.map(id => { const [s, l] = id.split('-').map(Number); return { sIdx: s, lIdx: l }; })
+                ? completedStages
+                    .map(id => { const [s, l] = id.split('-').map(Number); return { sIdx: s, lIdx: l }; })
+                    .filter(({ sIdx, lIdx }) => !STAGES[sIdx]?.levels[lIdx]?.variational)
                 : getQuizStagePool(p1);
             state.quizTotal = Math.min(5, pool.length);
             const shuffleRng = getSeededRandom(state._quizSessionSeed);
