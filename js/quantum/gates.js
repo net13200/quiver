@@ -93,7 +93,24 @@ export function generateMatrices(N) {
             GATE_MATRICES[`RZ_${suffix}_${q}`] = kronN(mats);
         }
     }
-    
+
+    // RY(θ) = [[cos(θ/2), -sin(θ/2)], [sin(θ/2), cos(θ/2)]]
+    const ryAngles = {
+        'PI':        [0,                    1],
+        'PI2':       [c,                    c],
+        'PI4':       [Math.cos(Math.PI/8),  Math.sin(Math.PI/8)],
+        'MINUS_PI2': [c,                   -c],
+        'MINUS_PI4': [Math.cos(Math.PI/8), -Math.sin(Math.PI/8)],
+    };
+    for (let q = 0; q < N; q++) {
+        for (let [suffix, [cv, sv]] of Object.entries(ryAngles)) {
+            const mat = [[{r:cv,i:0},{r:-sv,i:0}],[{r:sv,i:0},{r:cv,i:0}]];
+            let mats = Array(N).fill(I2);
+            mats[q] = mat;
+            GATE_MATRICES[`RY_${suffix}_${q}`] = kronN(mats);
+        }
+    }
+
     if (N >= 2) {
         if (N === 2) {
             GATE_MATRICES['CX01'] = CX2; GATE_MATRICES['CX10'] = CX2_REV;
@@ -168,6 +185,11 @@ export function formatAngleGate(gNext) {
         let qSuffix = gNext.startsWith('RZ') ? gNext.slice(-1) : gNext.slice(-2);
         return `${prefix}_${randAngle}_${qSuffix}`;
     }
+    if (gNext.startsWith('RY')) {
+        let angles = ['PI', 'PI2', 'PI4', 'MINUS_PI2', 'MINUS_PI4'];
+        let randAngle = angles[Math.floor(Math.random() * angles.length)];
+        return `RY_${randAngle}_${gNext.slice(-1)}`;
+    }
     return gNext;
 }
 
@@ -196,7 +218,7 @@ export function getOccupiedQubits(gate) {
         for(let i=Math.min(c,t); i<=Math.max(c,t); i++) occ.push(i);
         return occ;
     }
-    if (gate.startsWith('RZ_')) {
+    if (gate.startsWith('RZ_') || gate.startsWith('RY_')) {
         let parts = gate.split('_');
         return [parseInt(parts[parts.length - 1])];
     }

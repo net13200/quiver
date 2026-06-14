@@ -227,6 +227,13 @@ export function updateBlochSpheres(currentGuess, numQubits) {
     }
 }
 
+export function updateBlochSpheresFromState(stateVec, numQubits) {
+    const sub = ['₀', '₁', '₂'];
+    for (let q = 0; q < numQubits; q++) {
+        drawBlochSphere(`bloch-${q}`, calcBlochVector(stateVec, q, numQubits), `Qubit ${q} (q${sub[q]})`);
+    }
+}
+
 export function updateTargetBlochSphere(targetState, numQubits) {
     const wrap = document.getElementById('target-canvas-wrapper');
     if (!wrap) return;

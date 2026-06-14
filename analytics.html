@@ -156,18 +156,20 @@ const SUPABASE_URL = 'https://gexeorwjxbznkimgeokk.supabase.co';
 const LS_KEY       = 'quiver_analytics_key';
 
 // Stage level counts (index = stage number)
-const STAGE_LEVELS = [6, 5, 1, 1, 3, 3, 3, 4, 3, 4, 2, 3];
+const STAGE_LEVELS = [6, 5, 1, 1, 3, 3, 3, 4, 3, 4, 2, 3, 4, 4, 4];
 const STAGE_NAMES  = [
     'S0: Foundations','S1: Bell Pairs','S2: CZ Gate','S3: GHZ State',
     'S4: SWAP Gate','S5: Swap Test','S6: Hadamard Test','S7: Phase Rot.',
-    'S8: QFT','S9: QFT Adder','S10: Phase Est.','S11: Grover'
+    'S8: QFT','S9: QFT Adder','S10: Phase Est.','S11: Grover',
+    'S12: Var. Circuits','S13: VQE','S14: QAOA'
 ];
 const SECTIONS = [
-    { name: 'Foundations',        stages: [0,1],       color: '#6366f1' },
-    { name: 'Multi-Qubit Gates',  stages: [2,3,4],     color: '#22c55e' },
-    { name: 'Quantum Protocols',  stages: [5,6],        color: '#f59e0b' },
-    { name: 'Phase & QFT',        stages: [7,8,9,10],  color: '#ec4899' },
-    { name: 'Quantum Algorithms', stages: [11],         color: '#14b8a6' },
+    { name: 'Foundations',            stages: [0,1],          color: '#6366f1' },
+    { name: 'Multi-Qubit Gates',      stages: [2,3,4],        color: '#22c55e' },
+    { name: 'Quantum Protocols',      stages: [5,6],           color: '#f59e0b' },
+    { name: 'Phase & QFT',            stages: [7,8,9,10],     color: '#ec4899' },
+    { name: 'Quantum Algorithms',     stages: [11],            color: '#14b8a6' },
+    { name: 'Variational Algorithms', stages: [12,13,14],      color: '#f97316' },
 ];
 const ACHIEVEMENTS = [
     { id:'hello_quantum',      name:'Hello, Quantum!' },
@@ -185,6 +187,9 @@ const ACHIEVEMENTS = [
     { id:'stage_9_complete',   name:'Draper Adder' },
     { id:'stage_10_complete',  name:'Phase Estimator' },
     { id:'stage_11_complete',  name:"Grover's Searcher" },
+    { id:'stage_12_complete',  name:'Parameter Pioneer' },
+    { id:'stage_13_complete',  name:'Variationalist' },
+    { id:'stage_14_complete',  name:'QAOA Champion' },
     { id:'quantum_literate',   name:'Quantum Literate' },
     { id:'algorithm_architect',name:'Algorithm Architect' },
     { id:'phase_wizard',       name:'Phase Wizard' },

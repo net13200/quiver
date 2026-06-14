@@ -674,5 +674,337 @@ export const STAGES = [
                 ]
             }
         ]
-    }
+    },
+
+    // ── Stage 12: Parametrized Circuits ──────────────────────────────────────
+    {
+        title: "Parametrized Circuits",
+        section: "Variational Algorithms",
+        qubits: 1,
+        cols: 1,
+        set: [],
+        levels: [
+            {
+                name: "12.1: Your First Parameter",
+                quizDesc: "Tune θ in RY(θ) to rotate the qubit to |+⟩.",
+                variational: {
+                    numQubits: 1,
+                    params: [{ id: 'theta', label: 'θ', min: 0, max: 6.283, init: 0 }],
+                    template: [[ {gate:'RY', qubit:0, param:'theta'} ]],
+                    winMode: 'fidelity',
+                    targetVec: [{r:0.7071067811865476,i:0},{r:0.7071067811865476,i:0}],
+                    fidelityThreshold: 0.99,
+                    showLandscape: false,
+                    showOptimizer: false,
+                    costLabel: 'Fidelity',
+                    task: "The RY gate rotates the qubit by angle θ around the Y-axis of the Bloch sphere. Starting at |0⟩ (north pole), find θ that brings the qubit to |+⟩ — the equator — where it is 50% |0⟩ and 50% |1⟩.",
+                },
+                lesson: "**Parametrized circuits** are circuits where some gates take a continuous angle as input, instead of a fixed value.\n\nThe **RY gate** is a rotation about the Y-axis:\n\nRY(θ)|0⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩\n\nAt θ=0: stays at |0⟩ (north pole).\nAt θ=π/2: reaches |+⟩ = (|0⟩+|1⟩)/√2 (equator).\nAt θ=π: reaches |1⟩ (south pole).\n\nThis is the core idea of variational algorithms: **the circuit output is a function of the parameters.** By tuning the parameters, we can reach any desired state — or find the one that minimizes an objective function.\n\n**Goal:** find θ = π/2 ≈ 1.57.",
+                hint: "RY(θ)|0⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩. For equal amplitudes, cos(θ/2) = sin(θ/2) → θ/2 = π/4 → θ = π/2 ≈ 1.57.",
+            },
+            {
+                name: "12.2: Any Single-Qubit State",
+                quizDesc: "Use RZ(φ)·RY(θ) to reach the target state shown on the Bloch sphere.",
+                variational: {
+                    numQubits: 1,
+                    params: [
+                        { id: 'theta', label: 'θ (RY)', min: 0, max: 6.283, init: 0 },
+                        { id: 'phi',   label: 'φ (RZ)', min: 0, max: 6.283, init: 0 }
+                    ],
+                    template: [
+                        [ {gate:'RY', qubit:0, param:'theta'} ],
+                        [ {gate:'RZ', qubit:0, param:'phi'}   ]
+                    ],
+                    winMode: 'fidelity',
+                    targetVec: [{r:0.7071067811865476,i:0},{r:0,i:0.7071067811865476}],
+                    fidelityThreshold: 0.99,
+                    showLandscape: false,
+                    showOptimizer: false,
+                    costLabel: 'Fidelity',
+                    task: "The circuit applies RY(θ) then RZ(φ) to q₀. The target state is |+i⟩ = (|0⟩ + i|1⟩)/√2 — half-way between |0⟩ and |1⟩ on the XY-plane. Two parameters give you access to both the 'tilt' and 'spin' of the Bloch sphere.",
+                },
+                lesson: "**Any single-qubit state** can be written as:\n\n|ψ⟩ = cos(θ/2)|0⟩ + e^{iφ} sin(θ/2)|1⟩\n\nwhere θ is the polar angle (latitude) and φ is the azimuthal angle (longitude) on the Bloch sphere.\n\nThe two-gate sequence **RZ(φ) · RY(θ)** generates exactly this form:\n* RY(θ) controls the latitude — how much |1⟩ amplitude there is.\n* RZ(φ) controls the longitude — the relative phase between |0⟩ and |1⟩.\n\nThis means **any qubit state is reachable** with just two continuous parameters. This is the motivation behind single-qubit ansätze in variational algorithms.\n\n**Goal:** θ = π/2 sets the equator; φ = π/2 adds the i phase → |+i⟩.",
+                hint: "Set θ = π/2 ≈ 1.57 first (this puts you on the equator). Then set φ = π/2 ≈ 1.57 to add the i phase.",
+            },
+            {
+                name: "12.3: Entangling Layer",
+                quizDesc: "Use RY(θ₀)⊗RY(θ₁) followed by CX to prepare the Bell state |Φ+⟩.",
+                variational: {
+                    numQubits: 2,
+                    params: [
+                        { id: 'theta0', label: 'θ₀ (q₀)', min: 0, max: 6.283, init: 0 },
+                        { id: 'theta1', label: 'θ₁ (q₁)', min: 0, max: 6.283, init: 0 }
+                    ],
+                    template: [
+                        [ {gate:'RY',qubit:0,param:'theta0'}, {gate:'RY',qubit:1,param:'theta1'} ],
+                        [ 'CX01' ]
+                    ],
+                    winMode: 'fidelity',
+                    targetVec: [
+                        {r:0.7071067811865476,i:0}, {r:0,i:0},
+                        {r:0,i:0}, {r:0.7071067811865476,i:0}
+                    ],
+                    fidelityThreshold: 0.99,
+                    showLandscape: false,
+                    showOptimizer: false,
+                    costLabel: 'Fidelity',
+                    task: "First rotate each qubit with RY, then apply a CX gate. The CX entangles the qubits: if q₀ is in superposition and q₁ is |0⟩, the CX creates a Bell state. Find θ₀ and θ₁ to prepare |Φ+⟩ = (|00⟩+|11⟩)/√2.",
+                },
+                lesson: "**Entangling layers** are the key ingredient that makes multi-qubit ansätze powerful. A single layer of parametrized single-qubit rotations followed by entangling gates (CX, CZ) can prepare states that no single-qubit rotation could — including entangled states like Bell pairs.\n\n**The ansatz: [RY(θ₀)⊗RY(θ₁)] → CX₀₁**\n\nStarting from |00⟩:\n1. RY(θ₀) on q₀: cos(θ₀/2)|0⟩ + sin(θ₀/2)|1⟩\n2. RY(θ₁) on q₁: keeps q₁ at |0⟩ if θ₁=0\n3. CX₀₁: if q₀ has amplitude at |1⟩, the CX flips q₁ → entanglement!\n\n**For the Bell state |Φ+⟩:**\n* Set θ₀ = π/2 → q₀ = |+⟩\n* Set θ₁ = 0 → q₁ = |0⟩\n* CX: (|0⟩+|1⟩)/√2 ⊗ |0⟩ → (|00⟩+|11⟩)/√2 ✓\n\nThis circuit template is called a **hardware-efficient ansatz** — it uses only native two-qubit gates and is designed to run efficiently on real quantum hardware.",
+                hint: "Set θ₀ = π/2 ≈ 1.57 and θ₁ = 0. The CX will then entangle the qubits into the Bell state.",
+            },
+            {
+                name: "12.4: Deeper Ansatz",
+                quizDesc: "Use a two-layer ansatz [RY⊗RY → CX → RY⊗RY] to prepare (|01⟩+|10⟩)/√2.",
+                variational: {
+                    numQubits: 2,
+                    params: [
+                        { id: 'th0', label: 'θ₀', min: 0, max: 6.283, init: 0 },
+                        { id: 'th1', label: 'θ₁', min: 0, max: 6.283, init: 0 },
+                        { id: 'th2', label: 'θ₂', min: 0, max: 6.283, init: 0 },
+                        { id: 'th3', label: 'θ₃', min: 0, max: 6.283, init: 0 }
+                    ],
+                    template: [
+                        [ {gate:'RY',qubit:0,param:'th0'}, {gate:'RY',qubit:1,param:'th1'} ],
+                        [ 'CX01' ],
+                        [ {gate:'RY',qubit:0,param:'th2'}, {gate:'RY',qubit:1,param:'th3'} ]
+                    ],
+                    winMode: 'fidelity',
+                    targetVec: [
+                        {r:0,i:0}, {r:0.7071067811865476,i:0},
+                        {r:0.7071067811865476,i:0}, {r:0,i:0}
+                    ],
+                    fidelityThreshold: 0.99,
+                    showLandscape: false,
+                    showOptimizer: false,
+                    costLabel: 'Fidelity',
+                    task: "Add a second rotation layer after the CX gate. The deeper ansatz [RY⊗RY → CX → RY⊗RY] can reach states that a single layer cannot. Target: |Ψ+⟩ = (|01⟩+|10⟩)/√2.",
+                },
+                lesson: "**Ansatz depth** determines how expressive the circuit is — which states it can prepare. A single rotation layer can only reach a small region of state space. Adding more layers after the entangling gate unlocks more of the Hilbert space.\n\n**Two-layer ansatz:** [RY⊗RY] → CX → [RY⊗RY]\n\nTo reach |Ψ+⟩ = (|01⟩+|10⟩)/√2 from |Φ+⟩:\n* Start from |Φ+⟩ = (|00⟩+|11⟩)/√2 using the first layer (θ₀=π/2, θ₁=0)\n* Apply X on q₁ (implemented as RY(π) on q₁): |Φ+⟩ → (|01⟩+|10⟩)/√2\n* So: θ₀=π/2, θ₁=0, then θ₂=0, θ₃=π rotates q₁ → |Ψ+⟩\n\n**Key insight:** More parameters = more expressive. But more parameters also means a harder optimization problem — this trade-off is central to all variational algorithms.",
+                hint: "Set θ₀=π/2, θ₁=0 to create |Φ+⟩ with the first layer. Then θ₂=0, θ₃=π (or 3.14) to flip q₁ → |Ψ+⟩.",
+            },
+        ]
+    },
+
+    // ── Stage 13: VQE ────────────────────────────────────────────────────────
+    {
+        title: "VQE",
+        section: "Variational Algorithms",
+        qubits: 1,
+        cols: 1,
+        set: [],
+        levels: [
+            {
+                name: "13.1: Energy of a State",
+                quizDesc: "Tune θ in RY(θ) to minimize the energy ⟨Z⟩ and reach the ground state.",
+                variational: {
+                    numQubits: 1,
+                    params: [{ id: 'theta', label: 'θ', min: 0, max: 6.283, init: 0 }],
+                    template: [[ {gate:'RY', qubit:0, param:'theta'} ]],
+                    winMode: 'cost',
+                    hamiltonian: [{ pauli:'Z', qubits:[0], coeff:1 }],
+                    constTerm: 0,
+                    costThreshold: -0.95,
+                    higherIsBetter: false,
+                    showLandscape: false,
+                    showOptimizer: false,
+                    costLabel: '⟨Z⟩',
+                    task: "The Hamiltonian H = Z has eigenstates |0⟩ (energy +1) and |1⟩ (energy −1). Tune θ to lower the energy ⟨Z⟩ as far as possible. The lowest energy state is called the **ground state**.",
+                },
+                lesson: "**The Hamiltonian** is a matrix that represents the energy of a quantum system. Its lowest eigenvalue is the ground state energy, and the corresponding state is the ground state.\n\nFor H = Z:\n* |0⟩ has energy ⟨0|Z|0⟩ = +1 (high energy, 'excited')\n* |1⟩ has energy ⟨1|Z|1⟩ = −1 (low energy, 'ground state')\n\nFor a general state RY(θ)|0⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩:\n⟨Z⟩ = cos²(θ/2) − sin²(θ/2) = cos(θ)\n\nSo the energy decreases as θ increases from 0 to π, reaching the minimum of −1 at θ = π.\n\n**This is VQE in miniature:** tune the circuit parameters to minimize the Hamiltonian's expectation value. The minimum-energy state is the answer.",
+                hint: "⟨Z⟩ = cos(θ). This is minimized at θ = π ≈ 3.14, where ⟨Z⟩ = −1 (the |1⟩ state).",
+            },
+            {
+                name: "13.2: The Energy Landscape",
+                quizDesc: "Use the landscape and optimizer to find the ground state of H = Z.",
+                variational: {
+                    numQubits: 1,
+                    params: [{ id: 'theta', label: 'θ', min: 0, max: 6.283, init: 0.5 }],
+                    template: [[ {gate:'RY', qubit:0, param:'theta'} ]],
+                    winMode: 'cost',
+                    hamiltonian: [{ pauli:'Z', qubits:[0], coeff:1 }],
+                    constTerm: 0,
+                    costThreshold: -0.95,
+                    higherIsBetter: false,
+                    showLandscape: true,
+                    landscapeParam: 'theta',
+                    showOptimizer: true,
+                    costLabel: '⟨Z⟩',
+                    task: "The **energy landscape** shows how the cost ⟨Z⟩ varies with θ. The valley is where the ground state lives. You can tune θ by hand, or click **Run Optimizer** to watch gradient descent automatically navigate toward the minimum.",
+                },
+                lesson: "**The energy landscape** is the key visual concept in variational algorithms. For a 1D parameter, it is just a curve — easy to picture. For many parameters, it becomes a high-dimensional surface that gradient descent must navigate.\n\n**Gradient descent** takes a small step in the direction that decreases the energy most steeply:\nθ ← θ − η · ∂⟨H⟩/∂θ\n\nFor our landscape ⟨Z⟩ = cos(θ), the gradient is −sin(θ), so gradient descent moves toward the minimum at θ=π.\n\n**The classical-quantum loop:**\n1. **Quantum computer** evaluates ⟨H⟩ for current parameters\n2. **Classical computer** computes gradients and updates parameters\n3. Repeat until converged\n\nThis loop — classical optimizer + quantum evaluator — is the heart of every variational quantum algorithm.",
+                hint: "Click 'Run Optimizer' to watch the gradient descent animation. Or manually drag θ toward π ≈ 3.14.",
+            },
+            {
+                name: "13.3: Two-Qubit Hamiltonian",
+                quizDesc: "Minimize ⟨H⟩ = −⟨ZZ⟩ − 0.5·⟨XX⟩ using the Bell-state ansatz.",
+                variational: {
+                    numQubits: 2,
+                    params: [
+                        { id: 'theta0', label: 'θ₀ (q₀)', min: 0, max: 6.283, init: 0.3 },
+                        { id: 'theta1', label: 'θ₁ (q₁)', min: 0, max: 6.283, init: 0.3 }
+                    ],
+                    template: [
+                        [ {gate:'RY',qubit:0,param:'theta0'}, {gate:'RY',qubit:1,param:'theta1'} ],
+                        [ 'CX01' ]
+                    ],
+                    winMode: 'cost',
+                    hamiltonian: [
+                        { pauli:'ZZ', qubits:[0,1], coeff:-1   },
+                        { pauli:'XX', qubits:[0,1], coeff:-0.5 }
+                    ],
+                    constTerm: 0,
+                    costThreshold: -1.4,
+                    higherIsBetter: false,
+                    showLandscape: false,
+                    showOptimizer: true,
+                    costLabel: '⟨H⟩',
+                    task: "Find the ground state of H = −ZZ − 0.5·XX. The Bell-state ansatz [RY⊗RY → CX] can prepare the ground state. Use the optimizer or tune θ₀ and θ₁ manually. The minimum energy is −1.5.",
+                },
+                lesson: "**Multi-qubit Hamiltonians** describe interacting quantum systems. Real molecules and materials have Hamiltonians with many Pauli terms like ZZ, XX, XY, etc.\n\nFor H = −ZZ − 0.5·XX:\n* −ZZ prefers states where both qubits are the same (|00⟩ or |11⟩): ⟨00|ZZ|00⟩ = +1, so −ZZ gives −1 energy → favors equal-spin configurations\n* −0.5·XX adds quantum fluctuations — it mixes states via bit-flip\n\nThe ground state is |Φ+⟩ = (|00⟩+|11⟩)/√2:\n⟨ZZ⟩ = 1, ⟨XX⟩ = 1 → ⟨H⟩ = −1 − 0.5 = **−1.5** ✓\n\n**VQE strategy:** choose an ansatz that can prepare the ground state — then optimize. The Bell-state ansatz works here because the ground state is a Bell pair.",
+                hint: "Set θ₀ = π/2 ≈ 1.57 and θ₁ = 0. The CX creates |Φ+⟩ with energy ⟨H⟩ = −1.5.",
+            },
+            {
+                name: "13.4: VQE in Full",
+                quizDesc: "Use the 4-parameter ansatz and optimizer to find the ground state of a more complex Hamiltonian.",
+                variational: {
+                    numQubits: 2,
+                    params: [
+                        { id: 'th0', label: 'θ₀', min: 0, max: 6.283, init: 0.5 },
+                        { id: 'th1', label: 'θ₁', min: 0, max: 6.283, init: 0.5 },
+                        { id: 'th2', label: 'θ₂', min: 0, max: 6.283, init: 0.5 },
+                        { id: 'th3', label: 'θ₃', min: 0, max: 6.283, init: 0.5 }
+                    ],
+                    template: [
+                        [ {gate:'RY',qubit:0,param:'th0'}, {gate:'RY',qubit:1,param:'th1'} ],
+                        [ 'CX01' ],
+                        [ {gate:'RY',qubit:0,param:'th2'}, {gate:'RY',qubit:1,param:'th3'} ]
+                    ],
+                    winMode: 'cost',
+                    hamiltonian: [
+                        { pauli:'ZZ', qubits:[0,1], coeff:-1   },
+                        { pauli:'XX', qubits:[0,1], coeff:-0.5 },
+                        { pauli:'Z',  qubits:[0],   coeff:0.3  },
+                        { pauli:'Z',  qubits:[1],   coeff:-0.3 }
+                    ],
+                    constTerm: 0,
+                    costThreshold: -1.3,
+                    higherIsBetter: false,
+                    showLandscape: false,
+                    showOptimizer: true,
+                    costLabel: '⟨H⟩',
+                    task: "This Hamiltonian has a broken symmetry: H = −ZZ − 0.5·XX + 0.3·Z₀ − 0.3·Z₁. The single-layer ansatz can't always find the ground state — but the deeper two-layer ansatz can. Click **Run Optimizer** and watch VQE converge.",
+                },
+                lesson: "**Full VQE** is the complete algorithm:\n\n1. **Choose an ansatz** — a parametrized circuit that can (hopefully) express the ground state\n2. **Initialize parameters** — often randomly or at zero\n3. **Evaluate ⟨H⟩** — run the quantum circuit and measure the cost\n4. **Update parameters** — classical optimizer computes gradient and takes a step\n5. **Repeat** until ⟨H⟩ converges\n\n**Why VQE matters for near-term hardware:**\n* Circuit depth is shallow — short circuits mean less noise\n* The quantum computer only evaluates ⟨H⟩; the classical computer does the optimization\n* It can handle molecular Hamiltonians with 50–100 qubits where classical simulation is infeasible\n\n**The challenge:** the optimization landscape can have many local minima ('barren plateaus'). Choosing good initial parameters and ansatz design are active research areas.\n\nVQE was first proposed in 2014 and experimentally demonstrated for H₂ using a photonic quantum computer. Today it is one of the most studied near-term quantum algorithms.",
+                hint: "Click 'Run Optimizer' to let gradient descent find the minimum. The deeper ansatz has extra parameters to handle the asymmetric Z terms.",
+            },
+        ]
+    },
+
+    // ── Stage 14: QAOA ───────────────────────────────────────────────────────
+    {
+        title: "QAOA",
+        section: "Variational Algorithms",
+        qubits: 2,
+        cols: 4,
+        set: ['H0', 'H1'],
+        levels: [
+            {
+                name: "14.1: All Solutions at Once",
+                quizDesc: "Apply H to all qubits to create equal superposition — the starting point of every QAOA circuit.",
+                set: ['H0', 'H1'],
+                hint: "Apply H to both qubits. The result is (|00⟩+|01⟩+|10⟩+|11⟩)/2 — all 4 bit-strings with equal probability.",
+                lesson: "**QAOA (Quantum Approximate Optimization Algorithm)** is a variational algorithm designed to solve combinatorial optimization problems — problems where we want to find the best assignment from a set of discrete choices.\n\n**Example: Max-Cut.** Given a graph, split the nodes into two groups (0 and 1) to maximize the number of edges between groups. For our 2-node graph with one edge, the max cut is 1 (put one node in each group: 01 or 10).\n\n**QAOA starts with H⊗n — equal superposition of all bit-strings.** This encodes the intuition: 'consider all solutions simultaneously.' For n=2 qubits, all 4 bit-strings |00⟩, |01⟩, |10⟩, |11⟩ each have probability 1/4.\n\nThen QAOA applies two alternating layers:\n1. **Phase separator U_C(γ):** boosts the phase of high-value solutions\n2. **Mixer U_B(β):** mixes amplitudes to escape local minima\n\nBy optimizing γ and β, we concentrate probability on the best solutions.",
+                circuits: [
+                    [['H0','H1']],
+                    [['H0'],['H1']],
+                    [['H1'],['H0']]
+                ]
+            },
+            {
+                name: "14.2: Phase Separator",
+                quizDesc: "Tune γ in the phase separator to concentrate probability on Max-Cut solutions for a 2-node graph.",
+                variational: {
+                    numQubits: 2,
+                    params: [{ id: 'gamma', label: 'γ', min: 0, max: 3.14159, init: 0 }],
+                    template: [
+                        ['H0', 'H1'],
+                        ['CX01'],
+                        [ {gate:'RZ', qubit:1, param:'gamma'} ],
+                        ['CX01']
+                    ],
+                    winMode: 'prob',
+                    targetBits: [1, 2],
+                    probThreshold: 0.8,
+                    showLandscape: true,
+                    landscapeParam: 'gamma',
+                    showOptimizer: true,
+                    costLabel: 'P(cut)',
+                    task: "The phase separator for edge (0,1) applies CX·RZ(γ)·CX. This circuit multiplies the amplitude of each basis state by a phase that depends on whether the edge is cut. Tune γ to maximize the probability of measuring a valid Max-Cut (|01⟩ or |10⟩).",
+                },
+                lesson: "**The phase separator** encodes the cost function into the phases of the quantum state. For a Max-Cut edge between nodes i and j:\n\nU_C(γ) = exp(−iγ/2 · (I − Z_iZ_j))\n\nThis is implemented as: CX_{ij} · RZ(γ)_j · CX_{ij}\n\n**What it does to each state:**\n* |00⟩, |11⟩ (same group, edge NOT cut): phase e^{−iγ} → no benefit\n* |01⟩, |10⟩ (different groups, edge CUT): phase e^{+iγ} → boosted\n\nAfter applying the phase separator, the cut solutions have gained a relative phase boost. But phases alone don't change probabilities — we need the mixer to turn phases into amplitudes.\n\n**Optimal γ:** for a single edge, the optimal phase separator angle is γ = π/2. This maximizes the interference that the mixer can exploit.\n\n**Note:** The current circuit only includes the phase separator. In the next level, we add the mixer to complete p=1 QAOA.",
+                hint: "The optimal γ for a single-edge graph is π/2 ≈ 1.57. The phase separator alone doesn't increase probabilities — but try different values and see the effect.",
+            },
+            {
+                name: "14.3: The Mixer",
+                quizDesc: "Add the mixer RX(β) to the phase separator and tune both γ and β to solve 2-node Max-Cut.",
+                variational: {
+                    numQubits: 2,
+                    params: [
+                        { id: 'gamma', label: 'γ (phase)', min: 0, max: 3.14159, init: 0 },
+                        { id: 'beta',  label: 'β (mixer)', min: 0, max: 1.5708,  init: 0 }
+                    ],
+                    template: [
+                        ['H0', 'H1'],
+                        ['CX01'],
+                        [ {gate:'RZ', qubit:1, param:'gamma'} ],
+                        ['CX01'],
+                        [ {gate:'RY', qubit:0, param:'beta'}, {gate:'RY', qubit:1, param:'beta'} ]
+                    ],
+                    winMode: 'prob',
+                    targetBits: [1, 2],
+                    probThreshold: 0.9,
+                    showLandscape: false,
+                    showOptimizer: true,
+                    costLabel: 'P(cut)',
+                    task: "The full QAOA p=1 circuit: H⊗H → Phase_Sep(γ) → Mixer(β). The mixer H·RZ(β)·H = RX(β) converts phases into measurable amplitude differences. Tune γ and β (or run the optimizer) to push P(|01⟩)+P(|10⟩) above 90%.",
+                },
+                lesson: "**The mixer** drives transitions between bit-strings, converting phase differences into amplitude differences.\n\nThe standard QAOA mixer is:\nU_B(β) = exp(−iβ Σ_i X_i) = ⊗_i RX(2β)\n\nFor our approximation, we apply RY(β) independently on each qubit (same interference effect for this simple graph).\n\n**The two-step magic:**\n1. Phase separator sets different phases on cut vs. non-cut states\n2. Mixer interferes the phases: cut states constructively interfere, non-cut states destructively interfere\n\n**Optimal parameters for 2-node Max-Cut:**\n* γ ≈ π/4 (not π/2 — that was without the mixer)\n* β ≈ π/8\n\nFor this graph, P(max cut) can reach ~100% with the right γ,β pair.\n\n**Why not just try all possibilities?** For n qubits there are 2^n bit-strings. Classical brute force takes O(2^n) — for n=50 that's 10^15 trials. QAOA runs one circuit per evaluation, and the number of evaluations grows much more slowly with problem size.",
+                hint: "Try γ ≈ 0.79 (π/4) and β ≈ 0.39 (π/8). Or click 'Run Optimizer' to let gradient ascent find the maximum.",
+            },
+            {
+                name: "14.4: QAOA on a Triangle",
+                quizDesc: "Solve Max-Cut on a 3-node triangle graph by tuning γ and β in the full QAOA p=1 circuit.",
+                variational: {
+                    numQubits: 3,
+                    params: [
+                        { id: 'gamma', label: 'γ (phase)', min: 0, max: 3.14159, init: 0.3 },
+                        { id: 'beta',  label: 'β (mixer)', min: 0, max: 1.5708,  init: 0.3 }
+                    ],
+                    template: [
+                        ['H0','H1','H2'],
+                        ['CX01'],
+                        [ {gate:'RZ',qubit:1,param:'gamma'} ],
+                        ['CX01'],
+                        ['CX12'],
+                        [ {gate:'RZ',qubit:2,param:'gamma'} ],
+                        ['CX12'],
+                        ['CX02'],
+                        [ {gate:'RZ',qubit:2,param:'gamma'} ],
+                        ['CX02'],
+                        [ {gate:'RY',qubit:0,param:'beta'}, {gate:'RY',qubit:1,param:'beta'}, {gate:'RY',qubit:2,param:'beta'} ]
+                    ],
+                    winMode: 'prob',
+                    targetBits: [1, 2, 3, 4, 5, 6],
+                    probThreshold: 0.75,
+                    showLandscape: false,
+                    showOptimizer: true,
+                    costLabel: 'P(cut≥2)',
+                    task: "A triangle graph has 3 nodes and 3 edges (0-1, 1-2, 0-2). The max cut = 2 (any partition with one node alone cuts 2 edges). The valid configurations are all 6 states except |000⟩ and |111⟩. Tune γ and β to get P(valid cut) > 75%.",
+                },
+                lesson: "**QAOA on the triangle** shows why quantum optimization is interesting: the problem is hard to solve optimally, but QAOA finds a near-optimal solution efficiently.\n\nFor a triangle graph, every assignment except |000⟩ and |111⟩ cuts exactly 2 edges. Classical random guessing gives P(max cut) = 6/8 = 75%. QAOA p=1 can do slightly better.\n\n**The full p=1 QAOA circuit:**\n* **Init:** H on all 3 qubits\n* **Phase separator:** Apply CX·RZ(γ)·CX for each edge (01, 12, 02)\n* **Mixer:** RY(β) on all 3 qubits\n\nAll three edges use the same γ parameter — this is the p=1 approximation. Higher p (more layers) allows different angles per layer and achieves better approximations.\n\n**VQE vs. QAOA:**\n* VQE finds a quantum ground state (energy minimization)\n* QAOA finds the optimal bit-string (combinatorial optimization)\n* Both use the same hybrid loop: quantum circuit + classical optimizer\n\n**The QAOA guarantee:** for p → ∞, QAOA finds the exact optimal solution. For finite p, it provides an approximation ratio that improves with depth.",
+                hint: "Click 'Run Optimizer' for the best results. Manually, try γ ≈ 0.39 and β ≈ 0.19 (the theoretical optimum for p=1 triangle Max-Cut).",
+            },
+        ]
+    },
 ];

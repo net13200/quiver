@@ -1,10 +1,10 @@
 import { LEVELS, STAGES } from './data/stages.js';
-import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, unlockAchievement, unlockedAchievements, achievementProgress, learnStreak, updateLearnStreak, updateDailyStreak, setSyncHook, applyRemoteProgress } from './data/storage.js';
+import { completedStages, totalPoints, highestStreak, tutorialComplete, setTutorialComplete, timedBest, saveTimedBest, markStageCompleted, unlockAchievement, unlockedAchievements, achievementProgress, learnStreak, updateLearnStreak, updateDailyStreak, setSyncHook, applyRemoteProgress } from './data/storage.js';
 import { initSync, signIn, signUp, signOut, schedulePush, submitFeedback } from './data/sync.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, PLAY_CATEGORIES } from './data/achievements.js';
 import { generateMatrices, formatAngleGate, getOccupiedQubits, canFit, GATE_MATRICES } from './quantum/gates.js';
-import { computeStateVector, stateToString, statesMatch } from './quantum/engine.js';
-import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, renderLearnAchievements, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti, showRevealCircuit } from './game/ui.js';
+import { computeStateVector, stateToString, statesMatch, computeVariationalState, computeExpectation, computeFidelity } from './quantum/engine.js';
+import { toggleAllGates, getColumnHTML, renderDynamicCanvases, updateBlochSpheres, updateBlochSpheresFromState, hideVictoryModal, showVictoryModal, showInfoModal, hideInfoModal, nextTourStep, endTour, setGhostPointer, clearGhostPointer, parseMarkdownAndMath, updateTargetBlochSphere, updateTimedStatusBar, showDuelChallengeBanner, showPlayChallengeBanner, showDailyChallengeBanner, showAchievementToast, renderAchievementsPanel, renderLearnAchievements, showTutorialPrompt, fireQuantumConfetti, fireSectionConfetti, showRevealCircuit } from './game/ui.js';
 import { handleCellTap, updateActiveRow } from './game/dragdrop.js';
 import { submitGuess } from './game/validator.js';
 import { trackSessionStart, trackGameStart, trackHintViewed, trackLessonViewed, trackTutorialSkipped, trackSectionComplete } from './data/analytics.js';
@@ -248,11 +248,12 @@ function showMainMenu() {
 
 // ── Section Data & Rendering Helpers ────────────────────────────────────────
 const SECTION_STYLES = {
-    'Foundations':       { color: '#3b82f6', bg: 'rgba(59,130,246,0.13)',  icon: '🧩' },
-    'Multi-Qubit Gates': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.13)', icon: '🔗' },
-    'Quantum Protocols': { color: '#06b6d4', bg: 'rgba(6,182,212,0.13)',   icon: '🔬' },
-    'Phase & QFT':       { color: '#f59e0b', bg: 'rgba(245,158,11,0.13)',  icon: '🌀' },
-    'Quantum Algorithms':{ color: '#22c55e', bg: 'rgba(34,197,94,0.13)',   icon: '🔍' },
+    'Foundations':          { color: '#3b82f6', bg: 'rgba(59,130,246,0.13)',  icon: '🧩' },
+    'Multi-Qubit Gates':    { color: '#8b5cf6', bg: 'rgba(139,92,246,0.13)', icon: '🔗' },
+    'Quantum Protocols':    { color: '#06b6d4', bg: 'rgba(6,182,212,0.13)',   icon: '🔬' },
+    'Phase & QFT':          { color: '#f59e0b', bg: 'rgba(245,158,11,0.13)',  icon: '🌀' },
+    'Quantum Algorithms':   { color: '#22c55e', bg: 'rgba(34,197,94,0.13)',   icon: '🔍' },
+    'Variational Algorithms':{ color: '#f97316', bg: 'rgba(249,115,22,0.13)', icon: '⚡' },
 };
 
 // A stage "owns" a quiz node when it has >1 level, or is the last in a run of
@@ -725,7 +726,7 @@ const GATE_CHECKBOX_IDS = { X:'chk-x', Y:'chk-y', Z:'chk-z', H:'chk-h', SX:'chk-
 function expandGateSet(baseGates, numQubits) {
     let expanded = [];
     baseGates.forEach(g => {
-        if (['X', 'Y', 'Z', 'H', 'SX', 'RZ'].includes(g)) {
+        if (['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'RY'].includes(g)) {
             for (let i = 0; i < numQubits; i++) expanded.push(`${g}${i}`);
         } else if (['CX', 'CP', 'SWAP'].includes(g)) {
             if (numQubits > 1) {
@@ -763,6 +764,15 @@ function initGame(mode, p1, p2) {
 
     if (!state.isTutorial) state.tutorialJustCompleted = false;
     state.selectedBaseGate = null;
+    state.isVariational = false;
+    _stopOptimizer();
+
+    // Reset variational UI state
+    const _varPanel = document.getElementById('variational-panel');
+    if (_varPanel) _varPanel.classList.add('hidden');
+    document.getElementById('board')?.classList.remove('hidden');
+    document.getElementById('palette-container')?.classList.remove('hidden');
+    document.getElementById('attempts-counter')?.classList.remove('hidden');
 
     document.getElementById('main-menu').style.display = 'none';
     hideVictoryModal();
@@ -812,14 +822,32 @@ function initGame(mode, p1, p2) {
         nextBtn.disabled = isLast || !currentDone;
         prevBtn.innerHTML = isFirst ? '&#8592; Prev' : `&#8592; ${lvlLabel(prevP1, prevP2)}`;
         nextBtn.innerHTML = (isLast || !currentDone) ? 'Next &#8594;' : `${lvlLabel(nextP1, nextP2)} &#8594;`;
-        state.numQubits = lvl.qubits || stage.qubits;
-        state.numCols = lvl.cols || stage.cols;
-        state.activeSet = lvl.set || stage.set;
-        state.secretCircuits = lvl.circuits;
-        
+
+        // Variational levels have a different spec and skip the normal circuit system
+        state.isVariational = !!lvl.variational;
+        if (state.isVariational) {
+            const vspec = lvl.variational;
+            state.numQubits = vspec.numQubits;
+            state.numCols   = 1;
+            state.activeSet = [];
+            state.secretCircuits = [[]];
+            state.variationalSpec = vspec;
+            state.variationalParams = Object.fromEntries(vspec.params.map(p => [p.id, p.init]));
+            submitBtn.classList.add('hidden');
+            targetBox.style.display = 'none';
+        } else {
+            state.numQubits = lvl.qubits || stage.qubits;
+            state.numCols = lvl.cols || stage.cols;
+            state.activeSet = lvl.set || stage.set;
+            state.secretCircuits = lvl.circuits;
+            targetBox.style.display = 'block';
+        }
+
         let isStrict = (p1 >= 4);
-        let rulesText = isStrict ? "<br><span style='color:#ef4444; font-size:0.85rem; font-weight:bold;'>Strict Mode: An exact implementation is required!</span>" : "";
-        let lessonHTML = lvl.lesson ? `<button id="lesson-btn" class="hint-btn" style="background:#059669;" onclick="showLesson()">Read Lesson</button><div id="lesson-text" class="lesson-text hidden">${lvl.lesson}</div>` : "";
+        let rulesText = (!state.isVariational && isStrict) ? "<br><span style='color:#ef4444; font-size:0.85rem; font-weight:bold;'>Strict Mode: An exact implementation is required!</span>" : "";
+        const lessonSrc = state.isVariational ? lvl.variational?.lesson || lvl.lesson : lvl.lesson;
+        const hintSrc   = state.isVariational ? lvl.variational?.hint   || lvl.hint   : lvl.hint;
+        let lessonHTML = lessonSrc ? `<button id="lesson-btn" class="hint-btn" style="background:#059669;" onclick="showLesson()">Read Lesson</button><div id="lesson-text" class="lesson-text hidden">${lessonSrc}</div>` : "";
         let labBtnHTML = p1 === 8 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryQftLab()">Try the QFT</button>`
                        : p1 === 9 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryAdderLab()">Try the QFT Adder</button>`
                        : (p1 === 11 && state.currentP2 === 2) ? `<button class="hint-btn" style="background:#22c55e;color:#0f172a;" onclick="showGroverLab()">Try Grover Iterations</button>`
@@ -833,8 +861,7 @@ function initGame(mode, p1, p2) {
                                     ${lessonHTML}
                                     ${labBtnHTML}
                                   </div>
-                                  <div id="hint-text" class="hint-text hidden">Hint: ${lvl.hint}</div>`;
-        targetBox.style.display = 'block';
+                                  <div id="hint-text" class="hint-text hidden">Hint: ${hintSrc}</div>`;
         liveBox.style.display = 'none';
         
     } else if (mode === 'RANDOM' || mode === 'DAILY') {
@@ -1129,11 +1156,9 @@ function initGame(mode, p1, p2) {
     let angleContainer = document.getElementById('rz-angle-container');
     if(angleContainer) angleContainer.style.display = hasAngleGate ? 'inline-block' : 'none';
     
-    if (mode !== 'FREEPLAY' && mode !== 'QFT_LAB') {
+    if (mode !== 'FREEPLAY' && mode !== 'QFT_LAB' && !state.isVariational) {
         state.targetState = computeStateVector(state.secretCircuits[0], state.numQubits, GATE_MATRICES);
         document.getElementById('target-amplitudes').innerText = "|ψ⟩ = " + stateToString(state.targetState, state.numQubits);
-
-        // --- NEW: Render the Target Bloch Sphere ---
         updateTargetBlochSphere(state.targetState, state.numQubits);
     } else {
         updateTargetBlochSphere(null, state.numQubits);
@@ -1166,9 +1191,14 @@ function initGame(mode, p1, p2) {
     renderDynamicCanvases(state.numQubits);
     renderPalette();
     renderBoard();
-    updateBlochSpheres(state.currentGuess, state.numQubits);
 
-    if (_isSignedIn && !tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB' && mode !== 'QFT_LAB') {
+    if (state.isVariational) {
+        initVariationalMode(state.variationalSpec);
+    } else {
+        updateBlochSpheres(state.currentGuess, state.numQubits);
+    }
+
+    if (_isSignedIn && !tutorialComplete && !tutorialPromptShown && mode !== 'TIMED' && mode !== 'FREEPLAY' && mode !== 'LAB' && mode !== 'QFT_LAB' && !state.isVariational) {
         tutorialPromptShown = true;
         setTimeout(() => {
             if (state.gameOver) return;
@@ -1199,6 +1229,296 @@ window.toggleAdderLabPlay = () => toggleAdderLabPlay(state, renderBoard);
 window.toggleGroverLabPlay = toggleGroverLabPlay;
 window.selectLabNumber   = n => selectLabNumber(n, state, renderBoard);
 window.selectQftInput    = n => selectQftInput(n, state, renderBoard);
+
+// ── Variational Mode ──────────────────────────────────────────────────────
+let _varOptimizerTimer = null;
+
+function initVariationalMode(vspec) {
+    // Hide circuit board and palette — variational uses a custom panel
+    document.getElementById('board').classList.add('hidden');
+    document.getElementById('palette-container').classList.add('hidden');
+    document.getElementById('attempts-counter').classList.add('hidden');
+
+    const panel = document.getElementById('variational-panel');
+    panel.classList.remove('hidden');
+
+    // Build parameter sliders
+    const paramsSection = document.getElementById('var-params-section');
+    paramsSection.innerHTML = vspec.params.map(p => {
+        const val = state.variationalParams[p.id] ?? p.init;
+        return `<div class="var-param-row">
+            <div class="var-param-label">${p.label} = <span id="var-param-${p.id}-val">${val.toFixed(2)}</span></div>
+            <input type="range" id="var-param-${p.id}" class="var-param-slider"
+                   min="${p.min}" max="${p.max}" step="0.02" value="${val}">
+        </div>`;
+    }).join('');
+
+    // Attach live slider events
+    vspec.params.forEach(p => {
+        document.getElementById(`var-param-${p.id}`).addEventListener('input', e => {
+            state.variationalParams[p.id] = parseFloat(e.target.value);
+            document.getElementById(`var-param-${p.id}-val`).textContent = state.variationalParams[p.id].toFixed(2);
+            recomputeVariational();
+        });
+    });
+
+    // Show cost or fidelity section
+    const costSection = document.getElementById('var-cost-section');
+    const fidSection  = document.getElementById('var-fidelity-section');
+    if (vspec.winMode === 'fidelity') {
+        costSection.classList.add('hidden');
+        fidSection.classList.remove('hidden');
+    } else {
+        fidSection.classList.add('hidden');
+        costSection.classList.remove('hidden');
+        document.getElementById('var-cost-label').textContent = (vspec.costLabel || '⟨H⟩') + ' = ';
+        const goalThresh = vspec.winMode === 'prob'
+            ? Math.round((vspec.probThreshold ?? 0.8) * 100) + '%'
+            : (vspec.costThreshold ?? '?');
+        const sign = (vspec.higherIsBetter || vspec.winMode === 'prob') ? '>' : '<';
+        document.getElementById('var-cost-goal').textContent = `Goal: ${vspec.costLabel || '⟨H⟩'} ${sign} ${goalThresh}`;
+    }
+
+    // Landscape
+    const landscapeWrap = document.getElementById('var-landscape-wrap');
+    if (vspec.showLandscape && vspec.landscapeParam) {
+        landscapeWrap.classList.remove('hidden');
+    } else {
+        landscapeWrap.classList.add('hidden');
+    }
+
+    // Optimizer button
+    const optRow = document.getElementById('var-optimizer-row');
+    if (vspec.showOptimizer) {
+        optRow.classList.remove('hidden');
+    } else {
+        optRow.classList.add('hidden');
+    }
+
+    // Task description
+    if (vspec.task) {
+        const taskEl = document.getElementById('var-task');
+        if (taskEl) taskEl.textContent = vspec.task;
+    }
+
+    recomputeVariational();
+}
+
+function _computeVariationalCost(vspec, paramValues) {
+    const sv = computeVariationalState(vspec.template, paramValues, vspec.numQubits, GATE_MATRICES);
+
+    if (vspec.winMode === 'fidelity') {
+        return computeFidelity(sv, vspec.targetVec);
+    } else if (vspec.winMode === 'prob') {
+        const N = 1 << vspec.numQubits;
+        let prob = 0;
+        for (const bit of (vspec.targetBits || [])) {
+            if (bit < N) prob += sv[bit].r * sv[bit].r + sv[bit].i * sv[bit].i;
+        }
+        return prob;
+    } else {
+        const raw = computeExpectation(sv, vspec.hamiltonian, vspec.numQubits);
+        return raw + (vspec.constTerm || 0);
+    }
+}
+
+function recomputeVariational() {
+    const vspec = state.variationalSpec;
+    if (!vspec) return;
+
+    const sv = computeVariationalState(vspec.template, state.variationalParams, vspec.numQubits, GATE_MATRICES);
+    updateBlochSpheresFromState(sv, vspec.numQubits);
+
+    const cost = _computeVariationalCost(vspec, state.variationalParams);
+
+    if (vspec.winMode === 'fidelity') {
+        const pct = Math.round(cost * 100);
+        document.getElementById('var-fidelity-value').textContent = pct + '%';
+        const bar = document.getElementById('var-fidelity-bar');
+        if (bar) bar.style.width = pct + '%';
+    } else {
+        const display = vspec.winMode === 'prob' ? Math.round(cost * 100) + '%' : cost.toFixed(3);
+        document.getElementById('var-cost-value').textContent = display;
+        // Progress bar: map cost to a 0-100% visual
+        const bar = document.getElementById('var-progress-bar');
+        if (bar) {
+            let pct;
+            if (vspec.winMode === 'prob') {
+                pct = Math.round(cost * 100);
+            } else if (vspec.higherIsBetter) {
+                pct = Math.min(100, Math.round((cost / (vspec.costThreshold || 1)) * 100));
+            } else {
+                const min = vspec.costThreshold ?? -1;
+                pct = Math.max(0, Math.min(100, Math.round((1 - (cost - min) / (1 - min)) * 100)));
+            }
+            bar.style.width = pct + '%';
+        }
+    }
+
+    if (vspec.showLandscape) _drawLandscape(vspec);
+
+    // Check win
+    const won = _checkVariationalWin(vspec, cost);
+    if (won && !state.gameOver) {
+        state.gameOver = true;
+        _stopOptimizer();
+        // Small delay so the user sees the final readout
+        setTimeout(() => _fireVariationalVictory(), 300);
+    }
+}
+
+function _checkVariationalWin(vspec, cost) {
+    if (vspec.winMode === 'fidelity') return cost >= (vspec.fidelityThreshold ?? 0.99);
+    if (vspec.winMode === 'prob')     return cost >= (vspec.probThreshold ?? 0.8);
+    if (vspec.higherIsBetter)         return cost >= (vspec.costThreshold ?? 0);
+    return cost <= (vspec.costThreshold ?? -0.95);
+}
+
+function _fireVariationalVictory() {
+    const vspec = state.variationalSpec;
+    const p1 = state.currentP1, p2 = state.currentP2;
+    const stage = STAGES[p1];
+    const hasNext = p2 + 1 < stage.levels.length || p1 + 1 < STAGES.length;
+
+    fireQuantumConfetti();
+    markStageCompleted(p1, p2);
+    updateLearnStreak();
+    buildSectionsOverview();
+
+    // Achievement checks
+    const tryUnlock = (id) => {
+        if (unlockAchievement(id)) {
+            const a = ACHIEVEMENT_MAP[id];
+            if (a) setTimeout(() => showAchievementToast(a.name, a.icon), 900);
+        }
+    };
+    tryUnlock('superposition');
+    const stageComplete = stage.levels.every((_, lIdx) => completedStages.includes(`${p1}-${lIdx}`));
+    if (stageComplete) tryUnlock(`stage_${p1}_complete`);
+    const allStageIds = [];
+    STAGES.forEach((s, sIdx) => s.levels.forEach((_, lIdx) => allStageIds.push(`${sIdx}-${lIdx}`)));
+    if (allStageIds.every(id => completedStages.includes(id))) tryUnlock('quantum_literate');
+    const ls = parseInt(localStorage.getItem('quiver_learn_streak') || '0');
+    if (ls >= 7)  tryUnlock('learn_streak_7');
+    if (ls >= 30) tryUnlock('learn_streak_30');
+
+    const cost = _computeVariationalCost(vspec, state.variationalParams);
+    const subtitle = vspec.winMode === 'fidelity'
+        ? `Fidelity: ${Math.round(cost * 100)}%`
+        : `${vspec.costLabel || '⟨H⟩'} = ${cost.toFixed(3)}`;
+
+    showVictoryModal(`${stage.title} ${p2 + 1} Complete!`, subtitle, null, hasNext, null);
+
+    const nextBtn = document.getElementById('modal-next-btn');
+    if (nextBtn) {
+        nextBtn.textContent = 'Next Level';
+        nextBtn.onclick = () => {
+            hideVictoryModal();
+            if (p2 + 1 < stage.levels.length) initGame('STAGE', p1, p2 + 1);
+            else if (p1 + 1 < STAGES.length)  initGame('STAGE', p1 + 1, 0);
+        };
+    }
+    const againBtn = document.getElementById('modal-again-btn');
+    if (againBtn) {
+        againBtn.classList.remove('hidden');
+        againBtn.textContent = 'Try Again';
+        againBtn.onclick = () => { hideVictoryModal(); initGame('STAGE', p1, p2); };
+    }
+    const menuBtn = document.getElementById('modal-menu-btn');
+    if (menuBtn) menuBtn.textContent = 'Back to Stages';
+}
+
+function _drawLandscape(vspec) {
+    const svg = document.getElementById('var-landscape-svg');
+    if (!svg) return;
+    const W = 280, H = 80, PAD = 10;
+    const param = vspec.params.find(p => p.id === vspec.landscapeParam);
+    if (!param) return;
+
+    const steps = 60;
+    const min = param.min, max = param.max;
+    const points = [];
+    let costMin = Infinity, costMax = -Infinity;
+
+    for (let i = 0; i <= steps; i++) {
+        const t = min + (max - min) * (i / steps);
+        const params = {...state.variationalParams, [param.id]: t};
+        const c = _computeVariationalCost(vspec, params);
+        points.push({t, c});
+        if (c < costMin) costMin = c;
+        if (c > costMax) costMax = c;
+    }
+
+    const range = costMax - costMin || 1;
+    const toX = t => PAD + (t - min) / (max - min) * (W - 2*PAD);
+    const toY = c => PAD + (1 - (c - costMin) / range) * (H - 2*PAD);
+
+    const polyline = points.map(({t, c}) => `${toX(t).toFixed(1)},${toY(c).toFixed(1)}`).join(' ');
+
+    const curVal = state.variationalParams[param.id];
+    const curCost = _computeVariationalCost(vspec, state.variationalParams);
+    const dotX = toX(curVal), dotY = toY(curCost);
+
+    // Threshold line
+    const threshVal = vspec.costThreshold ?? vspec.probThreshold;
+    let threshLine = '';
+    if (threshVal != null) {
+        const ty = toY(threshVal);
+        if (ty >= PAD && ty <= H - PAD) {
+            threshLine = `<line x1="${PAD}" y1="${ty.toFixed(1)}" x2="${W-PAD}" y2="${ty.toFixed(1)}" stroke="#22c55e" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>`;
+        }
+    }
+
+    svg.innerHTML = `
+        <polyline points="${polyline}" fill="none" stroke="#f97316" stroke-width="2" stroke-linejoin="round"/>
+        ${threshLine}
+        <circle cx="${dotX.toFixed(1)}" cy="${dotY.toFixed(1)}" r="5" fill="#fbbf24" stroke="#fff" stroke-width="1.5"/>
+    `;
+}
+
+function _stopOptimizer() {
+    if (_varOptimizerTimer) { clearInterval(_varOptimizerTimer); _varOptimizerTimer = null; }
+    const btn = document.getElementById('var-optimizer-btn');
+    if (btn) { btn.textContent = '▶ Run Optimizer'; btn.disabled = false; }
+}
+
+window.runVariationalOptimizer = function() {
+    if (_varOptimizerTimer) { _stopOptimizer(); return; }
+    const vspec = state.variationalSpec;
+    if (!vspec || state.gameOver) return;
+
+    const btn = document.getElementById('var-optimizer-btn');
+    if (btn) { btn.textContent = '⏹ Stop'; }
+
+    const eps = 0.05;
+    const lr0 = 0.25;
+    let step = 0;
+    const maxSteps = 80;
+    const sign = (vspec.higherIsBetter || vspec.winMode === 'prob') ? -1 : 1;
+
+    _varOptimizerTimer = setInterval(() => {
+        if (state.gameOver || step >= maxSteps) { _stopOptimizer(); return; }
+        step++;
+        const lr = lr0 * Math.pow(0.98, step);
+
+        // Finite-difference gradient
+        vspec.params.forEach(p => {
+            const curr = state.variationalParams[p.id];
+            const cp = {...state.variationalParams, [p.id]: curr + eps};
+            const cm = {...state.variationalParams, [p.id]: curr - eps};
+            const grad = (_computeVariationalCost(vspec, cp) - _computeVariationalCost(vspec, cm)) / (2 * eps);
+            // gradient descent: move against gradient (or ascent: move with it)
+            state.variationalParams[p.id] = Math.max(p.min, Math.min(p.max, curr - sign * lr * grad));
+            // Update slider and label
+            const slider = document.getElementById(`var-param-${p.id}`);
+            const label  = document.getElementById(`var-param-${p.id}-val`);
+            if (slider) slider.value = state.variationalParams[p.id].toFixed(3);
+            if (label)  label.textContent = state.variationalParams[p.id].toFixed(2);
+        });
+
+        recomputeVariational();
+    }, 80);
+};
 
 // ── Auth UI ───────────────────────────────────────────────────────────────
 let _authMode = 'signin'; // 'signin' | 'signup'
@@ -1342,6 +1662,7 @@ const GATE_TIPS = {
     H:    'Hadamard: Creates equal superposition.\n|0⟩ → (|0⟩+|1⟩)/√2',
     SX:   '√X: Half a bit flip. Creates partial superposition.',
     RZ:   'RZ(θ): Rotation around Z-axis by θ. Adds relative phase between |0⟩ and |1⟩.',
+    RY:   'RY(θ): Rotation around Y-axis by θ. Continuously interpolates between |0⟩ and |1⟩.',
     CX:   'CNOT: Flips target qubit only when control is |1⟩. Generates entanglement.',
     CP:   'Controlled Phase: Adds phase to the |11⟩ state. Used in QFT.',
     SWAP: 'SWAP: Exchanges the full states of two qubits.',
@@ -1357,7 +1678,7 @@ function renderPalette() {
     const h = Math.max(60, state.numQubits * 30);
 
     // Extract unique base gates instead of showing all permutations
-    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'CX', 'CP', 'SWAP', 'CCX', 'QFT', 'IQFT', 'IQFT2'];
+    const allBases = ['X', 'Y', 'Z', 'H', 'SX', 'RZ', 'RY', 'CX', 'CP', 'SWAP', 'CCX', 'QFT', 'IQFT', 'IQFT2'];
     const exactMatchBases = new Set(['QFT', 'IQFT', 'IQFT2']);
     const uniqueBases = allBases.filter(base =>
         exactMatchBases.has(base)
@@ -1374,6 +1695,7 @@ function renderPalette() {
         // Mock a beautifully formatted gate just for the palette display
         let renderGate = baseType;
         if (baseType.startsWith('RZ')) renderGate = `RZ_${state.currentRzAngle}_0`;
+        else if (baseType.startsWith('RY')) renderGate = `RY_PI2_0`;
         else if (baseType.startsWith('CP')) renderGate = `CP_${state.currentRzAngle}_01`;
         else if (baseType === 'CX' || baseType === 'SWAP') renderGate = `${baseType}01`;
         else if (baseType === 'CCX') renderGate = `CCX012`;
@@ -1431,7 +1753,7 @@ function renderBoard() {
 
     const attemptsCounter = document.getElementById('attempts-counter');
     const timedBar = document.getElementById('timed-status-bar');
-    if (state.currentMode === 'FREEPLAY' || state.currentMode === 'LAB' || state.currentMode === 'QFT_LAB') {
+    if (state.isVariational || state.currentMode === 'FREEPLAY' || state.currentMode === 'LAB' || state.currentMode === 'QFT_LAB') {
         attemptsCounter.style.display = 'none';
         timedBar.classList.add('hidden');
     } else if (state.currentMode === 'TIMED') {

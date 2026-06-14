@@ -191,6 +191,35 @@
             <button id="stage-next-btn" class="stage-nav-btn">Next &#8594;</button>
         </div>
 
+        <!-- Variational mode panel — shown only for variational levels -->
+        <div id="variational-panel" class="hidden">
+            <div class="var-task-desc" id="var-task"></div>
+            <div id="var-params-section"></div>
+            <div id="var-cost-section" class="hidden">
+                <div class="var-cost-row">
+                    <span class="var-cost-label" id="var-cost-label">⟨H⟩ = </span>
+                    <span class="var-cost-value" id="var-cost-value">0.000</span>
+                </div>
+                <div class="var-progress-wrap"><div class="var-progress-bar" id="var-progress-bar"></div></div>
+                <div class="var-cost-goal" id="var-cost-goal"></div>
+            </div>
+            <div id="var-fidelity-section" class="hidden">
+                <div class="var-cost-row">
+                    <span class="var-cost-label">Fidelity: </span>
+                    <span class="var-cost-value" id="var-fidelity-value">0%</span>
+                </div>
+                <div class="var-progress-wrap"><div class="var-progress-bar" id="var-fidelity-bar"></div></div>
+                <div class="var-cost-goal">Goal: reach target state (≥ 99%)</div>
+            </div>
+            <div id="var-landscape-wrap" class="var-landscape-wrap hidden">
+                <div class="var-landscape-label">Energy Landscape</div>
+                <svg id="var-landscape-svg" width="280" height="80" viewBox="0 0 280 80" style="display:block;"></svg>
+            </div>
+            <div id="var-optimizer-row" class="hidden">
+                <button id="var-optimizer-btn" class="var-optimizer-btn" onclick="window.runVariationalOptimizer()">&#9654; Run Optimizer</button>
+            </div>
+        </div>
+
         <div class="main-layout">
             <div class="left-col">
                 <div id="target-container" class="state-container">

@@ -153,3 +153,104 @@ export function computeStateVector(sequence, N, gateMatrices, initialState = nul
     }
     return removeGlobalPhase(v);
 }
+
+// --- Variational / VQE support ---
+
+const _I2 = [[{r:1,i:0},{r:0,i:0}],[{r:0,i:0},{r:1,i:0}]];
+
+function _buildSingleQubitNGate(mat2, qubit, numQubits) {
+    const mats = Array(numQubits).fill(_I2);
+    mats[qubit] = mat2;
+    return kronN(mats);
+}
+
+function _resolveParamGate(spec, paramValues, numQubits) {
+    const theta = paramValues[spec.param] ?? 0;
+    if (spec.gate === 'RY') {
+        const cv = Math.cos(theta / 2), sv = Math.sin(theta / 2);
+        return _buildSingleQubitNGate([[{r:cv,i:0},{r:-sv,i:0}],[{r:sv,i:0},{r:cv,i:0}]], spec.qubit, numQubits);
+    }
+    if (spec.gate === 'RZ') {
+        return _buildSingleQubitNGate([[{r:1,i:0},{r:0,i:0}],[{r:0,i:0},{r:Math.cos(theta),i:Math.sin(theta)}]], spec.qubit, numQubits);
+    }
+    return null;
+}
+
+// Computes the state vector for a variational circuit template.
+// template: array of columns; each column is array of gate specs.
+//   String spec → looked up in fixedGateMatrices.
+//   Object spec {gate, qubit, param} → computed from paramValues.
+// Does NOT remove global phase.
+export function computeVariationalState(template, paramValues, numQubits, fixedGateMatrices) {
+    const numStates = 1 << numQubits;
+    let v = Array(numStates).fill().map(() => ({r:0, i:0}));
+    v[0] = {r:1, i:0};
+
+    const I_N = fixedGateMatrices['I'];
+
+    for (const column of template) {
+        if (!column || column.length === 0) continue;
+        let colMatrix = I_N;
+        for (const spec of column) {
+            const gmat = typeof spec === 'string'
+                ? fixedGateMatrices[spec]
+                : _resolveParamGate(spec, paramValues, numQubits);
+            if (gmat) colMatrix = matMult(colMatrix, gmat);
+        }
+        const nextV = [];
+        for (let i = 0; i < numStates; i++) {
+            let sum = {r:0, i:0};
+            for (let j = 0; j < numStates; j++) sum = add(sum, mult(colMatrix[i][j], v[j]));
+            nextV.push(sum);
+        }
+        v = nextV;
+    }
+    return v;
+}
+
+// Computes ⟨ψ|H|ψ⟩ for a Pauli Hamiltonian.
+// hamiltonian: [{pauli: 'ZZ', qubits: [0,1], coeff: -0.5}, ...]
+export function computeExpectation(stateVec, hamiltonian, numQubits) {
+    if (!hamiltonian || hamiltonian.length === 0) return 0;
+    let total = 0;
+    for (const term of hamiltonian) {
+        total += term.coeff * _pauliExpectation(stateVec, term.pauli, term.qubits, numQubits);
+    }
+    return total;
+}
+
+function _pauliExpectation(stateVec, pauli, qubits, numQubits) {
+    const N = 1 << numQubits;
+    let real = 0;
+    for (let j = 0; j < N; j++) {
+        let phase = {r:1, i:0};
+        let k = j;
+        for (let idx = 0; idx < pauli.length; idx++) {
+            const p = pauli[idx];
+            const q = qubits[idx];
+            const bitPos = numQubits - 1 - q;
+            const bit = (k >> bitPos) & 1;
+            if (p === 'Z') {
+                if (bit === 1) phase = {r: -phase.r, i: -phase.i};
+            } else if (p === 'X') {
+                k ^= (1 << bitPos);
+            } else if (p === 'Y') {
+                if (bit === 0) { k ^= (1 << bitPos); const t = phase.r; phase.r = -phase.i; phase.i = t; }
+                else           { k ^= (1 << bitPos); const t = phase.r; phase.r =  phase.i; phase.i = -t; }
+            }
+        }
+        const cj = stateVec[j], ck = stateVec[k];
+        real += cj.r * (phase.r*ck.r - phase.i*ck.i) + cj.i * (phase.r*ck.i + phase.i*ck.r);
+    }
+    return real;
+}
+
+// |⟨target|state⟩|²
+export function computeFidelity(stateVec, targetVec) {
+    let re = 0, im = 0;
+    for (let j = 0; j < stateVec.length; j++) {
+        re += targetVec[j].r * stateVec[j].r + targetVec[j].i * stateVec[j].i;
+        im += targetVec[j].r * stateVec[j].i - targetVec[j].i * stateVec[j].r;
+    }
+    return re * re + im * im;
+}
