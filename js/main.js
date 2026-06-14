@@ -274,9 +274,7 @@ function getQuizStagePool(sIdx) {
         i--;
     }
     const pool = [];
-    chain.forEach(s => STAGES[s].levels.forEach((lev, l) => {
-        if (!lev.variational) pool.push({ sIdx: s, lIdx: l });
-    }));
+    chain.forEach(s => STAGES[s].levels.forEach((_, l) => pool.push({ sIdx: s, lIdx: l })));
     return pool;
 }
 
@@ -1073,9 +1071,7 @@ function initGame(mode, p1, p2) {
             state._quizSessionSeed = Math.floor(Math.random() * 900000) + 100000;
 
             const pool = isGlobal
-                ? completedStages
-                    .map(id => { const [s, l] = id.split('-').map(Number); return { sIdx: s, lIdx: l }; })
-                    .filter(({ sIdx, lIdx }) => !STAGES[sIdx]?.levels[lIdx]?.variational)
+                ? completedStages.map(id => { const [s, l] = id.split('-').map(Number); return { sIdx: s, lIdx: l }; })
                 : getQuizStagePool(p1);
             state.quizTotal = Math.min(5, pool.length);
             const shuffleRng = getSeededRandom(state._quizSessionSeed);
@@ -1115,15 +1111,26 @@ function initGame(mode, p1, p2) {
             const currentQuizStage = STAGES[questionSIdx];
             const chosenLevel = currentQuizStage.levels[state._quizCurrentLevelIdx ?? 0];
 
-            state.numQubits = chosenLevel.qubits || currentQuizStage.qubits;
-            state.numCols   = chosenLevel.cols   || currentQuizStage.cols;
-            state.activeSet = buildActiveSet(chosenLevel.set || currentQuizStage.set || [], state.numQubits);
+            if (chosenLevel.variational) {
+                const vspec = chosenLevel.variational;
+                state.isVariational = true;
+                state.variationalSpec = vspec;
+                state.variationalParams = Object.fromEntries(vspec.params.map(p => [p.id, p.init]));
+                state.numQubits = vspec.numQubits;
+                state.numCols   = vspec.template.length;
+                state.activeSet = [];
+                state.secretCircuits = [[]];
+                submitBtn.classList.add('hidden');
+            } else {
+                state.numQubits = chosenLevel.qubits || currentQuizStage.qubits;
+                state.numCols   = chosenLevel.cols   || currentQuizStage.cols;
+                state.activeSet = buildActiveSet(chosenLevel.set || currentQuizStage.set || [], state.numQubits);
+                state.secretCircuits = chosenLevel.circuits;
+            }
             generateMatrices(state.numQubits);
-
-            state.secretCircuits = chosenLevel.circuits;
             const contextHTML = isGlobal ? `<div class="quiz-context">${currentQuizStage.title} · ${chosenLevel.name.replace(/^[\d\.]+[\.:]?\s*/, '')}</div>` : '';
             taskHTML = `${contextHTML}<div class="quiz-task"><div class="quiz-task-label">Your task:</div><div class="quiz-task-desc">${chosenLevel.quizDesc || chosenLevel.name}</div></div>`;
-            if (questionSIdx >= 4) strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
+            if (questionSIdx >= 4 && !chosenLevel.variational) strictNotice = `<div class="quiz-strict-notice">Strict Mode — exact circuit required</div>`;
         }
         const dotsHTML = Array(state.quizTotal).fill(0).map((_, i) => {
             const cls = i < state.quizScore ? 'correct' : (i === state.quizScore ? 'current' : '');
@@ -1386,6 +1393,19 @@ function _checkVariationalWin(vspec, cost) {
 }
 
 function _fireVariationalVictory() {
+    if (state.currentMode === 'QUIZ') {
+        state.quizScore++;
+        const msg = document.getElementById('message');
+        msg.innerText = '✓ Correct!';
+        msg.style.color = '#22c55e';
+        setTimeout(() => {
+            msg.innerText = '';
+            if (state.quizScore >= state.quizTotal) window.showQuizVictory?.();
+            else window.quizNextQuestion?.();
+        }, 900);
+        return;
+    }
+
     const vspec = state.variationalSpec;
     const p1 = state.currentP1, p2 = state.currentP2;
     const stage = STAGES[p1];

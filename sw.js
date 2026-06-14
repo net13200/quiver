@@ -44,6 +44,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
+  if (!url.startsWith('http')) return;
   // Never cache Supabase API calls or the Supabase SDK from CDN
   if (url.includes('supabase.co') || url.includes('supabase.js')) {
     e.respondWith(fetch(e.request));
