@@ -828,7 +828,7 @@ function initGame(mode, p1, p2) {
         if (state.isVariational) {
             const vspec = lvl.variational;
             state.numQubits = vspec.numQubits;
-            state.numCols   = 1;
+            state.numCols   = vspec.template.length;
             state.activeSet = [];
             state.secretCircuits = [[]];
             state.variationalSpec = vspec;
@@ -1233,80 +1233,19 @@ window.selectQftInput    = n => selectQftInput(n, state, renderBoard);
 // ── Variational Mode ──────────────────────────────────────────────────────
 let _varOptimizerTimer = null;
 
-function _renderVariationalCircuit(vspec) {
-    const el = document.getElementById('var-circuit');
-    if (!el || !vspec.template) return;
-
-    const PARAM_SYM = {
-        theta:'θ', phi:'φ', gamma:'γ', beta:'β',
-        theta0:'θ₀', theta1:'θ₁', theta2:'θ₂', theta3:'θ₃',
-        th0:'θ₀', th1:'θ₁', th2:'θ₂', th3:'θ₃',
-    };
-    const SUB = ['₀','₁','₂'];
-    const nQ = vspec.numQubits;
-    const nC = vspec.template.length;
-    const COL_W = nC > 8 ? 38 : nC > 5 ? 42 : 48;
-    const WIRE_H = 38, LEFT_PAD = 28, RIGHT_PAD = 8, TOP_PAD = 12, BOT_PAD = 8;
-    const W = LEFT_PAD + nC * COL_W + RIGHT_PAD;
-    const H = TOP_PAD + nQ * WIRE_H + BOT_PAD;
-    const wireY = q => TOP_PAD + q * WIRE_H + WIRE_H / 2;
-
-    let s = `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;" xmlns="http://www.w3.org/2000/svg">`;
-
-    // Qubit wires + labels
-    for (let q = 0; q < nQ; q++) {
-        const y = wireY(q);
-        s += `<line x1="${LEFT_PAD}" y1="${y}" x2="${W - RIGHT_PAD}" y2="${y}" stroke="#4a5568" stroke-width="1.5"/>`;
-        s += `<text x="${LEFT_PAD - 4}" y="${y + 4}" text-anchor="end" font-size="11" fill="#718096">q${SUB[q]}</text>`;
-    }
-
-    // Gates per column
-    for (let ci = 0; ci < nC; ci++) {
-        const col = vspec.template[ci];
-        const cx = LEFT_PAD + ci * COL_W + COL_W / 2;
-        for (const spec of col) {
-            if (typeof spec === 'string') {
-                if (spec.startsWith('CX') && spec.length === 4) {
-                    const ctrl = parseInt(spec[2]), tgt = parseInt(spec[3]);
-                    const yc = wireY(ctrl), yt = wireY(tgt);
-                    s += `<line x1="${cx}" y1="${yc}" x2="${cx}" y2="${yt}" stroke="#718096" stroke-width="1.5"/>`;
-                    s += `<circle cx="${cx}" cy="${yc}" r="5" fill="#718096"/>`;
-                    s += `<circle cx="${cx}" cy="${yt}" r="10" fill="none" stroke="#718096" stroke-width="1.5"/>`;
-                    s += `<line x1="${cx-10}" y1="${yt}" x2="${cx+10}" y2="${yt}" stroke="#718096" stroke-width="1.5"/>`;
-                    s += `<line x1="${cx}" y1="${yt-10}" x2="${cx}" y2="${yt+10}" stroke="#718096" stroke-width="1.5"/>`;
-                } else {
-                    const qubit = parseInt(spec[spec.length - 1]);
-                    const name = spec.slice(0, -1);
-                    const y = wireY(qubit);
-                    s += `<rect x="${cx-13}" y="${y-11}" width="26" height="22" rx="4" fill="#1e2233" stroke="#4a5568" stroke-width="1.2"/>`;
-                    s += `<text x="${cx}" y="${y+4}" text-anchor="middle" font-size="11" fill="#e2e8f0" font-weight="bold">${name}</text>`;
-                }
-            } else {
-                // Parametrized gate — orange
-                const y = wireY(spec.qubit);
-                const sym = PARAM_SYM[spec.param] || spec.param;
-                const label = `${spec.gate}(${sym})`;
-                const bw = COL_W > 40 ? 42 : 36;
-                s += `<rect x="${cx - bw/2}" y="${y-11}" width="${bw}" height="22" rx="4" fill="rgba(249,115,22,0.18)" stroke="#f97316" stroke-width="1.5"/>`;
-                s += `<text x="${cx}" y="${y+4}" text-anchor="middle" font-size="10" fill="#fed7aa" font-weight="bold">${label}</text>`;
-            }
-        }
-    }
-
-    s += '</svg>';
-    el.innerHTML = s;
-}
-
 function initVariationalMode(vspec) {
-    // Hide circuit board and palette — variational uses a custom panel
-    document.getElementById('board').classList.add('hidden');
+    // Hide palette — circuit board stays visible (read-only)
     document.getElementById('palette-container').classList.add('hidden');
     document.getElementById('attempts-counter').classList.add('hidden');
 
+    // Populate board with the fixed circuit template (read-only, no tap zones)
+    state.currentGuess = vspec.template.map(col =>
+        col.map(spec => typeof spec === 'string' ? spec : `${spec.gate}_VAR_${spec.param}_${spec.qubit}`)
+    );
+    renderBoard();
+
     const panel = document.getElementById('variational-panel');
     panel.classList.remove('hidden');
-
-    _renderVariationalCircuit(vspec);
 
     // Build parameter sliders
     const paramsSection = document.getElementById('var-params-section');
@@ -1863,7 +1802,7 @@ function renderBoard() {
         slotCol.appendChild(gatesLayer);
 
         // Layer 2: The invisible interactive tap zones
-        if (!state.gameOver) {
+        if (!state.gameOver && !state.isVariational) {
             for(let q = 0; q < state.numQubits; q++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell-zone';

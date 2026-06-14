@@ -118,7 +118,18 @@ export function getColumnHTML(gates, numQubits, gateStatusMap = null) {
     for(let type of gates) {
         let statusClass = (gateStatusMap && gateStatusMap[type]) ? (gateStatusMap[type] === 'correct' ? 'eval-correct' : 'eval-absent') : '';
         const rowHeight = Math.max(60, numQubits * 30) / numQubits;
-        if (type.startsWith('QFT') || type.startsWith('IQFT')) {
+        if (type.includes('_VAR_')) {
+            const parts = type.split('_');
+            const gateType = parts[0];
+            const paramId = parts[2];
+            const q = parseInt(parts[3]);
+            const PARAM_SYM = {theta:'θ',phi:'φ',gamma:'γ',beta:'β',th0:'θ₀',th1:'θ₁',th2:'θ₂',th3:'θ₃',theta0:'θ₀',theta1:'θ₁',theta2:'θ₂',theta3:'θ₃'};
+            const sym = PARAM_SYM[paramId] || paramId;
+            const top = ((q + 0.5) / numQubits * 100) + '%';
+            html += `<div class="gate-box ry-var-gate ${statusClass}" style="top:${top}">
+                <span style="font-size:11px">${gateType}</span><span style="font-size:9px">(${sym})</span>
+            </div>`;
+        } else if (type.startsWith('QFT') || type.startsWith('IQFT')) {
             let cssClass = (type === 'IQFT' || type === 'IQFT2') ? 'iqft-gate' : 'qft-gate';
             let spanQubits = type === 'IQFT2' ? Math.min(2, numQubits) : numQubits;
             let heightPx = spanQubits * rowHeight;
