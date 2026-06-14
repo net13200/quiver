@@ -13,7 +13,7 @@ import {
     initLabMode, initQftLabMode,
     selectLabNumber, selectQftInput,
     stopLabPlay, toggleQftLabPlay, toggleAdderLabPlay,
-    toggleGroverLabPlay, showGroverLab, showQftExplanation
+    toggleGroverLabPlay, showGroverLab, showQftExplanation, showBlochExplorerLab
 } from './game/labs.js';
 
 export let gameStartTime = 0;
@@ -851,6 +851,7 @@ function initGame(mode, p1, p2) {
         let labBtnHTML = p1 === 8 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryQftLab()">Try the QFT</button>`
                        : p1 === 9 ? `<button class="hint-btn" style="background:#f59e0b;" onclick="tryAdderLab()">Try the QFT Adder</button>`
                        : (p1 === 11 && state.currentP2 === 2) ? `<button class="hint-btn" style="background:#22c55e;color:#0f172a;" onclick="showGroverLab()">Try Grover Iterations</button>`
+                       : (p1 === 12 && state.currentP2 === 1) ? `<button class="hint-btn" style="background:#6366f1;" onclick="showBlochExplorerLab()">Explore the Bloch Sphere</button>`
                        : "";
 
         instructions.innerHTML = `<div class="stage-breadcrumb">${stage.title}</div>
@@ -1233,8 +1234,9 @@ window.initQftLab        = n => initGame('QFT_LAB', n);
 window.labGoBack         = () => initGame('STAGE', 9, state.labFromP2);
 window.qftLabGoBack      = () => initGame('STAGE', 8, state.qftLabFromP2);
 window.stopLabPlay       = stopLabPlay;
-window.showGroverLab     = showGroverLab;
-window.showQftExplanation = showQftExplanation;
+window.showGroverLab       = showGroverLab;
+window.showBlochExplorerLab = showBlochExplorerLab;
+window.showQftExplanation  = showQftExplanation;
 window.toggleQftLabPlay   = () => toggleQftLabPlay(state, renderBoard);
 window.toggleAdderLabPlay = () => toggleAdderLabPlay(state, renderBoard);
 window.toggleGroverLabPlay = toggleGroverLabPlay;

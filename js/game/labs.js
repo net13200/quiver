@@ -1,6 +1,6 @@
 import { computeStateVector, stateToString } from '../quantum/engine.js';
 import { GATE_MATRICES } from '../quantum/gates.js';
-import { updateBlochSpheres, updateTargetBlochSphere, parseMarkdownAndMath } from './ui.js';
+import { updateBlochSpheres, updateTargetBlochSphere, parseMarkdownAndMath, fireQuantumConfetti } from './ui.js';
 
 // X gates needed to encode |n⟩ for 3 qubits: qubit 0 = MSB (weight 4), qubit 2 = LSB (weight 1)
 export const QFT_LAB_CONFIGS = {
@@ -133,6 +133,178 @@ export function showGroverLab() {
     }
     panel.style.display = 'block';
     renderGroverLab();
+}
+
+// ── Bloch Explorer Lab ────────────────────────────────────────────────────────
+
+export function showBlochExplorerLab() {
+    let panel = document.getElementById('bloch-explorer-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'bloch-explorer-panel';
+        panel.style.cssText = 'margin-top:10px;padding:14px;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.3);border-radius:8px;';
+        const hintText = document.getElementById('hint-text');
+        if (hintText) hintText.parentNode.insertBefore(panel, hintText.nextSibling);
+        else document.getElementById('instructions').appendChild(panel);
+    }
+    panel.style.display = 'block';
+
+    // Uniform random point on sphere
+    function randomTarget() {
+        const u = Math.random(), v = Math.random();
+        const theta = Math.acos(1 - 2 * u);
+        const phi   = 2 * Math.PI * v;
+        return {
+            theta, phi,
+            bloch: { x: Math.sin(theta) * Math.cos(phi), y: Math.sin(theta) * Math.sin(phi), z: Math.cos(theta) }
+        };
+    }
+
+    // Compute Bloch vector from RZ(phi)·RY(theta)|0⟩
+    function currentBloch(theta, phi) {
+        const a = { r: Math.cos(phi / 2) * Math.cos(theta / 2), i: -Math.sin(phi / 2) * Math.cos(theta / 2) };
+        const b = { r: Math.cos(phi / 2) * Math.sin(theta / 2), i:  Math.sin(phi / 2) * Math.sin(theta / 2) };
+        return {
+            x: 2 * (a.r * b.r + a.i * b.i),
+            y: 2 * (a.r * b.i - a.i * b.r),
+            z: (a.r * a.r + a.i * a.i) - (b.r * b.r + b.i * b.i)
+        };
+    }
+
+    // Fidelity between RZ·RY|0⟩ and target Bloch vector (both pure states)
+    // For pure states: F = (1 + target·current) / 2
+    function fidelity(cur, tgt) {
+        return Math.max(0, (1 + cur.x * tgt.x + cur.y * tgt.y + cur.z * tgt.z) / 2);
+    }
+
+    function drawDualSphere(canvasId, cur, tgt) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2, cy = h / 2 - 8, R = Math.min(w, h) / 2 - 18;
+
+        // Sphere outline
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.35, 0, 0, 2 * Math.PI); ctx.stroke();
+
+        const proj = (x, y, z) => ({ px: cx + R * (y - 0.5 * x), py: cy + R * (-z + 0.35 * x) });
+
+        // Axes
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+        const axis = (p1, p2) => { ctx.beginPath(); ctx.moveTo(p1.px, p1.py); ctx.lineTo(p2.px, p2.py); ctx.stroke(); };
+        axis(proj(0,0,-1), proj(0,0,1)); axis(proj(0,-1,0), proj(0,1,0)); axis(proj(-1,0,0), proj(1,0,0));
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '10px sans-serif';
+        const p0 = proj(0,0,1);  ctx.fillText('|0⟩', p0.px - 6, p0.py - 4);
+        const p1 = proj(0,0,-1); ctx.fillText('|1⟩', p1.px - 6, p1.py + 12);
+
+        // Target vector (teal)
+        const pt = proj(tgt.x, tgt.y, tgt.z);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(pt.px, pt.py);
+        ctx.strokeStyle = '#2dd4bf'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(pt.px, pt.py, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = '#2dd4bf'; ctx.fill();
+
+        // Current vector (pink)
+        const pc = proj(cur.x, cur.y, cur.z);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(pc.px, pc.py);
+        ctx.strokeStyle = '#ec4899'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath(); ctx.arc(pc.px, pc.py, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = '#ec4899'; ctx.fill();
+    }
+
+    let target = randomTarget();
+    let thetaVal = 0, phiVal = 0;
+    let celebrating = false;
+
+    function render(checkWin = false) {
+        const cur = currentBloch(thetaVal, phiVal);
+        const fid = fidelity(cur, target.bloch);
+        const pct = Math.round(fid * 100);
+
+        drawDualSphere('bloch-explorer-canvas', cur, target.bloch);
+
+        const bar = document.getElementById('bloch-exp-bar');
+        const val = document.getElementById('bloch-exp-fid');
+        const status = document.getElementById('bloch-exp-status');
+        if (bar) bar.style.width = pct + '%';
+        if (val) val.textContent = pct + '%';
+
+        if (checkWin && fid >= 0.99 && !celebrating) {
+            celebrating = true;
+            if (status) { status.textContent = 'Target reached!'; status.style.color = '#2dd4bf'; }
+            const canvas = document.getElementById('bloch-explorer-canvas');
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect();
+                fireQuantumConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }
+            setTimeout(() => {
+                target = randomTarget();
+                thetaVal = 0; phiVal = 0;
+                const st = document.getElementById('var-exp-theta');
+                const sp = document.getElementById('var-exp-phi');
+                const stv = document.getElementById('var-exp-theta-val');
+                const spv = document.getElementById('var-exp-phi-val');
+                if (st) { st.value = 0; stv.textContent = '0.00'; }
+                if (sp) { sp.value = 0; spv.textContent = '0.00'; }
+                celebrating = false;
+                if (status) { status.textContent = ''; status.style.color = ''; }
+                render(false);
+            }, 1800);
+        }
+    }
+
+    panel.innerHTML = `
+        <div style="font-size:0.9rem;font-weight:700;color:#818cf8;margin-bottom:8px;">Bloch Sphere Explorer</div>
+        <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:10px;">
+            Match the <span style="color:#2dd4bf;font-weight:600;">teal target</span> using the two rotation gates.
+            <span style="color:#ec4899;font-weight:600;">Pink</span> = your state.
+        </div>
+        <div style="display:flex;justify-content:center;margin-bottom:10px;">
+            <canvas id="bloch-explorer-canvas" width="180" height="180"></canvas>
+        </div>
+        <div style="margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#cbd5e1;margin-bottom:2px;">
+                <span>θ (RY) = <span id="var-exp-theta-val">0.00</span></span>
+            </div>
+            <input type="range" id="var-exp-theta" min="0" max="6.283" step="0.02" value="0"
+                   style="width:100%;accent-color:#ec4899;">
+        </div>
+        <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#cbd5e1;margin-bottom:2px;">
+                <span>φ (RZ) = <span id="var-exp-phi-val">0.00</span></span>
+            </div>
+            <input type="range" id="var-exp-phi" min="0" max="6.283" step="0.02" value="0"
+                   style="width:100%;accent-color:#a78bfa;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:0.8rem;color:#94a3b8;">Fidelity:</span>
+            <div style="flex:1;height:8px;background:#1e293b;border-radius:4px;overflow:hidden;">
+                <div id="bloch-exp-bar" style="height:100%;width:0%;background:#2dd4bf;border-radius:4px;transition:width 0.1s;"></div>
+            </div>
+            <span id="bloch-exp-fid" style="font-size:0.8rem;color:#2dd4bf;min-width:32px;text-align:right;">0%</span>
+        </div>
+        <div id="bloch-exp-status" style="font-size:0.85rem;font-weight:600;text-align:center;min-height:1.2em;"></div>
+    `;
+
+    document.getElementById('var-exp-theta').addEventListener('input', e => {
+        thetaVal = parseFloat(e.target.value);
+        document.getElementById('var-exp-theta-val').textContent = thetaVal.toFixed(2);
+        render(false);
+    });
+    document.getElementById('var-exp-theta').addEventListener('change', () => render(true));
+
+    document.getElementById('var-exp-phi').addEventListener('input', e => {
+        phiVal = parseFloat(e.target.value);
+        document.getElementById('var-exp-phi-val').textContent = phiVal.toFixed(2);
+        render(false);
+    });
+    document.getElementById('var-exp-phi').addEventListener('change', () => render(true));
+
+    render(false);
 }
 
 // ── QFT Lab explanation toggle ────────────────────────────────────────────────
