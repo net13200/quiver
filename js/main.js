@@ -1260,11 +1260,13 @@ function initVariationalMode(vspec) {
 
     // Attach live slider events
     vspec.params.forEach(p => {
-        document.getElementById(`var-param-${p.id}`).addEventListener('input', e => {
+        const slider = document.getElementById(`var-param-${p.id}`);
+        slider.addEventListener('input', e => {
             state.variationalParams[p.id] = parseFloat(e.target.value);
             document.getElementById(`var-param-${p.id}-val`).textContent = state.variationalParams[p.id].toFixed(2);
-            recomputeVariational();
+            recomputeVariational(false);
         });
+        slider.addEventListener('change', () => recomputeVariational(true));
     });
 
     // Show cost or fidelity section
@@ -1327,7 +1329,7 @@ function _computeVariationalCost(vspec, paramValues) {
     }
 }
 
-function recomputeVariational() {
+function recomputeVariational(checkWin = true) {
     const vspec = state.variationalSpec;
     if (!vspec) return;
 
@@ -1362,13 +1364,13 @@ function recomputeVariational() {
 
     if (vspec.showLandscape) _drawLandscape(vspec);
 
-    // Check win
-    const won = _checkVariationalWin(vspec, cost);
-    if (won && !state.gameOver) {
-        state.gameOver = true;
-        _stopOptimizer();
-        // Small delay so the user sees the final readout
-        setTimeout(() => _fireVariationalVictory(), 300);
+    if (checkWin) {
+        const won = _checkVariationalWin(vspec, cost);
+        if (won && !state.gameOver) {
+            state.gameOver = true;
+            _stopOptimizer();
+            setTimeout(() => _fireVariationalVictory(), 300);
+        }
     }
 }
 
